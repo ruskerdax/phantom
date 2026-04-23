@@ -137,7 +137,6 @@ function seedChild(parent,index){
 
 // ---- Level templates (visual/balance metadata — no geometry) ----
 // Geometry is generated fresh each run from the seed.
-// worldH is omitted here — genLevel derives it randomly from the seed.
 const LV_TMPL=[
   {name:'CAVERN PRIME',   col:'#00ff88',bg:'#000c05',grav:.004,pcol:'#00cc66',pr:32,nObs:2,nEn:3,nFu:2,rxHp:3},
   {name:'VORTEX STATION', col:'#00ccff',bg:'#00050f',grav:.001,pcol:'#0077cc',pr:28,nObs:4,nEn:5,nFu:3,rxHp:5},
@@ -625,7 +624,7 @@ function updEnc(){
   }
   for(let i=enc.ebu.length-1;i>=0;i--){
     const b=enc.ebu[i];b.x=wrap(b.x+b.vx,EW);b.y=wrap(b.y+b.vy,EH);if(--b.l<=0){enc.ebu.splice(i,1);continue;}
-    let rm=false;for(const rk of enc.rocks)if(Math.hypot(b.x-rk.x,b.y-rk.y)<rk.r){rm=true;break;}if(rm){enc.ebu.splice(i,1);continue;}
+    let rm=false;for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(Math.hypot(b.x-rk.x,b.y-rk.y)<rk.r){rk.hp--;boomAt(enc.pts,b.x,b.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);rm=true;break;}}if(rm){enc.ebu.splice(i,1);continue;}
     if(Math.hypot(b.x-s.x,b.y-s.y)<12){
       enc.ebu.splice(i,1);
       if(!s.shld&&s.inv<=0){s.hp=Math.max(0,s.hp-3);s.inv=40;tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return;}}
