@@ -575,8 +575,10 @@ function updEnc(){
   // drift rocks
   for(const rk of enc.rocks){rk.x=wrap(rk.x+rk.vx,EW);rk.y=wrap(rk.y+rk.vy,EH);}
   // asteroid collision (ship vs rocks)
-  for(const rk of enc.rocks){if(s.inv<=0&&Math.hypot(s.x-rk.x,s.y-rk.y)<rk.r+7){
-    if(!s.shld){s.hp=Math.max(0,s.hp-4);s.inv=40;tone(180,.15,'sawtooth',.12);}
+  for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(s.inv<=0&&Math.hypot(s.x-rk.x,s.y-rk.y)<rk.r+7){
+    const dmg=Math.round((Math.hypot(s.vx,s.vy)/5.5)*5);
+    if(!s.shld&&dmg>0){s.hp=Math.max(0,s.hp-dmg);s.inv=40;tone(180,.15,'sawtooth',.12);}
+    if(dmg>0){rk.hp-=dmg;boomAt(enc.pts,rk.x,rk.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);}
     if(s.hp<=0){encKillShip();return;}break;
   }}
   // player fire
