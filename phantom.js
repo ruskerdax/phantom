@@ -137,7 +137,7 @@ function owStartEnc(idx){
     const tier=rng.int(0,2);const td=tierDefs[tier];
     rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:td.r[0]+rng.fl(0,td.r[1]),hp:td.hp,maxHp:td.hp,tier});
   }
-  const encShip=mkShip(EW*.08,EH/2);encShip.energy=Math.max(30,ow.s.energy);encShip.inv=90;
+  const encShip=mkShip(EW*.08,EH/2);encShip.energy=ow.s.energy;encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   G.ENC={owIdx:idx,et:e.t,label:et.enc.cnt>1?'SWARM ATTACK':et.name+' ENCOUNTER',
     s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],introTimer:70,cleared:false,
