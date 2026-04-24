@@ -162,7 +162,7 @@ function startAstEnc(){
   const ow=G.OW;
   const tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
   const rocks=[];
-  let rockCount=0;for(let i=0;i<8;i++)if(Math.random()<.25)rockCount++;
+  const rockCount=8+Math.floor(Math.random()*13);
   const spawnX=EW*.08,spawnY=EH/2,minSpawnDist=120;
   for(let i=0;i<rockCount;i++){
     let rx,ry,att=0;
@@ -678,7 +678,7 @@ function drawEnc(){
   const alive=enc.en.filter(e=>e.alive).length;
   cx.save();cx.font='13px monospace';cx.textAlign='center';
   if(enc.cleared){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=6+5*Math.abs(Math.sin(G.fr*.08));cx.fillText('ALL CLEAR — LEAVE THE AREA',W/2,18);}
-  else{cx.fillStyle=et.enc.col;cx.fillText(enc.label+' — '+alive+' remaining  ·  '+enc.rocks.length+' asteroids',W/2,18);}
+  else{cx.fillStyle=et.enc.col;cx.fillText(enc.label+' — '+alive+' remaining',W/2,18);}
   cx.restore();
   drHUD(enc.s.energy,enc.s.maxEnergy,enc.s.hp,enc.s.maxHp);
 }
