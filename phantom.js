@@ -664,10 +664,16 @@ function drawOW(){
     cx.closePath();cx.stroke();
   }
   cx.restore();}
-  {const sx2=OW_W/2,sy2=OW_H/2,pu=.5+.5*Math.sin(G.fr*.04);
+  {const sx2=OW_W/2,sy2=OW_H/2,SR=40,pu=.5+.5*Math.sin(G.fr*.04);
   cx.save();cx.translate(sx2,sy2);
-  cx.shadowColor='#ffe070';cx.shadowBlur=50+pu*40;
-  cx.fillStyle='#fff4c0';cx.beginPath();cx.arc(0,0,20,0,Math.PI*2);cx.fill();
+  // outer glow
+  cx.shadowColor='#ffe070';cx.shadowBlur=80+pu*60;
+  // limb darkening gradient
+  const grad=cx.createRadialGradient(0,0,0,0,0,SR);
+  grad.addColorStop(0,'#ffffff');grad.addColorStop(0.5,'#fffbe8');
+  grad.addColorStop(0.82,'#ffe87a');grad.addColorStop(1,'#ffcc40');
+  cx.fillStyle=grad;cx.beginPath();cx.arc(0,0,SR,0,Math.PI*2);cx.fill();
+  cx.shadowBlur=0;
   cx.restore();}
   for(let i=0;i<LV.length;i++){
     const p=owPos(PP[i]),d=LV[i];
