@@ -120,10 +120,11 @@ function owKillShip(){
 function owStartEnc(idx){
   const ow=G.OW,e=ow.en[idx],et=OET[e.t],ec=et.enc;
   const ens=[];
+  const initCd=Math.round(WEAPONS[ec.fire.wpn].cd*60);
   if(ec.cnt===1){
-    ens.push({x:EW-160,y:EH/2+(Math.random()*80-40),vx:0,vy:0,a:Math.PI,hp:ec.hp,mhp:ec.hp,timer:ec.fr,alive:true,t:e.t,spin:0});
+    ens.push({x:EW-160,y:EH/2+(Math.random()*80-40),vx:0,vy:0,a:Math.PI,hp:ec.hp,mhp:ec.hp,timer:initCd,alive:true,t:e.t,spin:0});
   } else {
-    for(let i=0;i<ec.cnt;i++){const a=(i/ec.cnt)*Math.PI*2;ens.push({x:EW-200+Math.cos(a)*60,y:EH/2+Math.sin(a)*60,vx:0,vy:0,a:Math.PI,hp:ec.hp,mhp:ec.hp,timer:ec.fr+i*18,alive:true,t:e.t,spin:0});}
+    for(let i=0;i<ec.cnt;i++){const a=(i/ec.cnt)*Math.PI*2;ens.push({x:EW-200+Math.cos(a)*60,y:EH/2+Math.sin(a)*60,vx:0,vy:0,a:Math.PI,hp:ec.hp,mhp:ec.hp,timer:initCd+i*18,alive:true,t:e.t,spin:0});}
   }
   const rng=mkRNG(seedChild(G.seed,200+idx));
   const rocks=[];
@@ -235,7 +236,7 @@ function updEnc(){
     if(dmg>0){rk.hp-=dmg;boomAt(enc.pts,rk.x,rk.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);}
     if(s.hp<=0){encKillShip();return;}break;
   }}
-  if(iFir()&&!s.shld&&!s.scd){const wp=playerWeapon;enc.bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*wp.spd+s.vx*.3,vy:-Math.cos(s.a)*wp.spd+s.vy*.3,l:wp.life,dmg:wp.dmg});s.scd=wp.cd;tone(900,.04,'square',.05);}
+  if(iFir()&&!s.shld&&!s.scd){const wp=playerWeapon;enc.bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*wp.spd+s.vx*.3,vy:-Math.cos(s.a)*wp.spd+s.vy*.3,l:wp.life,dmg:wp.dmg});s.scd=Math.round(wp.cd*60);tone(900,.04,'square',.05);}
   for(let i=enc.bul.length-1;i>=0;i--){
     const b=enc.bul[i];b.x=wrap(b.x+b.vx,EW);b.y=wrap(b.y+b.vy,EH);if(--b.l<=0){enc.bul.splice(i,1);continue;}
     let hit=false;
@@ -263,8 +264,8 @@ function updEnc(){
     e.x=wrap(e.x+e.vx,EW);e.y=wrap(e.y+e.vy,EH);
     for(const rk of enc.rocks){const rd=Math.hypot(e.x-rk.x,e.y-rk.y);if(rd<rk.r+16){e.vx+=(e.x-rk.x)/rd*.3;e.vy+=(e.y-rk.y)/rd*.3;}}
     if(--e.timer<=0){
-      e.timer=ec.fr+Math.floor(Math.random()*40-20);
       const fw=ec.fire,ewp=WEAPONS[fw.wpn];
+      e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
       const bas=fw.mode==='spin'
         ?Array.from({length:fw.count},(_,k)=>e.spin+k*Math.PI*2/fw.count)
         :Array.from({length:fw.count},(_,k)=>ta+(k-(fw.count-1)/2)*fw.spread);
@@ -366,7 +367,7 @@ function updCV(){
   if(wHit(s.x,s.y,9,G.lv)){cvBounce(s);if(s.hp<=0){cvKillShip();return;}}
   for(const f of cv.fu){if(!f.got&&Math.hypot(s.x-f.x,s.y-f.y)<22){f.got=true;pickupEnergy(s,f.x,f.y,cv.pts,d.col);}}
   if(G.st==='esc'){cv.esc--;if(cv.esc<=0){cvKillShip();return;}}
-  if(iFir()&&!s.shld&&!s.scd){cv.bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*7+s.vx*.3,vy:-Math.cos(s.a)*7+s.vy*.3,l:70});s.scd=12;tone(900,.04,'square',.05);}
+  if(iFir()&&!s.shld&&!s.scd){const wp=playerWeapon;cv.bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*wp.spd+s.vx*.3,vy:-Math.cos(s.a)*wp.spd+s.vy*.3,l:wp.life,dmg:wp.dmg});s.scd=Math.round(wp.cd*60);tone(900,.04,'square',.05);}
   for(let i=cv.bul.length-1;i>=0;i--){
     const b=cv.bul[i];b.x+=b.vx;b.y+=b.vy;b.l--;
     if(b.l<=0||b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,G.lv)){cv.bul.splice(i,1);continue;}
