@@ -329,12 +329,13 @@ function cvBounce(s){
   }
 }
 function enterLv(){
-  const d=LV[G.lv],ow=G.OW;
+  const d=LV[G.lv],ow=G.OW,ls=G.lvState[G.lv];
   G.CV={d,s:{...mkShip(d.ent.x,d.ent.y),energy:Math.max(25,ow?ow.s.energy:100),
              hp:ow?ow.s.hp:15,maxHp:ow?ow.s.maxHp:15},
-    en:d.en.map(e=>({...e,alive:true,timer:20+Math.floor(Math.random()*80)})),
-    fu:d.fu.map(f=>({...f,got:false})),
-    rx:{...d.rx,alive:true},bul:[],ebu:[],pts:[],rdone:false,esc:0,cam:{x:0,y:0}};
+    en:d.en.map((e,i)=>({...e,alive:ls?ls.en[i]:true,timer:20+Math.floor(Math.random()*80)})),
+    fu:d.fu.map((f,i)=>({...f,got:ls?ls.fu[i]:false})),
+    rx:ls?{...d.rx,hp:ls.rx.hp,alive:ls.rx.alive}:{...d.rx,alive:true},
+    bul:[],ebu:[],pts:[],rdone:false,esc:0,cam:{x:0,y:0}};
   G.st='play';
 }
 function cvKillShip(){
@@ -357,12 +358,11 @@ function updCV(){
   const tcy=Math.max(0,Math.min(wH-H,s.y-H*.45));
   cv.cam.y+=(tcy-cv.cam.y)*.12;
   if(s.y<0){
-    if(G.st==='esc'){
-      addSc(1000);tone(660,.4,'sine',.1);G.cleared[G.lv]=true;
-      if(G.cleared.every(c=>c)){G.st='done';return;}
-      const pi=G.lv;initOW(s.energy,PP[pi].x,Math.max(80,PP[pi].y-LV[pi].pr-55));
-      G.OW.s.hp=s.hp;G.OW.s.maxHp=s.maxHp;G.OW.s.vy=-1.2;return;
-    } else{s.y=4;s.vy=Math.abs(s.vy)*.5+.5;}return;
+    if(G.st==='esc'){addSc(1000);tone(660,.4,'sine',.1);G.cleared[G.lv]=true;delete G.lvState[G.lv];
+      if(G.cleared.every(c=>c)){G.st='done';return;}}
+    else{G.lvState[G.lv]={en:cv.en.map(e=>e.alive),fu:cv.fu.map(f=>f.got),rx:{hp:cv.rx.hp,alive:cv.rx.alive}};}
+    const pi=G.lv;initOW(s.energy,PP[pi].x,Math.max(80,PP[pi].y-LV[pi].pr-55));
+    G.OW.s.hp=s.hp;G.OW.s.maxHp=s.maxHp;G.OW.s.vy=-1.2;return;
   }
   if(wHit(s.x,s.y,9,G.lv)){cvBounce(s);if(s.hp<=0){cvKillShip();return;}}
   for(const f of cv.fu){if(!f.got&&Math.hypot(s.x-f.x,s.y-f.y)<22){f.got=true;pickupEnergy(s,f.x,f.y,cv.pts,d.col);}}
@@ -726,10 +726,10 @@ function update(){
   if(st==='title'){
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.titleSel=0;
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.titleSel=1;
-    if(iEnter()){ia();if(G.titleSel===0){G.score=0;G.cleared=[false,false,false];G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];initOW(100);}else{G.optFrom='title';G.st='options';}}
+    if(iEnter()){ia();if(G.titleSel===0){G.score=0;G.cleared=[false,false,false];G.lvState={};G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];initOW(100);}else{G.optFrom='title';G.st='options';}}
     return;
   }
-  if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='over'){G.st='title';}else{G.score=0;G.cleared=[false,false,false];G.st='title';}}return;}
+  if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='over'){G.st='title';}else{G.score=0;G.cleared=[false,false,false];G.lvState={};G.st='title';}}return;}
   if(st==='dead_ow'||st==='dead_enc'||st==='dead_cv')return;
   if(iPause()){
     if(G.paused){G.paused=false;}
