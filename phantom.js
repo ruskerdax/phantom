@@ -86,6 +86,8 @@ function iPause(){return!!(kjust('pause')||GP.startj);}
 // Static starfield
 const STARS=(()=>{const a=[];for(let i=0;i<220;i++)a.push({x:Math.random()*W,y:Math.random()*H,r:.3+Math.random()*1.4,ph:Math.random()*Math.PI*2,ci:i%5});return a;})();
 const SCOLS=['#ffffff','#aaaaff','#ffeebb','#aaffee','#ffaaaa'];
+// Motion dust — screen-space parallax particles, drift opposite player velocity
+const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Math.random()*H,r:.4+Math.random()*1.6,depth:.15+Math.random()*.7});return a;})();
 
 // Cave geometry — uses LV from gen.js, dseg/pip from util.js
 function wHit(x,y,r,li){if(y<0)return false;const d=LV[li],t=d.terrain;for(let i=0;i<t.length-1;i++)if(dseg(x,y,t[i][0],t[i][1],t[i+1][0],t[i+1][1])<r)return true;if(!pip(x,y,t))return true;for(const o of d.obs){if(pip(x,y,o))return true;for(let i=0;i<o.length;i++){const j=(i+1)%o.length;if(dseg(x,y,o[i][0],o[i][1],o[j][0],o[j][1])<r)return true;}}return false;}
@@ -407,6 +409,25 @@ function drStars(scroll=0){
   for(const s of STARS){cx.globalAlpha=.5+.3*Math.sin(s.ph+G.fr*.015);cx.fillStyle=SCOLS[s.ci];cx.beginPath();cx.arc((s.x+scroll)%W,s.y,s.r,0,Math.PI*2);cx.fill();}
   cx.globalAlpha=1;cx.restore();
 }
+function drDust(vx,vy){
+  const spd=Math.sqrt(vx*vx+vy*vy);if(spd>6){const s=6/spd;vx*=s;vy*=s;}
+  cx.save();
+  for(const d of DUST){
+    d.x=((d.x-vx*d.depth)%W+W)%W;
+    d.y=((d.y-vy*d.depth)%H+H)%H;
+    cx.globalAlpha=.12+d.depth*.2;
+    const streak=spd*d.depth;
+    if(streak>1){
+      // draw a short streak in the direction the dust appears to trail
+      cx.strokeStyle='#cce4ff';cx.lineWidth=d.r*.9;cx.lineCap='round';
+      cx.beginPath();cx.moveTo(d.x,d.y);cx.lineTo(d.x+vx*d.depth*2.5,d.y+vy*d.depth*2.5);cx.stroke();
+    } else {
+      cx.fillStyle='#cce4ff';
+      cx.beginPath();cx.arc(d.x,d.y,d.r,0,Math.PI*2);cx.fill();
+    }
+  }
+  cx.globalAlpha=1;cx.restore();
+}
 function drPts(pts){for(const p of pts){cx.save();cx.globalAlpha=Math.max(0,p.l/p.ml);cx.fillStyle=p.c;cx.beginPath();cx.arc(p.x,p.y,1.5,0,Math.PI*2);cx.fill();cx.restore();}}
 function drShip(x,y,a,shld,thr,energy,inv,fr){
   if(inv>0&&fr%4>=2)return;
@@ -501,6 +522,7 @@ function drawOW(){
   const ow=G.OW,s=ow.s;
   const camX=Math.max(0,Math.min(OW_W-W,s.x-W/2));
   const camY=Math.max(0,Math.min(OW_H-H,s.y-H/2));
+  drDust(camX-(ow.pcx??camX),camY-(ow.pcy??camY));ow.pcx=camX;ow.pcy=camY;
   cx.save();cx.translate(-camX,-camY);
   {const sx2=OW_W/2,sy2=OW_H/2,pu=.5+.5*Math.sin(G.fr*.04);
   cx.save();cx.translate(sx2,sy2);
@@ -534,6 +556,7 @@ function drawEnc(){
   const enc=G.ENC,et=OET[enc.et];
   const camX=enc.cam?enc.cam.x:0,camY=enc.cam?enc.cam.y:0;
   cx.fillStyle='#030408';cx.fillRect(0,0,W,H);drStars();
+  drDust(camX-(enc.pcx??camX),camY-(enc.pcy??camY));enc.pcx=camX;enc.pcy=camY;
   cx.save();cx.translate(-camX,-camY);
   const tierCol=['#667','#556','#445'];
   for(const rk of enc.rocks){
