@@ -157,11 +157,30 @@ function doJump(){
 function owStartEnc(idx){
   const ow=G.OW,e=ow.en[idx],et=OET[e.t],ec=et.enc;
   const ens=[];
-  const initCd=Math.round(WEAPONS[ec.fire.wpn].cd*60);
-  if(ec.cnt===1){
-    ens.push({x:EW-160,y:EH/2+(Math.random()*80-40),vx:0,vy:0,a:Math.PI,hp:ec.hp,mhp:ec.hp,timer:initCd,alive:true,t:e.t,spin:0,pulsesLeft:0,pulseTimer:0});
+  if(ec.groups){
+    const spawns=[];
+    for(const grp of ec.groups){
+      if(grp.chance!==undefined&&Math.random()>grp.chance)continue;
+      spawns.push(grp);
+    }
+    const total=spawns.reduce((s,g)=>s+g.cnt,0);
+    let ei=0;
+    for(const sp of spawns){
+      const gec=OET[sp.t].enc,initCd=Math.round(WEAPONS[gec.fire.wpn].cd*60);
+      for(let i=0;i<sp.cnt;i++){
+        const x=total===1?EW-160:EW-200+Math.cos((ei/total)*Math.PI*2)*60;
+        const y=total===1?EH/2+(Math.random()*80-40):EH/2+Math.sin((ei/total)*Math.PI*2)*60;
+        ens.push({x,y,vx:0,vy:0,a:Math.PI,hp:gec.hp,mhp:gec.hp,timer:initCd+ei*18,alive:true,t:sp.t,spin:0,pulsesLeft:0,pulseTimer:0});
+        ei++;
+      }
+    }
   } else {
-    for(let i=0;i<ec.cnt;i++){const a=(i/ec.cnt)*Math.PI*2;ens.push({x:EW-200+Math.cos(a)*60,y:EH/2+Math.sin(a)*60,vx:0,vy:0,a:Math.PI,hp:ec.hp,mhp:ec.hp,timer:initCd+i*18,alive:true,t:e.t,spin:0,pulsesLeft:0,pulseTimer:0});}
+    const initCd=Math.round(WEAPONS[ec.fire.wpn].cd*60);
+    if(ec.cnt===1){
+      ens.push({x:EW-160,y:EH/2+(Math.random()*80-40),vx:0,vy:0,a:Math.PI,hp:ec.hp,mhp:ec.hp,timer:initCd,alive:true,t:e.t,spin:0,pulsesLeft:0,pulseTimer:0});
+    } else {
+      for(let i=0;i<ec.cnt;i++){const a=(i/ec.cnt)*Math.PI*2;ens.push({x:EW-200+Math.cos(a)*60,y:EH/2+Math.sin(a)*60,vx:0,vy:0,a:Math.PI,hp:ec.hp,mhp:ec.hp,timer:initCd+i*18,alive:true,t:e.t,spin:0,pulsesLeft:0,pulseTimer:0});}
+    }
   }
   const rng=mkRNG(seedChild(G.seed,200+idx));
   const rocks=[];
@@ -177,7 +196,8 @@ function owStartEnc(idx){
   }
   const encShip=mkShip(EW*.08,EH/2);encShip.energy=ow.s.energy;encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
-  G.ENC={owIdx:idx,et:e.t,label:et.enc.cnt>1?'SWARM ATTACK':et.name+' ENCOUNTER',
+  const label=ec.groups?et.name+' ENCOUNTER':(ec.cnt>1?'SWARM ATTACK':et.name+' ENCOUNTER');
+  G.ENC={owIdx:idx,et:e.t,label,
     s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2)}};
   G.st='enc_in';
