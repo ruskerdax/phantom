@@ -155,12 +155,14 @@ function updOW(){
   const s=ow.s;if(!s.alive)return;
   s.a+=iRot()*(s.energy>0?.075:.0375);s.shld=false;
   if(iThr()){const thr=s.energy>0?.09:.01;s.vx+=Math.sin(s.a)*thr;s.vy-=Math.cos(s.a)*thr;if(s.energy>0)s.energy=Math.max(0,s.energy-.07);}
-  const sp=Math.hypot(s.vx,s.vy);if(sp>4.2){s.vx=s.vx/sp*4.2;s.vy=s.vy/sp*4.2;}
+  {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
+  const maxSpd=sdist<220?7:4.2;
+  const sp=Math.hypot(s.vx,s.vy);if(sp>maxSpd){s.vx=s.vx/sp*maxSpd;s.vy=s.vy/sp*maxSpd;}}
   s.x=wrap(s.x+s.vx,OW_W);s.y=wrap(s.y+s.vy,OW_H);
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   if(sdist<22){owKillShip();return;}
-  const sacc=Math.min(.2,120/(sdist*sdist));s.vx+=sdx/sdist*sacc;s.vy+=sdy/sdist*sacc;}
+  s.vx+=sdx*500/(sdist*sdist*sdist);s.vy+=sdy*500/(sdist*sdist*sdist);}
   const bp=owPos(BASE);ow.nearBase=Math.hypot(s.x-bp.x,s.y-bp.y)<BASE.r+28;
   if(iFir()&&ow.nearBase){G.st='base';return;}
   ow.nearP=-1;
