@@ -264,9 +264,10 @@ function updEnc(){
     for(const rk of enc.rocks){const rd=Math.hypot(e.x-rk.x,e.y-rk.y);if(rd<rk.r+16){e.vx+=(e.x-rk.x)/rd*.3;e.vy+=(e.y-rk.y)/rd*.3;}}
     if(--e.timer<=0){
       e.timer=ec.fr+Math.floor(Math.random()*40-20);
-      if(e.t===1){for(let k=0;k<3;k++){const ba=e.spin+k*Math.PI*2/3;enc.ebu.push({x:e.x+Math.sin(ba)*10,y:e.y-Math.cos(ba)*10,vx:Math.sin(ba)*3.2,vy:-Math.cos(ba)*3.2,l:140});}}
-      else if(e.t===2){for(let k=-1;k<=1;k++){const ba=ta+k*.2;enc.ebu.push({x:e.x+Math.sin(ba)*22,y:e.y-Math.cos(ba)*22,vx:Math.sin(ba)*3.8,vy:-Math.cos(ba)*3.8,l:160});}}
-      else{enc.ebu.push({x:e.x+Math.sin(ta)*14,y:e.y-Math.cos(ta)*14,vx:Math.sin(ta)*4.5,vy:-Math.cos(ta)*4.5,l:150});}
+      const ewp=WEAPONS[0];
+      if(e.t===1){for(let k=0;k<3;k++){const ba=e.spin+k*Math.PI*2/3;enc.ebu.push({x:e.x+Math.sin(ba)*10,y:e.y-Math.cos(ba)*10,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life});}}
+      else if(e.t===2){for(let k=-1;k<=1;k++){const ba=ta+k*.2;enc.ebu.push({x:e.x+Math.sin(ba)*22,y:e.y-Math.cos(ba)*22,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life});}}
+      else{enc.ebu.push({x:e.x+Math.sin(ta)*14,y:e.y-Math.cos(ta)*14,vx:Math.sin(ta)*ewp.spd,vy:-Math.cos(ta)*ewp.spd,l:ewp.life});}
       tone(550+e.t*80,.04,'square',.03);
     }
     if(s.inv<=0&&Math.hypot(e.x-s.x,e.y-s.y)<ec.r+9){
@@ -376,7 +377,7 @@ function updCV(){
   for(const e of cv.en){
     if(!e.alive)continue;
     e.a+=angDiff(e.a,Math.atan2(s.x-e.x,-(s.y-e.y)))*.04;
-    if(--e.timer<=0){e.timer=100+Math.floor(Math.random()*40-20);cv.ebu.push({x:e.x+Math.sin(e.a)*15,y:e.y-Math.cos(e.a)*15,vx:Math.sin(e.a)*3.5,vy:-Math.cos(e.a)*3.5,l:90});}
+    if(--e.timer<=0){const ewp=WEAPONS[0];e.timer=100+Math.floor(Math.random()*40-20);cv.ebu.push({x:e.x+Math.sin(e.a)*15,y:e.y-Math.cos(e.a)*15,vx:Math.sin(e.a)*ewp.spd,vy:-Math.cos(e.a)*ewp.spd,l:ewp.life});}
   }
   for(let i=cv.ebu.length-1;i>=0;i--){
     const b=cv.ebu[i];b.x+=b.vx;b.y+=b.vy;b.l--;
