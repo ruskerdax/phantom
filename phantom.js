@@ -100,15 +100,15 @@ function updPts(pts,gy=0){for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p
 function mkShip(x,y){return{x,y,vx:0,vy:0,a:0,energy:100,alive:true,inv:120,scd:0,shld:false,hp:15,maxHp:15};}
 let playerWeapon=WEAPONS[0];
 
-const BASE={x:Math.round(W*.18),y:Math.round(H*.68),r:22};
+const BASE={x:Math.round(OW_W*.18),y:Math.round(OW_H*.68),r:22};
 
 // ===================== OVERWORLD =====================
 function owEnemyPos(t){
   const a=Math.random()*Math.PI*2,d=240+Math.random()*180;
-  return{t,x:Math.max(40,Math.min(W-40,W/2+Math.cos(a)*d)),y:Math.max(40,Math.min(H-40,H/2+Math.sin(a)*d)),vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
+  return{t,x:Math.max(40,Math.min(OW_W-40,OW_W/2+Math.cos(a)*d)),y:Math.max(40,Math.min(OW_H-40,OW_H/2+Math.sin(a)*d)),vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
 }
 function initOW(energy,sx,sy){
-  G.OW={s:mkShip(sx??W/2,sy??280),en:[owEnemyPos(0),owEnemyPos(1),owEnemyPos(2)],fu:[],pts:[],nearP:-1,nearBase:false};
+  G.OW={s:mkShip(sx??OW_W/2,sy??Math.round(OW_H*.48)),en:[owEnemyPos(0),owEnemyPos(1),owEnemyPos(2)],fu:[],pts:[],nearP:-1,nearBase:false};
   G.OW.s.energy=energy??100;G.OW.s.inv=120;
   G.st='overworld';
 }
@@ -150,12 +150,12 @@ function owStartEnc(idx){
 }
 function updOW(){
   const ow=G.OW;updPts(ow.pts);
-  for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,W);f.y=wrap(f.y+f.vy,H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
+  for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,OW_W);f.y=wrap(f.y+f.vy,OW_H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
   const s=ow.s;if(!s.alive)return;
   s.a+=iRot()*(s.energy>0?.075:.0375);s.shld=false;
   if(iThr()){const thr=s.energy>0?.09:.01;s.vx+=Math.sin(s.a)*thr;s.vy-=Math.cos(s.a)*thr;if(s.energy>0)s.energy=Math.max(0,s.energy-.07);}
   const sp=Math.hypot(s.vx,s.vy);if(sp>4.2){s.vx=s.vx/sp*4.2;s.vy=s.vy/sp*4.2;}
-  s.x=wrap(s.x+s.vx,W);s.y=wrap(s.y+s.vy,H);
+  s.x=wrap(s.x+s.vx,OW_W);s.y=wrap(s.y+s.vy,OW_H);
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
   ow.nearBase=Math.hypot(s.x-BASE.x,s.y-BASE.y)<BASE.r+28;
   if(iFir()&&ow.nearBase){G.st='base';return;}
@@ -170,7 +170,7 @@ function updOW(){
     e.a+=angDiff(e.a,ta)*.07;
     e.vx+=Math.sin(e.a)*et.owSpd*.05;e.vy-=Math.cos(e.a)*et.owSpd*.05;
     e.vx*=.970;e.vy*=.970;const es=Math.hypot(e.vx,e.vy);if(es>et.owSpd){e.vx=e.vx/es*et.owSpd;e.vy=e.vy/es*et.owSpd;}
-    e.x=wrap(e.x+e.vx,W);e.y=wrap(e.y+e.vy,H);
+    e.x=wrap(e.x+e.vx,OW_W);e.y=wrap(e.y+e.vy,OW_H);
     if(e.flash>0)e.flash--;
     if(s.inv<=0&&dist<et.trigR){
       if(s.shld){e.vx-=(dx/dist)*3;e.vy-=(dy/dist)*3;e.flash=12;}
@@ -492,7 +492,10 @@ function drawBaseMenu(){
 }
 function drawOW(){
   cx.fillStyle='#000008';cx.fillRect(0,0,W,H);drStars();
-  const ow=G.OW;
+  const ow=G.OW,s=ow.s;
+  const camX=Math.max(0,Math.min(OW_W-W,s.x-W/2));
+  const camY=Math.max(0,Math.min(OW_H-H,s.y-H/2));
+  cx.save();cx.translate(-camX,-camY);
   for(let i=0;i<LV.length;i++){
     const p=PP[i],d=LV[i];
     if(G.cleared[i]){cx.save();cx.strokeStyle='#334';cx.lineWidth=1;cx.setLineDash([3,5]);cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.stroke();cx.fillStyle='#223';cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.fill();cx.fillStyle='#446';cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText('CLEARED',p.x,p.y+3);cx.setLineDash([]);cx.restore();continue;}
@@ -505,11 +508,12 @@ function drawOW(){
     if(ow.nearP===i){cx.save();cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.textAlign='center';cx.fillText('[ FIRE TO ENTER ]',p.x,p.y+d.pr+16);cx.restore();}
   }
   for(const e of ow.en)if(e.alive)drOWEnemy(e);
-  for(const f of ow.fu)drEnergy(wrap(f.x,W),wrap(f.y,H),'#0f8');
+  for(const f of ow.fu)drEnergy(f.x,f.y,'#0f8');
   drPts(ow.pts);
   drBase(ow.nearBase);
-  if(ow.s.alive)drShip(ow.s.x,ow.s.y,ow.s.a,ow.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),ow.s.energy,ow.s.inv,G.fr);
-  drHUD(ow.s.energy,ow.s.hp,ow.s.maxHp);
+  if(s.alive)drShip(s.x,s.y,s.a,s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),s.energy,s.inv,G.fr);
+  cx.restore();
+  drHUD(s.energy,s.hp,s.maxHp);
 }
 
 function drawEnc(){

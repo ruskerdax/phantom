@@ -260,8 +260,8 @@ function genLevel(tmpl,seed){
 
 // ---- Overworld planet positions ----
 function genPlanets(rng){
-  const zones=[{x:W*.24,y:H*.29},{x:W*.77,y:H*.25},{x:W*.50,y:H*.76}];
-  return zones.map(z=>({x:Math.round(z.x+rng.fl(-52,52)),y:Math.round(z.y+rng.fl(-38,38))}));
+  const zones=[{x:OW_W*.24,y:OW_H*.29},{x:OW_W*.77,y:OW_H*.25},{x:OW_W*.50,y:OW_H*.76}];
+  return zones.map(z=>({x:Math.round(z.x+rng.fl(-78,78)),y:Math.round(z.y+rng.fl(-57,57))}));
 }
 
 // ---- Master world-generation entry point ----
