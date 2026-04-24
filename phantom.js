@@ -949,11 +949,11 @@ function drawRebuild(){
   cx.restore();drGPI();scanlines();
 }
 
+function pauseItems(){return G.cheatMode?['RESUME','OPTIONS','REPAIR SHIP','TELEPORT TO SLIPGATE','CLEAR ALL SECTORS','ADD 10K CREDITS','ZERO CREDITS','QUIT TO TITLE']:['RESUME','OPTIONS','QUIT TO TITLE'];}
+
 function drawPause(){
-  const PITEMS=G.cheatMode
-    ?['RESUME','OPTIONS','REPAIR SHIP','TELEPORT TO SLIPGATE','CLEAR ALL SECTORS','QUIT TO TITLE']
-    :['RESUME','OPTIONS','QUIT TO TITLE'];
-  const ph=G.cheatMode?336:240,pw=300,px=W/2-pw/2,py=H/2-ph/2;
+  const PITEMS=pauseItems();
+  const ph=G.cheatMode?408:240,pw=300,px=W/2-pw/2,py=H/2-ph/2;
   cx.save();
   cx.fillStyle='rgba(0,0,0,.75)';cx.fillRect(0,0,W,H);
   cx.strokeStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=20;cx.lineWidth=1.5;
@@ -966,7 +966,7 @@ function drawPause(){
   for(let i=0;i<PITEMS.length;i++){
     const iy=py+76+i*36;
     const sel=i===G.pauseSel;
-    const isCheat=G.cheatMode&&(i===2||i===3||i===4);
+    const isCheat=G.cheatMode&&i>=2&&i<=6;
     if(sel){cx.fillStyle=isCheat?'#ffee44':'#0f8';cx.shadowColor=isCheat?'#ff8':'#0f8';cx.shadowBlur=10;cx.fillText('▶ '+PITEMS[i],W/2,iy);}
     else{cx.fillStyle=isCheat?'#665500':'#668';cx.shadowBlur=0;cx.fillText(PITEMS[i],W/2,iy);}
   }
@@ -1154,9 +1154,7 @@ function update(){
     return;
   }
   if(G.paused){
-    const PITEMS=G.cheatMode
-      ?['RESUME','OPTIONS','REPAIR SHIP','TELEPORT TO SLIPGATE','CLEAR ALL SECTORS','QUIT TO TITLE']
-      :['RESUME','OPTIONS','QUIT TO TITLE'];
+    const PITEMS=pauseItems();
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.pauseSel=Math.max(0,G.pauseSel-1);
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.pauseSel=Math.min(PITEMS.length-1,G.pauseSel+1);
     if(iEnter()||GP.thrustj){
@@ -1175,6 +1173,8 @@ function update(){
         G.cleared=[true,true,true];G.slipgateActive=true;G.slipMsg=360;
         if(G.ENC){G.ENC=null;G.CV=null;}G.st='overworld';G.paused=false;
       }
+      else if(G.cheatMode&&G.pauseSel===5){G.credits+=10000;tone(880,.15,'sine',.07);G.paused=false;}
+      else if(G.cheatMode&&G.pauseSel===6){G.credits=0;tone(220,.15,'sawtooth',.07);G.paused=false;}
       else if(G.pauseSel===PITEMS.length-1){G.paused=false;G.ENC=null;G.CV=null;G.st='title';}
     }
     return;
