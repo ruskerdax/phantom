@@ -460,12 +460,12 @@ function owStartEnc(idx){
   const rng=mkRNG(seedChild(G.seed,200+idx));
   const rocks=[];
   const rockCount=8;
+  const spawnX=EW*.08,spawnY=EH/2,minSpawnDist=120;
   for(let i=0;i<rockCount;i++){
-    rocks.push({
-      x:rng.fl(60,EW-60),y:rng.fl(60,EH-60),
-      vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),
-      r:26+rng.fl(0,8),hp:18,maxHp:18,tier:0
-    });
+    let rx,ry,attempts=0;
+    do{rx=rng.fl(60,EW-60);ry=rng.fl(60,EH-60);attempts++;}
+    while(Math.hypot(rx-spawnX,ry-spawnY)<minSpawnDist&&attempts<30);
+    rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:26+rng.fl(0,8),hp:18,maxHp:18,tier:0});
   }
   const encShip=mkShip(EW*.08,EH/2);encShip.energy=Math.max(30,ow.s.energy);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
