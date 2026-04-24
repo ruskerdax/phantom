@@ -459,13 +459,15 @@ function owStartEnc(idx){
   // Seeded asteroids spread across the full encounter world
   const rng=mkRNG(seedChild(G.seed,200+idx));
   const rocks=[];
-  const rockCount=8;
+  const rockCount=rng.int(5,12);
   const spawnX=EW*.08,spawnY=EH/2,minSpawnDist=120;
+  const tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
   for(let i=0;i<rockCount;i++){
     let rx,ry,attempts=0;
     do{rx=rng.fl(60,EW-60);ry=rng.fl(60,EH-60);attempts++;}
     while(Math.hypot(rx-spawnX,ry-spawnY)<minSpawnDist&&attempts<30);
-    rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:26+rng.fl(0,8),hp:18,maxHp:18,tier:0});
+    const tier=rng.int(0,2);const td=tierDefs[tier];
+    rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:td.r[0]+rng.fl(0,td.r[1]),hp:td.hp,maxHp:td.hp,tier});
   }
   const encShip=mkShip(EW*.08,EH/2);encShip.energy=Math.max(30,ow.s.energy);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
