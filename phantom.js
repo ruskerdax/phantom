@@ -536,10 +536,35 @@ function drawOW(){
   const camY=Math.max(0,Math.min(OW_H-H,s.y-H/2));
   drDust(camX-(ow.pcx??camX),camY-(ow.pcy??camY));ow.pcx=camX;ow.pcy=camY;
   cx.save();cx.translate(-camX,-camY);
-  {cx.save();cx.lineWidth=1;cx.globalAlpha=.65;cx.setLineDash([4,2]);
-  for(const[col,r]of[['#aaccff',BASE.orbitR],...PP.map((b,i)=>[LV[i].pcol,b.orbitR])]){
+  {cx.save();cx.lineWidth=1;cx.globalAlpha=.65;
+  const owBodies=[['#aaccff',BASE.orbitR,BASE],...PP.map((b,i)=>[LV[i].pcol,b.orbitR,b])];
+  cx.setLineDash([4,2]);
+  for(const[col,r]of owBodies){
     cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=6;
     cx.beginPath();cx.arc(OW_W/2,OW_H/2,r,0,Math.PI*2);cx.stroke();
+  }
+  cx.setLineDash([]);
+  const arrowSpd=0.00173,N=40,arrowGap=0.2;
+  cx.font='14px monospace';cx.textAlign='center';cx.textBaseline='alphabetic';
+  const _gm=cx.measureText('❯'),_gOff=(_gm.actualBoundingBoxAscent-_gm.actualBoundingBoxDescent)/2;
+  for(const[col,r,b]of owBodies){
+    const bodyA=b.orbitA+G.owFr*b.orbitSpd;
+    cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=8;
+    for(let i=0;i<N;i++){
+      const phase=(G.fr*arrowSpd+i*Math.PI/N)%Math.PI;
+      if(phase<arrowGap)continue;
+      const fade=phase>Math.PI*.8?1-(phase-Math.PI*.8)/(Math.PI*.2):1;
+      cx.globalAlpha=.49*fade;
+      for(const dir of[1,-1]){
+        const a=bodyA+Math.PI+dir*phase;
+        const ax=OW_W/2+Math.cos(a)*r,ay=OW_H/2+Math.sin(a)*r;
+        const rot=Math.atan2(dir*Math.cos(a),-dir*Math.sin(a));
+        cx.save();cx.translate(ax,ay);cx.rotate(rot);cx.scale(1,2/3);
+        cx.fillText('❯',0,_gOff);
+        cx.restore();
+      }
+    }
+    cx.globalAlpha=.49;
   }
   cx.restore();}
   {const sx2=OW_W/2,sy2=OW_H/2,pu=.5+.5*Math.sin(G.fr*.04);
