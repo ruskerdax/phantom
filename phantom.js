@@ -93,7 +93,7 @@ const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Ma
 function wHit(x,y,r,li){if(y<0)return false;const d=LV[li],t=d.terrain;for(let i=0;i<t.length-1;i++)if(dseg(x,y,t[i][0],t[i][1],t[i+1][0],t[i+1][1])<r)return true;if(!pip(x,y,t))return true;for(const o of d.obs){if(pip(x,y,o))return true;for(let i=0;i<o.length;i++){const j=(i+1)%o.length;if(dseg(x,y,o[i][0],o[i][1],o[j][0],o[j][1])<r)return true;}}return false;}
 
 // Game state
-let G={st:'title',score:0,hi:0,fr:0,lv:0,cleared:[false,false,false],OW:null,ENC:null,CV:null,paused:false,pauseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0};
+let G={st:'title',score:0,hi:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],OW:null,ENC:null,CV:null,paused:false,pauseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0};
 function addSc(n){G.score+=n;if(G.score>G.hi)G.hi=G.score;}
 const ENERGY_PICKUP=38;
 function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(100,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
@@ -102,7 +102,7 @@ function updPts(pts,gy=0){for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p
 function mkShip(x,y){return{x,y,vx:0,vy:0,a:0,energy:100,alive:true,inv:120,scd:0,shld:false,hp:15,maxHp:15};}
 let playerWeapon=WEAPONS[0];
 
-function owPos(b){const a=b.orbitA+G.fr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
+function owPos(b){const a=b.orbitA+G.owFr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
 
 // ===================== OVERWORLD =====================
 function owEnemyPos(t){
@@ -152,7 +152,7 @@ function owStartEnc(idx){
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
 function updOW(){
-  const ow=G.OW;updPts(ow.pts);
+  G.owFr++;const ow=G.OW;updPts(ow.pts);
   for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,OW_W);f.y=wrap(f.y+f.vy,OW_H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
   const s=ow.s;if(!s.alive)return;
   s.a+=iRot()*(s.energy>0?.075:.0375);s.shld=false;
@@ -166,7 +166,7 @@ function updOW(){
   if(sdist<22){owKillShip();return;}
   s.vx+=sdx*500/(sdist*sdist*sdist);s.vy+=sdy*500/(sdist*sdist*sdist);}
   const bp=owPos(BASE);ow.nearBase=Math.hypot(s.x-bp.x,s.y-bp.y)<BASE.r+28;
-  if(iFir()&&ow.nearBase){G.st='base';return;}
+  if(iFir()&&ow.nearBase){s.hp=s.maxHp;s.energy=100;G.st='base';return;}
   ow.nearP=-1;
   for(let i=0;i<LV.length;i++){if(G.cleared[i])continue;const pp=owPos(PP[i]);if(Math.hypot(s.x-pp.x,s.y-pp.y)<LV[i].pr+28){ow.nearP=i;break;}}
   if(iFir()&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
@@ -512,9 +512,9 @@ function drawBaseMenu(){
   cx.strokeRect(px,py,pw,ph);
   cx.shadowBlur=12;cx.fillStyle='#aaccff';cx.font='bold 22px monospace';cx.textAlign='center';
   cx.fillText('FRIENDLY BASE',W/2,py+44);
-  cx.shadowBlur=0;cx.fillStyle='#446';cx.font='13px monospace';
-  cx.fillText('[ COMING SOON ]',W/2,py+110);
-  cx.fillStyle='#334';cx.fillText('FIRE OR ESC TO LEAVE',W/2,py+160);
+  cx.shadowBlur=0;cx.fillStyle='#0f8';cx.font='13px monospace';
+  cx.fillText('SHIP REPAIRED AND RECHARGED',W/2,py+110);
+  cx.fillStyle='#446';cx.fillText('FIRE OR ESC TO LEAVE',W/2,py+160);
   cx.restore();
 }
 function drawOW(){
