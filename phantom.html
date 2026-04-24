@@ -100,6 +100,12 @@ const OET=[
  {name:'DREADNOUGHT',col:'#ffee00',col2:'#ff6600',owSpd:.55,trigR:68,sc:350,energy:true, enc:{cnt:1,hp:18,spd:.75,fr:38, r:20,col:'#ffee00',col2:'#ff6600'}}
 ];
 
+// Weapon definitions
+const WEAPONS=[
+  {id:'cannon', dmg:3, cd:12, spd:7,  life:120},
+];
+let playerWeapon=WEAPONS[0];
+
 // Planet positions — populated by genWorld()
 let PP=[];
 
@@ -586,7 +592,7 @@ function updEnc(){
     if(s.hp<=0){encKillShip();return;}break;
   }}
   // player fire
-  if(iFir()&&!s.shld&&!s.scd){enc.bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*7+s.vx*.3,vy:-Math.cos(s.a)*7+s.vy*.3,l:120,dmg:3});s.scd=12;tone(900,.04,'square',.05);}
+  if(iFir()&&!s.shld&&!s.scd){const wp=playerWeapon;enc.bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*wp.spd+s.vx*.3,vy:-Math.cos(s.a)*wp.spd+s.vy*.3,l:wp.life,dmg:wp.dmg});s.scd=wp.cd;tone(900,.04,'square',.05);}
   // player bullets
   for(let i=enc.bul.length-1;i>=0;i--){
     const b=enc.bul[i];b.x=wrap(b.x+b.vx,EW);b.y=wrap(b.y+b.vy,EH);if(--b.l<=0){enc.bul.splice(i,1);continue;}
@@ -996,7 +1002,7 @@ function update(){
   if(st==='title'){
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.titleSel=0;
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.titleSel=1;
-    if(iEnter()){ia();if(G.titleSel===0){G.score=0;G.cleared=[false,false,false];G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);initOW(100);}else{G.optFrom='title';G.st='options';}}
+    if(iEnter()){ia();if(G.titleSel===0){G.score=0;G.cleared=[false,false,false];G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];initOW(100);}else{G.optFrom='title';G.st='options';}}
     return;
   }
   if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='over'){G.st='title';}else{G.score=0;G.cleared=[false,false,false];G.st='title';}}return;}
