@@ -100,7 +100,7 @@ function updPts(pts,gy=0){for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p
 function mkShip(x,y){return{x,y,vx:0,vy:0,a:0,energy:100,alive:true,inv:120,scd:0,shld:false,hp:15,maxHp:15};}
 let playerWeapon=WEAPONS[0];
 
-const BASE={x:Math.round(OW_W*.18),y:Math.round(OW_H*.68),r:22};
+function owPos(b){const a=b.orbitA+G.fr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
 
 // ===================== OVERWORLD =====================
 function owEnemyPos(t){
@@ -157,10 +157,10 @@ function updOW(){
   const sp=Math.hypot(s.vx,s.vy);if(sp>4.2){s.vx=s.vx/sp*4.2;s.vy=s.vy/sp*4.2;}
   s.x=wrap(s.x+s.vx,OW_W);s.y=wrap(s.y+s.vy,OW_H);
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
-  ow.nearBase=Math.hypot(s.x-BASE.x,s.y-BASE.y)<BASE.r+28;
+  const bp=owPos(BASE);ow.nearBase=Math.hypot(s.x-bp.x,s.y-bp.y)<BASE.r+28;
   if(iFir()&&ow.nearBase){G.st='base';return;}
   ow.nearP=-1;
-  for(let i=0;i<LV.length;i++){if(G.cleared[i])continue;if(Math.hypot(s.x-PP[i].x,s.y-PP[i].y)<LV[i].pr+28){ow.nearP=i;break;}}
+  for(let i=0;i<LV.length;i++){if(G.cleared[i])continue;const pp=owPos(PP[i]);if(Math.hypot(s.x-pp.x,s.y-pp.y)<LV[i].pr+28){ow.nearP=i;break;}}
   if(iFir()&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
   for(let i=0;i<ow.en.length;i++){
     const e=ow.en[i];if(!e.alive)continue;
@@ -365,7 +365,7 @@ function updCV(){
     if(G.st==='esc'){addSc(1000);tone(660,.4,'sine',.1);G.cleared[G.lv]=true;delete G.lvState[G.lv];
       if(G.cleared.every(c=>c)){G.st='done';return;}}
     else{G.lvState[G.lv]={en:cv.en.map(e=>e.alive),fu:cv.fu.map(f=>f.got),rx:{hp:cv.rx.hp,alive:cv.rx.alive}};}
-    const pi=G.lv;initOW(s.energy,PP[pi].x,Math.max(80,PP[pi].y-LV[pi].pr-55));
+    const pi=G.lv,pp=owPos(PP[pi]);initOW(s.energy,pp.x,Math.max(80,pp.y-LV[pi].pr-55));
     G.OW.s.hp=s.hp;G.OW.s.maxHp=s.maxHp;G.OW.s.vy=-1.2;return;
   }
   if(wHit(s.x,s.y,9,G.lv)){cvBounce(s);if(s.hp<=0){cvKillShip();return;}}
@@ -461,7 +461,7 @@ function drBullet(x,y,col='#fff'){cx.save();cx.fillStyle=col;cx.shadowColor=col;
 function scanlines(){cx.save();cx.globalAlpha=.035;cx.fillStyle='#000';for(let y=0;y<H;y+=2)cx.fillRect(0,y,W,1);cx.restore();}
 
 function drBase(near){
-  const{x,y,r}=BASE,pu=.5+.5*Math.sin(G.fr*.05);
+  const{r}=BASE,{x,y}=owPos(BASE),pu=.5+.5*Math.sin(G.fr*.05);
   cx.save();
   cx.strokeStyle='#aaccff';cx.shadowColor='#aaccff';cx.shadowBlur=6+pu*10;cx.lineWidth=1.5;
   cx.beginPath();
@@ -497,7 +497,7 @@ function drawOW(){
   const camY=Math.max(0,Math.min(OW_H-H,s.y-H/2));
   cx.save();cx.translate(-camX,-camY);
   for(let i=0;i<LV.length;i++){
-    const p=PP[i],d=LV[i];
+    const p=owPos(PP[i]),d=LV[i];
     if(G.cleared[i]){cx.save();cx.strokeStyle='#334';cx.lineWidth=1;cx.setLineDash([3,5]);cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.stroke();cx.fillStyle='#223';cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.fill();cx.fillStyle='#446';cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText('CLEARED',p.x,p.y+3);cx.setLineDash([]);cx.restore();continue;}
     const pu=.5+.5*Math.sin(G.fr*.05+i);cx.save();cx.shadowColor=d.pcol;cx.shadowBlur=8+pu*14;
     cx.strokeStyle=d.pcol;cx.lineWidth=1.5;cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.stroke();

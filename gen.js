@@ -3,6 +3,7 @@
 // Level data and planet positions — populated by genWorld()
 let LV=[];
 let PP=[];
+let BASE=null;
 
 // Seeded PRNG — mulberry32
 function mkRNG(seed){
@@ -258,15 +259,33 @@ function genLevel(tmpl,seed){
   return{...tmpl,worldH:wH,terrain,obs,en,fu,rx,ent};
 }
 
-// ---- Overworld planet positions ----
-function genPlanets(rng){
-  const zones=[{x:OW_W*.24,y:OW_H*.29},{x:OW_W*.77,y:OW_H*.25},{x:OW_W*.50,y:OW_H*.76}];
-  return zones.map(z=>({x:Math.round(z.x+rng.fl(-78,78)),y:Math.round(z.y+rng.fl(-57,57))}));
+// ---- Overworld body orbital parameters ----
+// Returns 4 bodies: [0]=base, [1..3]=planets. Each has {orbitR, orbitA, orbitSpd}.
+function genOWBodies(rng){
+  const bodies=[],minR=130,maxR=380,minSep=200;
+  for(let b=0;b<4;b++){
+    let orbitR,orbitA,ix,iy,att=0;
+    do{
+      orbitR=minR+rng.fl(0,maxR-minR);
+      orbitA=rng.fl(0,Math.PI*2);
+      ix=OW_W/2+Math.cos(orbitA)*orbitR;
+      iy=OW_H/2+Math.sin(orbitA)*orbitR;
+      att++;
+    }while(att<60&&bodies.some(e=>{
+      const ex=OW_W/2+Math.cos(e.orbitA)*e.orbitR,ey=OW_H/2+Math.sin(e.orbitA)*e.orbitR;
+      return Math.hypot(ix-ex,iy-ey)<minSep;
+    }));
+    const orbitSpd=0.00030-(orbitR-minR)/(maxR-minR)*0.00015;
+    bodies.push({orbitR,orbitA,orbitSpd});
+  }
+  return bodies;
 }
 
 // ---- Master world-generation entry point ----
 function genWorld(seed){
   LV=LV_TMPL.map((tmpl,i)=>genLevel(tmpl,seedChild(seed,i)));
-  PP=genPlanets(mkRNG(seedChild(seed,99)));
+  const bodies=genOWBodies(mkRNG(seedChild(seed,99)));
+  BASE={...bodies[0],r:22};
+  PP=bodies.slice(1);
   console.log(`[PHANTOM] world seed: 0x${seed.toString(16).toUpperCase().padStart(8,'0')}`);
 }
