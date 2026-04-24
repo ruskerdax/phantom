@@ -525,7 +525,7 @@ function drawOW(){
   const camY=Math.max(0,Math.min(OW_H-H,s.y-H/2));
   drDust(camX-(ow.pcx??camX),camY-(ow.pcy??camY));ow.pcx=camX;ow.pcy=camY;
   cx.save();cx.translate(-camX,-camY);
-  {cx.save();cx.lineWidth=1;cx.globalAlpha=.65;cx.setLineDash([4,5]);
+  {cx.save();cx.lineWidth=1;cx.globalAlpha=.65;cx.setLineDash([4,2]);
   for(const[col,r]of[['#aaccff',BASE.orbitR],...PP.map((b,i)=>[LV[i].pcol,b.orbitR])]){
     cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=6;
     cx.beginPath();cx.arc(OW_W/2,OW_H/2,r,0,Math.PI*2);cx.stroke();
