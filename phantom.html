@@ -95,9 +95,9 @@ let LV=[];
 
 // Overworld enemy types: 0=Saucer, 1=Swarm, 2=Dreadnought
 const OET=[
- {name:'SAUCER',  col:'#ff4444',col2:'#ff9900',owSpd:1.4,trigR:58, sc:150,energy:false,enc:{cnt:1,hp:2,spd:2.2,fr:65, r:13,col:'#ff4444',col2:'#ff9900'}},
- {name:'SWARM',   col:'#00ddff',col2:'#cc00ff',owSpd:.95, trigR:54, sc:80, energy:false, enc:{cnt:5,hp:1,spd:2.8,fr:100,r:9, col:'#00ddff',col2:'#cc00ff'}},
- {name:'DREADNOUGHT',col:'#ffee00',col2:'#ff6600',owSpd:.55,trigR:68,sc:350,energy:true, enc:{cnt:1,hp:6,spd:.75,fr:38, r:20,col:'#ffee00',col2:'#ff6600'}}
+ {name:'SAUCER',  col:'#ff4444',col2:'#ff9900',owSpd:1.4,trigR:58, sc:150,energy:false,enc:{cnt:1,hp:6, spd:2.2,fr:65, r:13,col:'#ff4444',col2:'#ff9900'}},
+ {name:'SWARM',   col:'#00ddff',col2:'#cc00ff',owSpd:.95, trigR:54, sc:80, energy:false, enc:{cnt:5,hp:3, spd:2.8,fr:100,r:9, col:'#00ddff',col2:'#cc00ff'}},
+ {name:'DREADNOUGHT',col:'#ffee00',col2:'#ff6600',owSpd:.55,trigR:68,sc:350,energy:true, enc:{cnt:1,hp:18,spd:.75,fr:38, r:20,col:'#ffee00',col2:'#ff6600'}}
 ];
 
 // Planet positions — populated by genWorld()
@@ -586,7 +586,7 @@ function updEnc(){
     if(s.hp<=0){encKillShip();return;}break;
   }}
   // player fire
-  if(iFir()&&!s.shld&&!s.scd){enc.bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*7+s.vx*.3,vy:-Math.cos(s.a)*7+s.vy*.3,l:120});s.scd=12;tone(900,.04,'square',.05);}
+  if(iFir()&&!s.shld&&!s.scd){enc.bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*7+s.vx*.3,vy:-Math.cos(s.a)*7+s.vy*.3,l:120,dmg:3});s.scd=12;tone(900,.04,'square',.05);}
   // player bullets
   for(let i=enc.bul.length-1;i>=0;i--){
     const b=enc.bul[i];b.x=wrap(b.x+b.vx,EW);b.y=wrap(b.y+b.vy,EH);if(--b.l<=0){enc.bul.splice(i,1);continue;}
@@ -595,13 +595,13 @@ function updEnc(){
     for(let ri=enc.rocks.length-1;ri>=0;ri--){
       const rk=enc.rocks[ri];
       if(Math.hypot(b.x-rk.x,b.y-rk.y)<rk.r){
-        rk.hp--;boomAt(enc.pts,b.x,b.y,'#778',4);
+        rk.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,'#778',4);
         if(rk.hp<=0)splitRock(enc,ri);
         hit=true;break;
       }
     }
     if(hit){enc.bul.splice(i,1);continue;}
-    for(const e of enc.en){if(!e.alive)continue;if(Math.hypot(b.x-e.x,b.y-e.y)<OET[e.t].enc.r){e.hp--;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,OET[e.t].enc.col,5);if(e.hp<=0){e.alive=false;boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col,14);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col2,8);tone(200,.3,'sawtooth',.1);if(OET[e.t].energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}hit=true;break;}}
+    for(const e of enc.en){if(!e.alive)continue;if(Math.hypot(b.x-e.x,b.y-e.y)<OET[e.t].enc.r){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,OET[e.t].enc.col,5);if(e.hp<=0){e.alive=false;boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col,14);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col2,8);tone(200,.3,'sawtooth',.1);if(OET[e.t].energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}hit=true;break;}}
     if(hit)enc.bul.splice(i,1);
   }
   // enemy AI
