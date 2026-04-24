@@ -1073,7 +1073,7 @@ function update(){
   if(st==='title'){
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.titleSel=0;
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.titleSel=1;
-    if(iEnter()){ia();if(G.titleSel===0){G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];secondaryWeapon=WEAPONS[2];initOW(100);}else{G.optFrom='title';G.st='options';}}
+    if(iEnter()){ia();if(G.titleSel===0){G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];secondaryWeapon=WEAPONS[2];const _sgp=owPos(SLIPGATE);initOW(100,_sgp.x,_sgp.y);}else{G.optFrom='title';G.st='options';}}
     return;
   }
   if(st==='rebuild'){if(iEnter()){ia();doRebuild();}return;}
