@@ -106,13 +106,19 @@ let playerWeapon=WEAPONS[0];
 function owPos(b){const a=b.orbitA+G.owFr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
 
 // ===================== OVERWORLD =====================
-function owEnemyPos(t){
-  const a=Math.random()*Math.PI*2,d=240+Math.random()*180;
-  return{t,x:Math.max(40,Math.min(OW_W-40,OW_W/2+Math.cos(a)*d)),y:Math.max(40,Math.min(OW_H-40,OW_H/2+Math.sin(a)*d)),vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
+function owEnemyPos(t,px,py,minDist=300){
+  let x,y,attempts=0;
+  do{const a=Math.random()*Math.PI*2,d=240+Math.random()*180;
+    x=Math.max(40,Math.min(OW_W-40,OW_W/2+Math.cos(a)*d));
+    y=Math.max(40,Math.min(OW_H-40,OW_H/2+Math.sin(a)*d));
+    attempts++;
+  }while(px!=null&&Math.hypot(x-px,y-py)<minDist&&attempts<30);
+  return{t,x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
 }
 function initOW(energy,sx,sy){
   const bp=owPos(BASE);
-  G.OW={s:mkShip(sx??bp.x,sy??bp.y),en:[owEnemyPos(0),owEnemyPos(1),owEnemyPos(2)],fu:[],pts:[],nearP:-1,nearBase:false};
+  const px=sx??bp.x,py=sy??bp.y;
+  G.OW={s:mkShip(px,py),en:[owEnemyPos(0,px,py),owEnemyPos(1,px,py),owEnemyPos(2,px,py)],fu:[],pts:[],nearP:-1,nearBase:false};
   G.OW.s.energy=energy??G.OW.s.maxEnergy;G.OW.s.inv=120;
   G.st='overworld';
 }
