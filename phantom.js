@@ -100,13 +100,15 @@ function updPts(pts,gy=0){for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p
 function mkShip(x,y){return{x,y,vx:0,vy:0,a:0,energy:100,alive:true,inv:120,scd:0,shld:false,hp:15,maxHp:15};}
 let playerWeapon=WEAPONS[0];
 
+const BASE={x:Math.round(W*.18),y:Math.round(H*.68),r:22};
+
 // ===================== OVERWORLD =====================
 function owEnemyPos(t){
   const a=Math.random()*Math.PI*2,d=240+Math.random()*180;
   return{t,x:Math.max(40,Math.min(W-40,W/2+Math.cos(a)*d)),y:Math.max(40,Math.min(H-40,H/2+Math.sin(a)*d)),vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
 }
 function initOW(energy,sx,sy){
-  G.OW={s:mkShip(sx??W/2,sy??280),en:[owEnemyPos(0),owEnemyPos(1),owEnemyPos(2)],fu:[],pts:[],nearP:-1};
+  G.OW={s:mkShip(sx??W/2,sy??280),en:[owEnemyPos(0),owEnemyPos(1),owEnemyPos(2)],fu:[],pts:[],nearP:-1,nearBase:false};
   G.OW.s.energy=energy??100;G.OW.s.inv=120;
   G.st='overworld';
 }
@@ -155,6 +157,8 @@ function updOW(){
   const sp=Math.hypot(s.vx,s.vy);if(sp>4.2){s.vx=s.vx/sp*4.2;s.vy=s.vy/sp*4.2;}
   s.x=wrap(s.x+s.vx,W);s.y=wrap(s.y+s.vy,H);
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
+  ow.nearBase=Math.hypot(s.x-BASE.x,s.y-BASE.y)<BASE.r+28;
+  if(iFir()&&ow.nearBase){G.st='base';return;}
   ow.nearP=-1;
   for(let i=0;i<LV.length;i++){if(G.cleared[i])continue;if(Math.hypot(s.x-PP[i].x,s.y-PP[i].y)<LV[i].pr+28){ow.nearP=i;break;}}
   if(iFir()&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
@@ -456,6 +460,36 @@ function drHUD(energy,hp=15,maxHp=15){
 function drBullet(x,y,col='#fff'){cx.save();cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=6;cx.beginPath();cx.arc(x,y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
 function scanlines(){cx.save();cx.globalAlpha=.035;cx.fillStyle='#000';for(let y=0;y<H;y+=2)cx.fillRect(0,y,W,1);cx.restore();}
 
+function drBase(near){
+  const{x,y,r}=BASE,pu=.5+.5*Math.sin(G.fr*.05);
+  cx.save();
+  cx.strokeStyle='#aaccff';cx.shadowColor='#aaccff';cx.shadowBlur=6+pu*10;cx.lineWidth=1.5;
+  cx.beginPath();
+  for(let i=0;i<4;i++){const a=i*Math.PI/2+Math.PI/4;i?cx.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r):cx.moveTo(x+Math.cos(a)*r,y+Math.sin(a)*r);}
+  cx.closePath();cx.stroke();
+  cx.lineWidth=1;
+  cx.beginPath();cx.moveTo(x-r*1.6,y);cx.lineTo(x-r,y);cx.moveTo(x+r,y);cx.lineTo(x+r*1.6,y);cx.stroke();
+  cx.beginPath();cx.moveTo(x,y-r*1.6);cx.lineTo(x,y-r);cx.moveTo(x,y+r);cx.lineTo(x,y+r*1.6);cx.stroke();
+  cx.shadowBlur=0;cx.fillStyle='#aaccff';cx.font='bold 10px monospace';cx.textAlign='center';
+  cx.fillText('BASE',x,y-r-8);
+  if(near){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.fillText('[ FIRE TO DOCK ]',x,y+r+16);}
+  cx.restore();
+}
+function drawBaseMenu(){
+  drawOW();
+  cx.save();
+  cx.fillStyle='rgba(0,12,8,.92)';
+  const pw=360,ph=220,px=W/2-pw/2,py=H/2-ph/2;
+  cx.fillRect(px,py,pw,ph);
+  cx.strokeStyle='#aaccff';cx.shadowColor='#aaccff';cx.shadowBlur=18;cx.lineWidth=1.5;
+  cx.strokeRect(px,py,pw,ph);
+  cx.shadowBlur=12;cx.fillStyle='#aaccff';cx.font='bold 22px monospace';cx.textAlign='center';
+  cx.fillText('FRIENDLY BASE',W/2,py+44);
+  cx.shadowBlur=0;cx.fillStyle='#446';cx.font='13px monospace';
+  cx.fillText('[ COMING SOON ]',W/2,py+110);
+  cx.fillStyle='#334';cx.fillText('FIRE OR ESC TO LEAVE',W/2,py+160);
+  cx.restore();
+}
 function drawOW(){
   cx.fillStyle='#000008';cx.fillRect(0,0,W,H);drStars();
   const ow=G.OW;
@@ -473,6 +507,7 @@ function drawOW(){
   for(const e of ow.en)if(e.alive)drOWEnemy(e);
   for(const f of ow.fu)drEnergy(wrap(f.x,W),wrap(f.y,H),'#0f8');
   drPts(ow.pts);
+  drBase(ow.nearBase);
   if(ow.s.alive)drShip(ow.s.x,ow.s.y,ow.s.a,ow.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),ow.s.energy,ow.s.inv,G.fr);
   drHUD(ow.s.energy,ow.s.hp,ow.s.maxHp);
 }
@@ -747,6 +782,7 @@ function update(){
     }
     return;
   }
+  if(st==='base'){if(iFir()||iPause()){G.st='overworld';}return;}
   if(st==='overworld')updOW();
   else if(st==='enc_in'||st==='encounter'){if(st==='enc_in'&&G.ENC.introTimer>0){G.ENC.introTimer--;if(G.ENC.introTimer===0)G.st='encounter';}else updEnc();}
   else if(st==='play'||st==='esc')updCV();
@@ -759,6 +795,7 @@ function draw(){
   if(st==='controls')return drawControls();
   if(st==='over')return drawScreen('GAME OVER','SCORE  '+G.score,'#f40','ENTER OR START TO CONTINUE');
   if(st==='done')return drawScreen('SECTOR LIBERATED!','FINAL SCORE  '+G.score,'#fd0','ENTER OR START TO PLAY AGAIN');
+  if(st==='base')return drawBaseMenu();
   if(st==='overworld'||st==='dead_ow'){drawOW();if(st==='dead_ow'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px monospace';cx.textAlign='center';cx.fillText('SHIP DESTROYED',W/2,H/2);cx.restore();}}
   else if(st==='enc_in'||st==='encounter'||st==='dead_enc'){drawEnc();if(st==='dead_enc'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px monospace';cx.textAlign='center';cx.fillText('SHIP DESTROYED',W/2,H/2);cx.restore();}}
   else drawCV();
