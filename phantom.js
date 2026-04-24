@@ -140,7 +140,7 @@ function owStartEnc(idx){
   }
   const rng=mkRNG(seedChild(G.seed,200+idx));
   const rocks=[];
-  const rockCount=rng.int(5,12);
+  let rockCount=0;for(let i=0;i<8;i++)if(rng.fl(0,1)<.25)rockCount++;
   const spawnX=EW*.08,spawnY=EH/2,minSpawnDist=120;
   const tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
   for(let i=0;i<rockCount;i++){
@@ -162,7 +162,7 @@ function startAstEnc(){
   const ow=G.OW;
   const tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
   const rocks=[];
-  const rockCount=8+Math.floor(Math.random()*13);
+  let rockCount=0;for(let i=0;i<8;i++)if(Math.random()<.25)rockCount++;
   const spawnX=EW*.08,spawnY=EH/2,minSpawnDist=120;
   for(let i=0;i<rockCount;i++){
     let rx,ry,att=0;
