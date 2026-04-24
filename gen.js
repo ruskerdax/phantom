@@ -6,6 +6,7 @@ let PP=[];
 let BASE=null;
 let AB=[];
 let AB_BELT=[];
+let HBASE=null;
 
 // Seeded PRNG — mulberry32
 function mkRNG(seed){
@@ -303,6 +304,23 @@ function genABodies(rng,planetBodies){
   }
   return{bodies,belt};
 }
+// ---- Hostile base orbital parameters ----
+function genHBaseBody(rng,allBodies){
+  const minR=200,maxR=880;
+  let orbitR,orbitA,ix,iy,att=0;
+  do{
+    orbitR=minR+rng.fl(0,maxR-minR);
+    orbitA=rng.fl(0,Math.PI*2);
+    ix=OW_W/2+Math.cos(orbitA)*orbitR;
+    iy=OW_H/2+Math.sin(orbitA)*orbitR;
+    att++;
+  }while(att<80&&allBodies.some(b=>{
+    const bx=OW_W/2+Math.cos(b.orbitA)*b.orbitR,by=OW_H/2+Math.sin(b.orbitA)*b.orbitR;
+    return Math.hypot(ix-bx,iy-by)<440;
+  }));
+  const orbitSpd=0.00030-(orbitR-minR)/(maxR-minR)*0.00015;
+  return{orbitR,orbitA,orbitSpd,r:20};
+}
 // ---- Master world-generation entry point ----
 function genWorld(seed){
   LV=LV_TMPL.map((tmpl,i)=>genLevel(tmpl,seedChild(seed,i)));
@@ -311,5 +329,6 @@ function genWorld(seed){
   PP=bodies.slice(1);
   const abData=genABodies(mkRNG(seedChild(seed,300)),bodies);
   AB=abData.bodies;AB_BELT=abData.belt;
+  HBASE=genHBaseBody(mkRNG(seedChild(seed,400)),[...bodies,...abData.bodies]);
   console.log(`[PHANTOM] world seed: 0x${seed.toString(16).toUpperCase().padStart(8,'0')}`);
 }
