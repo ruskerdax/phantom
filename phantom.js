@@ -96,7 +96,7 @@ const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Ma
 function wHit(x,y,r,li){if(y<0)return false;const d=LV[li],t=d.terrain;for(let i=0;i<t.length-1;i++)if(dseg(x,y,t[i][0],t[i][1],t[i+1][0],t[i+1][1])<r)return true;if(!pip(x,y,t))return true;for(const o of d.obs){if(pip(x,y,o))return true;for(let i=0;i<o.length;i++){const j=(i+1)%o.length;if(dseg(x,y,o[i][0],o[i][1],o[j][0],o[j][1])<r)return true;}}return false;}
 
 // Game state
-let G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,slipgateActive:false,slipMsg:0,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,baseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0};
+let G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,slipgateActive:false,slipMsg:0,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,baseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false};
 function addBounty(n){G.bounty+=n;}
 const PLAYER_SHIP={maxHp:15,maxEnergy:100};
 const ENERGY_PICKUP=38;
@@ -982,9 +982,9 @@ function drawOptions(){
   cx.font='bold 28px monospace';cx.fillText('OPTIONS',W/2,70);
   cx.shadowBlur=0;cx.strokeStyle='#1a4a2a';cx.lineWidth=1;
   cx.beginPath();cx.moveTo(60,88);cx.lineTo(W-60,88);cx.stroke();
-  const items=['SOUND EFFECTS','MUSIC','CONTROLS'];
-  const startY=160,rowH=90;
-  for(let i=0;i<3;i++){
+  const items=['SOUND EFFECTS','MUSIC','CONTROLS','CHEAT MODE'];
+  const startY=130,rowH=80;
+  for(let i=0;i<4;i++){
     const y=startY+i*rowH,sel=i===G.optSel;
     cx.textAlign='center';
     cx.fillStyle=sel?'#aaffcc':'#668';cx.shadowBlur=sel?4:0;cx.shadowColor='#0f8';
@@ -1003,9 +1003,16 @@ function drawOptions(){
       cx.shadowBlur=0;
       cx.fillStyle='#446';cx.font='11px monospace';cx.textAlign='center';
       cx.fillText(vol*10+'%',W/2,y+42);
-    } else {
+    } else if(i===2){
       cx.fillStyle=sel?'#446':'#334';cx.font='11px monospace';cx.textAlign='center';
       cx.fillText(sel?'ENTER OR ► TO OPEN':'',W/2,y+18);
+    } else {
+      const on=G.cheatMode;
+      cx.fillStyle=on?(sel?'#ff8':'#664'):(sel?'#446':'#334');
+      cx.shadowColor=on?'#ff8':'#0f8';cx.shadowBlur=on&&sel?8:0;
+      cx.font='bold 13px monospace';cx.textAlign='center';
+      cx.fillText(on?'ON':'OFF',W/2,y+18);
+      cx.shadowBlur=0;
     }
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
@@ -1070,7 +1077,7 @@ function update(){
   const st=G.st;
   if(st==='options'){
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.optSel=Math.max(0,G.optSel-1);
-    if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.optSel=Math.min(2,G.optSel+1);
+    if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.optSel=Math.min(3,G.optSel+1);
     if(G.optSel===0){
       if(jp('ArrowLeft')||GP.menuLeft){G.sfxVol=Math.max(0,G.sfxVol-1);tone(900,.04,'square',.05);}
       if(jp('ArrowRight')||GP.menuRight){G.sfxVol=Math.min(10,G.sfxVol+1);tone(900,.04,'square',.05);}
@@ -1079,6 +1086,8 @@ function update(){
       if(jp('ArrowRight')||GP.menuRight)G.musVol=Math.min(10,G.musVol+1);
     } else if(G.optSel===2){
       if(iEnter()||jp('ArrowRight')||GP.thrustj||GP.menuRight){G.ctrlSel=0;G.optCol=0;G.optListen=null;G.st='controls';return;}
+    } else if(G.optSel===3){
+      if(iEnter()||jp('ArrowLeft')||jp('ArrowRight')||GP.menuLeft||GP.menuRight){G.cheatMode=!G.cheatMode;tone(G.cheatMode?1200:400,.08,'square',.05);}
     }
     if(iPause()){G.st=G.optFrom;if(G.optFrom!=='title')G.paused=true;}
     return;
