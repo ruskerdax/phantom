@@ -13,11 +13,11 @@ function tone(f,d,t='square',v=.07){if(!AC)return;const sv=(G?G.sfxVol/10:1);if(
 const K={};
 document.addEventListener('keydown',e=>{
   if(!K[e.code])ia();K[e.code]=true;K[e.code+'j']=true;
-  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape'].includes(e.code))e.preventDefault();
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','KeyW','KeyA','KeyS','KeyD','KeyJ','KeyI'].includes(e.code))e.preventDefault();
   if(G&&G.optListen==='key'){
     const blocked=['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12','Tab','Escape'];
     if(e.code==='Escape'){G.optListen=null;}
-    else if(!blocked.includes(e.code)){BND[ACT_DEFS[G.optSel].id].key=e.code;saveBND();G.optListen=null;}
+    else if(!blocked.includes(e.code)){BND[ACT_DEFS[G.ctrlSel].id].key=e.code;saveBND();G.optListen=null;}
     e.preventDefault();
   }
 },{passive:false});
@@ -27,17 +27,17 @@ function jp(c){const v=K[c+'j'];K[c+'j']=false;return!!v;}
 
 // Action bindings
 const ACT_DEFS=[
-  {id:'rotLeft', label:'ROTATE LEFT',  defKey:'ArrowLeft', defBtn:14},
-  {id:'rotRight',label:'ROTATE RIGHT', defKey:'ArrowRight',defBtn:15},
-  {id:'thrust',  label:'THRUST',       defKey:'ArrowUp',   defBtn:0},
-  {id:'fire',    label:'FIRE',         defKey:'Space',     defBtn:2},
-  {id:'shield',  label:'SHIELD',       defKey:'ShiftLeft', defBtn:4},
+  {id:'rotLeft', label:'ROTATE LEFT',  defKey:'KeyA',      defBtn:14},
+  {id:'rotRight',label:'ROTATE RIGHT', defKey:'KeyD',      defBtn:15},
+  {id:'thrust',  label:'THRUST',       defKey:'KeyW',      defBtn:0},
+  {id:'fire',    label:'FIRE',         defKey:'KeyJ',      defBtn:2},
+  {id:'shield',  label:'SHIELD',       defKey:'KeyI',      defBtn:4},
   {id:'pause',   label:'PAUSE',        defKey:'Escape',    defBtn:9},
 ];
 let BND={};ACT_DEFS.forEach(a=>{BND[a.id]={key:a.defKey,btn:a.defBtn};});
 try{const s=localStorage.getItem('phantom_bnd');if(s){const p=JSON.parse(s);Object.keys(p).forEach(k=>{if(BND[k])BND[k]=p[k];});}}catch(e){}
 function saveBND(){try{localStorage.setItem('phantom_bnd',JSON.stringify(BND));}catch(e){}}
-function fmtKey(c){return({ArrowLeft:'◄ LEFT',ArrowRight:'► RIGHT',ArrowUp:'▲ UP',ArrowDown:'▼ DOWN',Space:'SPACE',ShiftLeft:'L-SHIFT',ShiftRight:'R-SHIFT',Enter:'ENTER',Escape:'ESC',KeyW:'W',KeyA:'A',KeyS:'S',KeyD:'D',KeyQ:'Q',KeyE:'E',KeyR:'R',KeyF:'F',KeyZ:'Z',KeyX:'X',KeyC:'C',ControlLeft:'L-CTRL',AltLeft:'L-ALT',Tab:'TAB'})[c]||c.replace('Key','').replace('Digit','');}
+function fmtKey(c){return({ArrowLeft:'◄ LEFT',ArrowRight:'► RIGHT',ArrowUp:'▲ UP',ArrowDown:'▼ DOWN',Space:'SPACE',ShiftLeft:'L-SHIFT',ShiftRight:'R-SHIFT',Enter:'ENTER',Escape:'ESC',KeyW:'W',KeyA:'A',KeyS:'S',KeyD:'D',KeyQ:'Q',KeyE:'E',KeyR:'R',KeyF:'F',KeyJ:'J',KeyI:'I',KeyZ:'Z',KeyX:'X',KeyC:'C',ControlLeft:'L-CTRL',AltLeft:'L-ALT',Tab:'TAB'})[c]||c.replace('Key','').replace('Digit','');}
 function fmtBtn(i){const n=['A','B','X','Y','LB','RB','LT','RT','SEL','START','L3','R3','↑','↓','◄','►'];return n[i]!==undefined?n[i]:'BTN'+i;}
 
 // Gamepad
