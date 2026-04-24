@@ -329,6 +329,6 @@ function genWorld(seed){
   PP=bodies.slice(1);
   const abData=genABodies(mkRNG(seedChild(seed,300)),bodies);
   AB=abData.bodies;AB_BELT=abData.belt;
-  HBASE=genHBaseBody(mkRNG(seedChild(seed,400)),[...bodies,...abData.bodies]);
+  HBASE=genHBaseBody(mkRNG(seedChild(seed,400)),[bodies[0]]);
   console.log(`[PHANTOM] world seed: 0x${seed.toString(16).toUpperCase().padStart(8,'0')}`);
 }
