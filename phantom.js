@@ -96,7 +96,7 @@ const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Ma
 function wHit(x,y,r,li){if(y<0)return false;const d=LV[li],t=d.terrain;for(let i=0;i<t.length-1;i++)if(dseg(x,y,t[i][0],t[i][1],t[i+1][0],t[i+1][1])<r)return true;if(!pip(x,y,t))return true;for(const o of d.obs){if(pip(x,y,o))return true;for(let i=0;i<o.length;i++){const j=(i+1)%o.length;if(dseg(x,y,o[i][0],o[i][1],o[j][0],o[j][1])<r)return true;}}return false;}
 
 // Game state
-let G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,baseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0};
+let G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,slipgateActive:false,slipMsg:0,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,baseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0};
 function addBounty(n){G.bounty+=n;}
 const PLAYER_SHIP={maxHp:15,maxEnergy:100};
 const ENERGY_PICKUP=38;
@@ -143,6 +143,16 @@ function doRebuild(){
   G.OW.s=mkShip(bp.x,bp.y);
   G.OW.s.inv=180;
   G.st='overworld';
+}
+function doJump(){
+  const energy=G.OW.s.energy;
+  G.seed=(Math.random()*0xFFFFFFFF)>>>0;
+  G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;
+  G.bounty=0;G.slipgateActive=false;G.slipMsg=0;
+  genWorld(G.seed);
+  const sgp=owPos(SLIPGATE);
+  initOW(energy,sgp.x,sgp.y);
+  tone(300,.15,'sine',.07);setTimeout(()=>tone(500,.15,'sine',.07),160);setTimeout(()=>tone(800,.4,'sine',.07),330);
 }
 function owStartEnc(idx){
   const ow=G.OW,e=ow.en[idx],et=OET[e.t],ec=et.enc;
@@ -225,7 +235,7 @@ function startHBaseEnc(){
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
 function updOW(){
-  G.owFr++;const ow=G.OW;updPts(ow.pts);
+  G.owFr++;if(G.slipMsg>0)G.slipMsg--;const ow=G.OW;updPts(ow.pts);
   for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,OW_W);f.y=wrap(f.y+f.vy,OW_H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
   const s=ow.s;if(!s.alive)return;
   s.a+=iRot()*(s.energy>0?.075:.0375);s.shld=false;
@@ -475,7 +485,7 @@ function updCV(){
   cv.cam.y+=(tcy-cv.cam.y)*.12;
   if(s.y<0){
     if(G.st==='esc'){addBounty(1000);tone(660,.4,'sine',.1);G.cleared[G.lv]=true;delete G.lvState[G.lv];
-      if(G.cleared.every(c=>c)){G.st='done';return;}}
+      if(G.cleared.every(c=>c)){G.slipgateActive=true;G.slipMsg=360;}}
     else{G.lvState[G.lv]={en:cv.en.map(e=>e.alive),fu:cv.fu.map(f=>f.got),rx:{hp:cv.rx.hp,alive:cv.rx.alive}};}
     const pi=G.lv,pp=owPos(PP[pi]);initOW(s.energy,pp.x,Math.max(80,pp.y-LV[pi].pr-55));
     G.OW.s.hp=s.hp;G.OW.s.maxHp=s.maxHp;G.OW.s.vy=-1.2;return;
@@ -613,31 +623,43 @@ function drBase(near){
 }
 function drSlipgate(near){
   const{x,y}=owPos(SLIPGATE),pu=.5+.5*Math.sin(G.fr*.045);
-  const col='#aa99cc';
+  const active=G.slipgateActive;
+  const col=active?'#cc99ff':'#aa99cc';
   cx.save();
-  cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=6+pu*14;cx.lineWidth=2.5;
+  cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=(active?10:6)+pu*(active?22:14);cx.lineWidth=2.5;
   cx.beginPath();cx.ellipse(x,y,28,17,0,0,Math.PI*2);cx.stroke();
   cx.lineWidth=1.2;cx.globalAlpha=.55;
   cx.beginPath();cx.ellipse(x,y,20,12,0,0,Math.PI*2);cx.stroke();
   cx.globalAlpha=1;cx.shadowBlur=0;cx.fillStyle=col;cx.font='bold 10px monospace';cx.textAlign='center';
   cx.fillText('SLIPGATE',x,y-28-8);
-  if(near){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.fillText('[ FIRE TO ENTER ]',x,y+28+16);}
+  if(near){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.fillText(active?'[ FIRE TO JUMP ]':'[ FIRE TO ENTER ]',x,y+28+16);}
   cx.restore();
 }
 function drawSlipgateMenu(){
   drawOW();
+  const active=G.slipgateActive;
+  const col=active?'#cc99ff':'#aa99cc';
   cx.save();
   const pw=360,ph=200,px=W/2-pw/2,py=H/2-ph/2;
   cx.fillStyle='rgba(4,0,12,.92)';cx.fillRect(px,py,pw,ph);
-  cx.strokeStyle='#aa99cc';cx.shadowColor='#aa99cc';cx.shadowBlur=18;cx.lineWidth=1.5;
+  cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=18;cx.lineWidth=1.5;
   cx.strokeRect(px,py,pw,ph);
-  cx.shadowBlur=12;cx.fillStyle='#aa99cc';cx.font='bold 22px monospace';cx.textAlign='center';
+  cx.shadowBlur=12;cx.fillStyle=col;cx.font='bold 22px monospace';cx.textAlign='center';
   cx.fillText('SLIPGATE',W/2,py+40);
-  cx.shadowBlur=0;cx.fillStyle='#8877aa';cx.font='bold 15px monospace';
-  cx.fillText('COMING SOON',W/2,py+90);
-  cx.fillStyle='#554466';cx.font='11px monospace';
-  cx.fillText('A gateway to the next star system.',W/2,py+115);
-  cx.fillStyle='#334';cx.font='11px monospace';
+  if(active){
+    cx.shadowBlur=0;cx.fillStyle='#cc99ff';cx.font='bold 15px monospace';
+    cx.fillText('JUMP TO NEW SYSTEM',W/2,py+88);
+    cx.fillStyle='#776688';cx.font='11px monospace';
+    cx.fillText('A new star system awaits beyond the gate.',W/2,py+110);
+    cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=8;cx.font='bold 12px monospace';
+    cx.fillText('[ ENTER TO JUMP ]',W/2,py+142);
+  }else{
+    cx.shadowBlur=0;cx.fillStyle='#8877aa';cx.font='bold 15px monospace';
+    cx.fillText('COMING SOON',W/2,py+88);
+    cx.fillStyle='#554466';cx.font='11px monospace';
+    cx.fillText('Clear all sectors to activate the slipgate.',W/2,py+112);
+  }
+  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';
   cx.fillText('ESC TO LEAVE',W/2,py+ph-14);
   cx.restore();
 }
@@ -777,6 +799,17 @@ function drawOW(){
   if(s.alive)drShip(s.x,s.y,s.a,s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),s.energy,s.inv,G.fr);
   cx.restore();
   drHUD(s.energy,s.maxEnergy,s.hp,s.maxHp);
+  if(G.slipMsg>0){
+    const alpha=Math.min(1,G.slipMsg/40);
+    cx.save();cx.globalAlpha=alpha;
+    cx.fillStyle='rgba(4,0,12,.82)';cx.fillRect(W/2-200,H/2-32,400,52);
+    cx.strokeStyle='#cc99ff';cx.shadowColor='#cc99ff';cx.shadowBlur=14;cx.lineWidth=1;cx.strokeRect(W/2-200,H/2-32,400,52);
+    cx.fillStyle='#cc99ff';cx.font='bold 14px monospace';cx.textAlign='center';cx.shadowBlur=10;
+    cx.fillText('SLIPGATE ACTIVATED',W/2,H/2-8);
+    cx.shadowBlur=0;cx.fillStyle='#9977bb';cx.font='11px monospace';
+    cx.fillText('The slipgate is now open. Find it at the outer rim.',W/2,H/2+14);
+    cx.restore();
+  }
 }
 
 function drawEnc(){
@@ -1073,7 +1106,7 @@ function update(){
   if(st==='title'){
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.titleSel=0;
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.titleSel=1;
-    if(iEnter()){ia();if(G.titleSel===0){G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];secondaryWeapon=WEAPONS[2];const _sgp=owPos(SLIPGATE);initOW(100,_sgp.x,_sgp.y);}else{G.optFrom='title';G.st='options';}}
+    if(iEnter()){ia();if(G.titleSel===0){G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;G.slipgateActive=false;G.slipMsg=0;G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];secondaryWeapon=WEAPONS[2];const _sgp=owPos(SLIPGATE);initOW(100,_sgp.x,_sgp.y);}else{G.optFrom='title';G.st='options';}}
     return;
   }
   if(st==='rebuild'){if(iEnter()){ia();doRebuild();}return;}
@@ -1098,6 +1131,7 @@ function update(){
     return;
   }
   if(st==='slipgate'){
+    if(G.slipgateActive&&(iEnter()||iFir())){ia();doJump();return;}
     if(iPause())G.st='overworld';
     return;
   }
