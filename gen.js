@@ -262,11 +262,12 @@ function genLevel(tmpl,seed){
 // ---- Overworld body orbital parameters ----
 // Returns 4 bodies: [0]=base, [1..3]=planets. Each has {orbitR, orbitA, orbitSpd}.
 function genOWBodies(rng){
-  const bodies=[],minR=200,maxR=440,minSep=220;
+  const bodies=[],minR=200,maxR=880,minSep=440;
   for(let b=0;b<4;b++){
     let orbitR,orbitA,ix,iy,att=0;
     do{
-      orbitR=minR+rng.fl(0,maxR-minR);
+      const bMinR=b===0?550:minR;
+      orbitR=bMinR+rng.fl(0,maxR-bMinR);
       orbitA=rng.fl(0,Math.PI*2);
       ix=OW_W/2+Math.cos(orbitA)*orbitR;
       iy=OW_H/2+Math.sin(orbitA)*orbitR;

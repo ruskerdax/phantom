@@ -106,9 +106,9 @@ let playerWeapon=WEAPONS[0];
 function owPos(b){const a=b.orbitA+G.owFr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
 
 // ===================== OVERWORLD =====================
-function owEnemyPos(t,px,py,minDist=300){
+function owEnemyPos(t,px,py,minDist=600){
   let x,y,attempts=0;
-  do{const a=Math.random()*Math.PI*2,d=240+Math.random()*180;
+  do{const a=Math.random()*Math.PI*2,d=480+Math.random()*360;
     x=Math.max(40,Math.min(OW_W-40,OW_W/2+Math.cos(a)*d));
     y=Math.max(40,Math.min(OW_H-40,OW_H/2+Math.sin(a)*d));
     attempts++;
@@ -167,7 +167,12 @@ function updOW(){
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   const maxSpd=sdist<220?7:4.2;
   const sp=Math.hypot(s.vx,s.vy);if(sp>maxSpd){s.vx=s.vx/sp*maxSpd;s.vy=s.vy/sp*maxSpd;}}
-  s.x=wrap(s.x+s.vx,OW_W);s.y=wrap(s.y+s.vy,OW_H);
+  {const bz=600;
+  if(s.x<bz&&s.vx<0)s.vx*=s.x/bz;
+  if(s.x>OW_W-bz&&s.vx>0)s.vx*=(OW_W-s.x)/bz;
+  if(s.y<bz&&s.vy<0)s.vy*=s.y/bz;
+  if(s.y>OW_H-bz&&s.vy>0)s.vy*=(OW_H-s.y)/bz;}
+  s.x=Math.max(0,Math.min(OW_W,s.x+s.vx));s.y=Math.max(0,Math.min(OW_H,s.y+s.vy));
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   if(sdist<22){owKillShip();return;}
