@@ -827,7 +827,7 @@ function drawScreen(title,sub,tc,prompt){
 
 function drawPause(){
   const PITEMS=['RESUME','OPTIONS','QUIT TO TITLE'];
-  const pw=300,ph=200,px=W/2-pw/2,py=H/2-ph/2;
+  const pw=300,ph=240,px=W/2-pw/2,py=H/2-ph/2;
   cx.save();
   cx.fillStyle='rgba(0,0,0,.75)';cx.fillRect(0,0,W,H);
   cx.strokeStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=20;cx.lineWidth=1.5;
