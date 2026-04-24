@@ -147,10 +147,10 @@ function owStartEnc(idx){
 }
 function updOW(){
   const ow=G.OW;updPts(ow.pts);
-  for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,W);f.y=wrap(f.y+f.vy,H);if(--f.timer<=0){ow.fu.splice(i,1);continue;}if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
+  for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,W);f.y=wrap(f.y+f.vy,H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
   const s=ow.s;if(!s.alive)return;
-  s.a+=iRot()*.075;s.shld=false;
-  if(iThr()&&s.energy>0){s.vx+=Math.sin(s.a)*.09;s.vy-=Math.cos(s.a)*.09;s.energy=Math.max(0,s.energy-.07);}
+  s.a+=iRot()*(s.energy>0?.075:.0375);s.shld=false;
+  if(iThr()){const thr=s.energy>0?.09:.01;s.vx+=Math.sin(s.a)*thr;s.vy-=Math.cos(s.a)*thr;if(s.energy>0)s.energy=Math.max(0,s.energy-.07);}
   const sp=Math.hypot(s.vx,s.vy);if(sp>4.2){s.vx=s.vx/sp*4.2;s.vy=s.vy/sp*4.2;}
   s.x=wrap(s.x+s.vx,W);s.y=wrap(s.y+s.vy,H);
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
@@ -185,7 +185,7 @@ function encKillShip(){
 function encWin(){
   const enc=G.ENC,et=OET[enc.et],ow=G.OW;
   ow.en[enc.owIdx].alive=false;
-  ow.s.energy=Math.max(ow.s.energy,enc.s.energy);
+  ow.s.energy=enc.s.energy;
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
   ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;
   ow.s.inv=80;
@@ -216,10 +216,10 @@ function updEnc(){
   const enc=G.ENC;if(enc.introTimer>0){enc.introTimer--;return;}
   updPts(enc.pts);
   const s=enc.s;if(!s.alive)return;
-  for(let i=enc.fu.length-1;i>=0;i--){const f=enc.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,EW);f.y=wrap(f.y+f.vy,EH);if(--f.timer<=0){enc.fu.splice(i,1);continue;}if(Math.hypot(s.x-f.x,s.y-f.y)<18){pickupEnergy(s,f.x,f.y,enc.pts,'#0f8');enc.fu.splice(i,1);}}
-  s.a+=iRot()*.065;s.shld=iShd(s.energy);
+  for(let i=enc.fu.length-1;i>=0;i--){const f=enc.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,EW);f.y=wrap(f.y+f.vy,EH);if(Math.hypot(s.x-f.x,s.y-f.y)<18){pickupEnergy(s,f.x,f.y,enc.pts,'#0f8');enc.fu.splice(i,1);}}
+  s.a+=iRot()*(s.energy>0?.065:.0325);s.shld=iShd(s.energy);
   if(s.shld)s.energy=Math.max(0,s.energy-.15);
-  if(iThr()&&s.energy>0&&!s.shld){s.vx+=Math.sin(s.a)*.12;s.vy-=Math.cos(s.a)*.12;s.energy=Math.max(0,s.energy-.08);}
+  if(iThr()&&!s.shld){const thr=s.energy>0?.12:.013;s.vx+=Math.sin(s.a)*thr;s.vy-=Math.cos(s.a)*thr;if(s.energy>0)s.energy=Math.max(0,s.energy-.08);}
   const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>EW+30||s.y<-30||s.y>EH+30){encWin();return;}}else{s.x=wrap(s.x+s.vx,EW);s.y=wrap(s.y+s.vy,EH);}
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
@@ -344,9 +344,9 @@ function cvKillShip(){
 function updCV(){
   const cv=G.CV;updPts(cv.pts,.06);
   const s=cv.s,d=cv.d;if(!s.alive)return;
-  s.a+=iRot()*.065;s.shld=iShd(s.energy);
+  s.a+=iRot()*(s.energy>0?.065:.0325);s.shld=iShd(s.energy);
   if(s.shld)s.energy=Math.max(0,s.energy-.17);
-  if(iThr()&&s.energy>0&&!s.shld){s.vx+=Math.sin(s.a)*.13;s.vy-=Math.cos(s.a)*.13;s.energy=Math.max(0,s.energy-.09);}
+  if(iThr()&&!s.shld){const thr=s.energy>0?.13:.014;s.vx+=Math.sin(s.a)*thr;s.vy-=Math.cos(s.a)*thr;if(s.energy>0)s.energy=Math.max(0,s.energy-.09);}
   s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;const sp=Math.hypot(s.vx,s.vy);if(sp>5.5){s.vx=s.vx/sp*5.5;s.vy=s.vy/sp*5.5;}
   s.x+=s.vx;s.y+=s.vy;
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
@@ -402,6 +402,7 @@ function drShip(x,y,a,shld,thr,energy,inv,fr){
   cx.strokeStyle='#fff';cx.shadowColor='#fff';cx.shadowBlur=8;cx.lineWidth=1.5;
   cx.beginPath();cx.moveTo(0,-10);cx.lineTo(-7,8);cx.lineTo(0,4);cx.lineTo(7,8);cx.closePath();cx.stroke();
   if(thr&&energy>0&&!shld){cx.strokeStyle='#fb0';cx.shadowColor='#fb0';cx.shadowBlur=12;cx.beginPath();cx.moveTo(-3,7);cx.lineTo(0,13+Math.random()*6);cx.lineTo(3,7);cx.stroke();}
+  else if(thr&&energy<=0){cx.strokeStyle='#f22';cx.shadowColor='#f22';cx.shadowBlur=6;cx.beginPath();cx.moveTo(-1.5,7);cx.lineTo(0,9+Math.random()*2);cx.lineTo(1.5,7);cx.stroke();}
   cx.restore();
 }
 function drOWEnemy(e){
@@ -469,7 +470,7 @@ function drawOW(){
   for(const e of ow.en)if(e.alive)drOWEnemy(e);
   for(const f of ow.fu)drEnergy(wrap(f.x,W),wrap(f.y,H),'#0f8');
   drPts(ow.pts);
-  if(ow.s.alive)drShip(ow.s.x,ow.s.y,ow.s.a,ow.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust)&&ow.s.energy>0,ow.s.energy,ow.s.inv,G.fr);
+  if(ow.s.alive)drShip(ow.s.x,ow.s.y,ow.s.a,ow.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),ow.s.energy,ow.s.inv,G.fr);
   drHUD(ow.s.energy,ow.s.hp,ow.s.maxHp);
 }
 
@@ -495,7 +496,7 @@ function drawEnc(){
   for(const b of enc.bul)drBullet(b.x,b.y,'#fff');
   for(const b of enc.ebu)drBullet(b.x,b.y,et.enc.col);
   drPts(enc.pts);
-  if(enc.s.alive)drShip(enc.s.x,enc.s.y,enc.s.a,enc.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust)&&enc.s.energy>0,enc.s.energy,enc.s.inv,G.fr);
+  if(enc.s.alive)drShip(enc.s.x,enc.s.y,enc.s.a,enc.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),enc.s.energy,enc.s.inv,G.fr);
   cx.restore();
   if(enc.introTimer>0){const a=Math.min(1,(70-enc.introTimer)/20);cx.save();cx.globalAlpha=a;cx.fillStyle='rgba(0,0,0,.7)';cx.fillRect(0,H/2-36,W,72);cx.fillStyle=et.enc.col;cx.shadowColor=et.enc.col;cx.shadowBlur=20;cx.font='bold 32px monospace';cx.textAlign='center';cx.fillText(enc.label,W/2,H/2+4);cx.shadowBlur=0;cx.fillStyle='#668';cx.font='13px monospace';cx.fillText('DESTROY ALL ENEMIES TO ESCAPE',W/2,H/2+26);cx.globalAlpha=1;cx.restore();}
   const alive=enc.en.filter(e=>e.alive).length;
@@ -526,7 +527,7 @@ function drawCV(){
   for(const b of cv.bul){cx.save();cx.fillStyle='#fff';cx.shadowColor='#fff';cx.shadowBlur=6;cx.beginPath();cx.arc(b.x,b.y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
   for(const b of cv.ebu){cx.save();cx.fillStyle='#f66';cx.shadowColor='#f66';cx.shadowBlur=6;cx.beginPath();cx.arc(b.x,b.y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
   drPts(cv.pts);
-  if(cv.s.alive)drShip(cv.s.x,cv.s.y,cv.s.a,cv.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust)&&cv.s.energy>0,cv.s.energy,cv.s.inv,G.fr);
+  if(cv.s.alive)drShip(cv.s.x,cv.s.y,cv.s.a,cv.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),cv.s.energy,cv.s.inv,G.fr);
   cx.restore();
   drHUD(cv.s.energy,cv.s.hp,cv.s.maxHp);
   cx.save();cx.font='13px monospace';cx.fillStyle=col;cx.textAlign='center';cx.fillText(d.name,W/2,18);cx.restore();
