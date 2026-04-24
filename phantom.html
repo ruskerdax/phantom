@@ -521,8 +521,6 @@ function encWin(){
   const enc=G.ENC,et=OET[enc.et],ow=G.OW;
   addSc(et.sc*(enc.et===1?OET[1].enc.cnt:1));
   ow.en[enc.owIdx].alive=false;
-  // energy drop at overworld ship position (encounter coords don't map to overworld)
-  if(et.energy){for(let i=0;i<2;i++){const a=Math.random()*Math.PI*2;ow.fu.push({x:wrap(ow.s.x+Math.cos(a)*30,W),y:wrap(ow.s.y+Math.sin(a)*30,H),vx:(Math.random()-.5)*.7,vy:(Math.random()-.5)*.7,timer:400});}}
   ow.s.energy=Math.max(ow.s.energy,enc.s.energy);
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
   // Scatter ow ship slightly; keep its pre-encounter position
