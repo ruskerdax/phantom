@@ -132,7 +132,17 @@ function owKillShip(){
   s.alive=false;boomAt(ow.pts,s.x,s.y,'#fff',28);boomAt(ow.pts,s.x,s.y,'#fa0',16);
   tone(200,.5,'sawtooth',.15);
   G.st='dead_ow';
-  setTimeout(()=>{G.st='over';},1800);
+  setTimeout(()=>{G.st='rebuild';},1800);
+}
+function doRebuild(){
+  const bp=owPos(BASE);
+  if(G.credits>=2500)G.credits-=2500;
+  G.bounty=0;
+  G.ENC=null;G.CV=null;
+  if(!G.OW){initOW(100);return;}
+  G.OW.s=mkShip(bp.x,bp.y);
+  G.OW.s.inv=180;
+  G.st='overworld';
 }
 function owStartEnc(idx){
   const ow=G.OW,e=ow.en[idx],et=OET[e.t],ec=et.enc;
@@ -267,7 +277,7 @@ function encKillShip(){
   s.alive=false;boomAt(enc.pts,s.x,s.y,'#fff',28);boomAt(enc.pts,s.x,s.y,'#fa0',16);
   tone(200,.5,'sawtooth',.15);
   G.st='dead_enc';
-  setTimeout(()=>{G.st='over';},1800);
+  setTimeout(()=>{G.st='rebuild';},1800);
 }
 function encWin(){
   const enc=G.ENC,ow=G.OW;
@@ -447,7 +457,7 @@ function cvKillShip(){
   s.alive=false;boomAt(cv.pts,s.x,s.y,'#fff',28);boomAt(cv.pts,s.x,s.y,'#fa0',18);
   tone(200,.5,'sawtooth',.15);
   G.st='dead_cv';
-  setTimeout(()=>{G.st='over';},1800);
+  setTimeout(()=>{G.st='rebuild';},1800);
 }
 function updCV(){
   const cv=G.CV;updPts(cv.pts,.06);for(let i=cv.lsb.length-1;i>=0;i--){if(--cv.lsb[i].l<=0)cv.lsb.splice(i,1);}
@@ -851,6 +861,27 @@ function drawScreen(title,sub,tc,prompt){
   cx.fillText('SEED  '+G.seed.toString(16).toUpperCase().padStart(8,'0'),W/2,H/2+95);
   cx.restore();drGPI();scanlines();
 }
+function drawRebuild(){
+  const canAfford=G.credits>=2500;
+  cx.fillStyle='#000';cx.fillRect(0,0,W,H);drStars();
+  cx.save();cx.textAlign='center';
+  cx.shadowColor='#f40';cx.shadowBlur=28;cx.fillStyle='#f40';
+  cx.font='bold 46px monospace';cx.fillText('SHIP DESTROYED',W/2,H/2-96);
+  cx.shadowBlur=0;cx.fillStyle='#acd';cx.font='18px monospace';
+  if(canAfford){
+    cx.fillText('REBUILD COST: 2500 CREDITS',W/2,H/2-46);
+    cx.fillStyle='#8df';cx.fillText('CREDITS: '+G.credits,W/2,H/2-20);
+  } else {
+    cx.fillStyle='#fd8';cx.font='16px monospace';
+    cx.fillText('INSUFFICIENT FUNDS — CHARITABLE ASSISTANCE GRANTED',W/2,H/2-46);
+    cx.fillStyle='#8df';cx.font='18px monospace';cx.fillText('CREDITS: '+G.credits,W/2,H/2-20);
+  }
+  cx.fillStyle='#f86';cx.font='16px monospace';cx.fillText('BOUNTY FORFEIT: '+G.bounty,W/2,H/2+10);
+  if(Math.floor(G.fr/28)%2===0){cx.fillStyle='#668';cx.font='14px monospace';cx.fillText('ENTER OR START TO REBUILD',W/2,H/2+56);}
+  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';
+  cx.fillText('SEED  '+G.seed.toString(16).toUpperCase().padStart(8,'0'),W/2,H/2+86);
+  cx.restore();drGPI();scanlines();
+}
 
 function drawPause(){
   const PITEMS=['RESUME','OPTIONS','QUIT TO TITLE'];
@@ -1012,6 +1043,7 @@ function update(){
     if(iEnter()){ia();if(G.titleSel===0){G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];secondaryWeapon=WEAPONS[2];initOW(100);}else{G.optFrom='title';G.st='options';}}
     return;
   }
+  if(st==='rebuild'){if(iEnter()){ia();doRebuild();}return;}
   if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='over'){G.st='title';}else{G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.st='title';}}return;}
   if(st==='dead_ow'||st==='dead_enc'||st==='dead_cv')return;
   if(st==='base'){
@@ -1059,6 +1091,7 @@ function draw(){
   if(st==='options')return drawOptions();
   if(st==='controls')return drawControls();
   if(st==='over')return drawScreen('GAME OVER','','#f40','ENTER OR START TO CONTINUE');
+  if(st==='rebuild')return drawRebuild();
   if(st==='done')return drawScreen('SECTOR LIBERATED!','CREDITS  '+G.credits,'#fd0','ENTER OR START TO PLAY AGAIN');
   if(st==='base')return drawBaseMenu();
   if(st==='overworld'||st==='dead_ow'){drawOW();if(st==='dead_ow'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px monospace';cx.textAlign='center';cx.fillText('SHIP DESTROYED',W/2,H/2);cx.restore();}}
