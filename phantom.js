@@ -108,7 +108,8 @@ function owEnemyPos(t){
   return{t,x:Math.max(40,Math.min(OW_W-40,OW_W/2+Math.cos(a)*d)),y:Math.max(40,Math.min(OW_H-40,OW_H/2+Math.sin(a)*d)),vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
 }
 function initOW(energy,sx,sy){
-  G.OW={s:mkShip(sx??OW_W/2,sy??Math.round(OW_H*.48)),en:[owEnemyPos(0),owEnemyPos(1),owEnemyPos(2)],fu:[],pts:[],nearP:-1,nearBase:false};
+  const bp=owPos(BASE);
+  G.OW={s:mkShip(sx??bp.x,sy??bp.y),en:[owEnemyPos(0),owEnemyPos(1),owEnemyPos(2)],fu:[],pts:[],nearP:-1,nearBase:false};
   G.OW.s.energy=energy??100;G.OW.s.inv=120;
   G.st='overworld';
 }
@@ -157,6 +158,9 @@ function updOW(){
   const sp=Math.hypot(s.vx,s.vy);if(sp>4.2){s.vx=s.vx/sp*4.2;s.vy=s.vy/sp*4.2;}
   s.x=wrap(s.x+s.vx,OW_W);s.y=wrap(s.y+s.vy,OW_H);
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
+  {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
+  if(sdist<22){owKillShip();return;}
+  const sacc=Math.min(.2,120/(sdist*sdist));s.vx+=sdx/sdist*sacc;s.vy+=sdy/sdist*sacc;}
   const bp=owPos(BASE);ow.nearBase=Math.hypot(s.x-bp.x,s.y-bp.y)<BASE.r+28;
   if(iFir()&&ow.nearBase){G.st='base';return;}
   ow.nearP=-1;
@@ -496,6 +500,14 @@ function drawOW(){
   const camX=Math.max(0,Math.min(OW_W-W,s.x-W/2));
   const camY=Math.max(0,Math.min(OW_H-H,s.y-H/2));
   cx.save();cx.translate(-camX,-camY);
+  {const sx2=OW_W/2,sy2=OW_H/2,pu=.5+.5*Math.sin(G.fr*.04);
+  cx.save();cx.translate(sx2,sy2);
+  cx.shadowColor='#ffe070';cx.shadowBlur=50+pu*40;
+  cx.fillStyle='#fff4c0';cx.beginPath();cx.arc(0,0,20,0,Math.PI*2);cx.fill();
+  cx.fillStyle='#ffcc40';cx.beginPath();cx.arc(0,0,13,0,Math.PI*2);cx.fill();
+  cx.strokeStyle='rgba(255,210,60,.55)';cx.lineWidth=1.5;
+  for(let i=0;i<8;i++){const a=G.fr*.008+i*Math.PI/4,r1=23+pu*2,r2=36+pu*10;cx.beginPath();cx.moveTo(Math.cos(a)*r1,Math.sin(a)*r1);cx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);cx.stroke();}
+  cx.restore();}
   for(let i=0;i<LV.length;i++){
     const p=owPos(PP[i]),d=LV[i];
     if(G.cleared[i]){cx.save();cx.strokeStyle='#334';cx.lineWidth=1;cx.setLineDash([3,5]);cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.stroke();cx.fillStyle='#223';cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.fill();cx.fillStyle='#446';cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText('CLEARED',p.x,p.y+3);cx.setLineDash([]);cx.restore();continue;}
