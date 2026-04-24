@@ -4,6 +4,8 @@
 let LV=[];
 let PP=[];
 let BASE=null;
+let AB=[];
+let AB_BELT=[];
 
 // Seeded PRNG — mulberry32
 function mkRNG(seed){
@@ -282,11 +284,32 @@ function genOWBodies(rng){
   return bodies;
 }
 
+// ---- Asteroid belt bodies + belt particles ----
+function genABodies(rng,planetBodies){
+  const minR=200,maxR=880;
+  let orbitR,att=0;
+  do{orbitR=minR+rng.fl(0,maxR-minR);att++;}
+  while(att<60&&planetBodies.some(b=>Math.abs(b.orbitR-orbitR)<100));
+  const orbitSpd=0.00030-(orbitR-minR)/(maxR-minR)*0.00015;
+  // minimum angle so trigger zones (r+28=78px each) don't overlap
+  const minDa=2*Math.asin(Math.min(1,78/orbitR));
+  const a1=rng.fl(0,Math.PI*2);
+  const da=minDa+rng.fl(0,Math.PI*2-2*minDa);
+  const a2=(a1+da)%(Math.PI*2);
+  const bodies=[{orbitR,orbitA:a1,orbitSpd,r:50},{orbitR,orbitA:a2,orbitSpd,r:50}];
+  const belt=[],spread=20,N=160;
+  for(let i=0;i<N;i++){
+    belt.push({a:rng.fl(0,Math.PI*2),dr:rng.fl(-spread,spread),rv:1.5+rng.fl(0,3),sides:rng.int(5,8),rot:rng.fl(0,Math.PI*2)});
+  }
+  return{bodies,belt};
+}
 // ---- Master world-generation entry point ----
 function genWorld(seed){
   LV=LV_TMPL.map((tmpl,i)=>genLevel(tmpl,seedChild(seed,i)));
   const bodies=genOWBodies(mkRNG(seedChild(seed,99)));
   BASE={...bodies[0],r:22};
   PP=bodies.slice(1);
+  const abData=genABodies(mkRNG(seedChild(seed,300)),bodies);
+  AB=abData.bodies;AB_BELT=abData.belt;
   console.log(`[PHANTOM] world seed: 0x${seed.toString(16).toUpperCase().padStart(8,'0')}`);
 }

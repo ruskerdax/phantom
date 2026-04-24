@@ -118,7 +118,7 @@ function owEnemyPos(t,px,py,minDist=600){
 function initOW(energy,sx,sy){
   const bp=owPos(BASE);
   const px=sx??bp.x,py=sy??bp.y;
-  G.OW={s:mkShip(px,py),en:[owEnemyPos(0,px,py),owEnemyPos(1,px,py),owEnemyPos(2,px,py)],fu:[],pts:[],nearP:-1,nearBase:false};
+  G.OW={s:mkShip(px,py),en:[owEnemyPos(0,px,py),owEnemyPos(1,px,py),owEnemyPos(2,px,py)],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1};
   G.OW.s.energy=energy??G.OW.s.maxEnergy;G.OW.s.inv=120;
   G.st='overworld';
 }
@@ -158,6 +158,35 @@ function owStartEnc(idx){
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
+function startAstEnc(){
+  const ow=G.OW;
+  const tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
+  const rocks=[];
+  const rockCount=8+Math.floor(Math.random()*13);
+  const spawnX=EW*.08,spawnY=EH/2,minSpawnDist=120;
+  for(let i=0;i<rockCount;i++){
+    let rx,ry,att=0;
+    do{rx=60+Math.random()*(EW-120);ry=60+Math.random()*(EH-120);att++;}
+    while(Math.hypot(rx-spawnX,ry-spawnY)<minSpawnDist&&att<30);
+    const tier=Math.floor(Math.random()*3);const td=tierDefs[tier];
+    rocks.push({x:rx,y:ry,vx:(Math.random()-.5)*1.1,vy:(Math.random()-.5)*1.1,r:td.r[0]+Math.random()*td.r[1],hp:td.hp,maxHp:td.hp,tier});
+  }
+  const ens=[];
+  const saucerEc=OET[0].enc,initCd=Math.round(WEAPONS[saucerEc.fire.wpn].cd*60);
+  for(let i=0;i<3;i++){
+    if(Math.random()<.35){
+      const a=(i/3)*Math.PI*2;
+      ens.push({x:EW-200+Math.cos(a)*60,y:EH/2+Math.sin(a)*60,vx:0,vy:0,a:Math.PI,hp:saucerEc.hp,mhp:saucerEc.hp,timer:initCd+i*18,alive:true,t:0,spin:0});
+    }
+  }
+  const encShip=mkShip(spawnX,spawnY);encShip.energy=ow.s.energy;encShip.inv=90;
+  encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
+  G.ENC={owIdx:null,isAst:true,et:0,label:'ASTEROID FIELD',
+    s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],introTimer:ens.length?70:0,cleared:!ens.length,
+    cam:{x:0,y:Math.max(0,EH/2-H/2)}};
+  G.st=ens.length?'enc_in':'encounter';
+  tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
+}
 function updOW(){
   G.owFr++;const ow=G.OW;updPts(ow.pts);
   for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,OW_W);f.y=wrap(f.y+f.vy,OW_H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
@@ -182,6 +211,9 @@ function updOW(){
   ow.nearP=-1;
   for(let i=0;i<LV.length;i++){if(G.cleared[i])continue;const pp=owPos(PP[i]);if(Math.hypot(s.x-pp.x,s.y-pp.y)<LV[i].pr+28){ow.nearP=i;break;}}
   if(iFir()&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
+  ow.nearAst=-1;
+  for(let ai=0;ai<2;ai++){const ap=owPos(AB[ai]);if(Math.hypot(s.x-ap.x,s.y-ap.y)<AB[ai].r+28){ow.nearAst=ai;break;}}
+  if(iFir()&&ow.nearAst>=0){startAstEnc();return;}
   for(let i=0;i<ow.en.length;i++){
     const e=ow.en[i];if(!e.alive)continue;
     const et=OET[e.t];e.spin+=.04+e.t*.015;
@@ -208,8 +240,8 @@ function encKillShip(){
   setTimeout(()=>{G.st='over';},1800);
 }
 function encWin(){
-  const enc=G.ENC,et=OET[enc.et],ow=G.OW;
-  ow.en[enc.owIdx].alive=false;
+  const enc=G.ENC,ow=G.OW;
+  if(enc.owIdx!=null)ow.en[enc.owIdx].alive=false;
   ow.s.energy=enc.s.energy;
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
   ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;
@@ -537,17 +569,19 @@ function drawOW(){
   drDust(camX-(ow.pcx??camX),camY-(ow.pcy??camY));ow.pcx=camX;ow.pcy=camY;
   cx.save();cx.translate(-camX,-camY);
   {cx.save();cx.lineWidth=1;cx.globalAlpha=.65;
-  const owBodies=[['#aaccff',BASE.orbitR,BASE],...PP.map((b,i)=>[LV[i].pcol,b.orbitR,b])];
+  const arrowBodies=[['#aaccff',BASE.orbitR,BASE],...PP.map((b,i)=>[LV[i].pcol,b.orbitR,b])];
   cx.setLineDash([4,2]);
-  for(const[col,r]of owBodies){
+  for(const[col,r]of arrowBodies){
     cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=6;
     cx.beginPath();cx.arc(OW_W/2,OW_H/2,r,0,Math.PI*2);cx.stroke();
   }
+  cx.strokeStyle='#998877';cx.shadowColor='#998877';cx.shadowBlur=6;
+  cx.beginPath();cx.arc(OW_W/2,OW_H/2,AB[0].orbitR,0,Math.PI*2);cx.stroke();
   cx.setLineDash([]);
   const arrowSpd=0.00173,N=40,arrowGap=0.2;
   cx.font='14px monospace';cx.textAlign='center';cx.textBaseline='alphabetic';
   const _gm=cx.measureText('❯'),_gOff=(_gm.actualBoundingBoxAscent-_gm.actualBoundingBoxDescent)/2;
-  for(const[col,r,b]of owBodies){
+  for(const[col,r,b]of arrowBodies){
     const bodyA=b.orbitA+G.owFr*b.orbitSpd;
     cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=8;
     for(let i=0;i<N;i++){
@@ -565,6 +599,16 @@ function drawOW(){
       }
     }
     cx.globalAlpha=.49;
+  }
+  cx.restore();}
+  {cx.save();cx.globalAlpha=.6;cx.strokeStyle='#776655';cx.lineWidth=0.8;cx.shadowColor='#554433';cx.shadowBlur=2;
+  const abOrbitR=AB[0].orbitR,abSpd=AB[0].orbitSpd;
+  for(const p of AB_BELT){
+    const a=p.a+G.owFr*abSpd;
+    const bx=OW_W/2+Math.cos(a)*(abOrbitR+p.dr),by=OW_H/2+Math.sin(a)*(abOrbitR+p.dr);
+    cx.beginPath();
+    for(let i=0;i<p.sides;i++){const pa=(i/p.sides)*Math.PI*2+p.rot;i?cx.lineTo(bx+Math.cos(pa)*p.rv,by+Math.sin(pa)*p.rv):cx.moveTo(bx+Math.cos(pa)*p.rv,by+Math.sin(pa)*p.rv);}
+    cx.closePath();cx.stroke();
   }
   cx.restore();}
   {const sx2=OW_W/2,sy2=OW_H/2,pu=.5+.5*Math.sin(G.fr*.04);
@@ -586,6 +630,16 @@ function drawOW(){
     cx.globalAlpha=1;cx.fillStyle=d.col;cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText(d.name,p.x,p.y-d.pr-8);cx.restore();
     if(ow.nearP===i){cx.save();cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.textAlign='center';cx.fillText('[ FIRE TO ENTER ]',p.x,p.y+d.pr+16);cx.restore();}
   }
+  for(let ai=0;ai<2;ai++){const ap=owPos(AB[ai]);
+    cx.save();cx.strokeStyle='#998877';cx.shadowColor='#776655';cx.shadowBlur=5;cx.lineWidth=1.2;
+    for(const[ox,oy,r2]of[[-14,-9,11],[9,-16,8],[16,6,10],[-9,13,9],[19,-5,7],[1,17,6],[-17,5,8],[8,11,7]]){
+      cx.beginPath();
+      for(let i=0;i<8;i++){const a2=(i/8)*Math.PI*2,rr=r2*(1+.2*Math.sin(a2*3+r2));
+        i?cx.lineTo(ap.x+ox+Math.cos(a2)*rr,ap.y+oy+Math.sin(a2)*rr):cx.moveTo(ap.x+ox+Math.cos(a2)*rr,ap.y+oy+Math.sin(a2)*rr);}
+      cx.closePath();cx.stroke();}
+    cx.fillStyle='#998877';cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText('ASTEROID FIELD',ap.x,ap.y-40);
+    cx.restore();
+    if(ow.nearAst===ai){cx.save();cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.textAlign='center';cx.fillText('[ FIRE TO ENTER ]',ap.x,ap.y+44);cx.restore();}}
   for(const e of ow.en)if(e.alive)drOWEnemy(e);
   for(const f of ow.fu)drEnergy(f.x,f.y,'#0f8');
   drPts(ow.pts);
@@ -620,7 +674,7 @@ function drawEnc(){
   drPts(enc.pts);
   if(enc.s.alive)drShip(enc.s.x,enc.s.y,enc.s.a,enc.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),enc.s.energy,enc.s.inv,G.fr);
   cx.restore();
-  if(enc.introTimer>0){const a=Math.min(1,(70-enc.introTimer)/20);cx.save();cx.globalAlpha=a;cx.fillStyle='rgba(0,0,0,.7)';cx.fillRect(0,H/2-36,W,72);cx.fillStyle=et.enc.col;cx.shadowColor=et.enc.col;cx.shadowBlur=20;cx.font='bold 32px monospace';cx.textAlign='center';cx.fillText(enc.label,W/2,H/2+4);cx.shadowBlur=0;cx.fillStyle='#668';cx.font='13px monospace';cx.fillText('DESTROY ALL ENEMIES TO ESCAPE',W/2,H/2+26);cx.globalAlpha=1;cx.restore();}
+  if(enc.introTimer>0){const a=Math.min(1,(70-enc.introTimer)/20);cx.save();cx.globalAlpha=a;cx.fillStyle='rgba(0,0,0,.7)';cx.fillRect(0,H/2-36,W,72);cx.fillStyle=et.enc.col;cx.shadowColor=et.enc.col;cx.shadowBlur=20;cx.font='bold 32px monospace';cx.textAlign='center';cx.fillText(enc.label,W/2,H/2+4);cx.shadowBlur=0;cx.fillStyle='#668';cx.font='13px monospace';cx.fillText(enc.isAst&&!enc.en.length?'YOU MAY LEAVE AT ANY TIME':'DESTROY ALL ENEMIES TO ESCAPE',W/2,H/2+26);cx.globalAlpha=1;cx.restore();}
   const alive=enc.en.filter(e=>e.alive).length;
   cx.save();cx.font='13px monospace';cx.textAlign='center';
   if(enc.cleared){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=6+5*Math.abs(Math.sin(G.fr*.08));cx.fillText('ALL CLEAR — LEAVE THE AREA',W/2,18);}
