@@ -524,6 +524,12 @@ function drawOW(){
   const camY=Math.max(0,Math.min(OW_H-H,s.y-H/2));
   drDust(camX-(ow.pcx??camX),camY-(ow.pcy??camY));ow.pcx=camX;ow.pcy=camY;
   cx.save();cx.translate(-camX,-camY);
+  {cx.save();cx.lineWidth=1;cx.globalAlpha=.65;cx.setLineDash([4,5]);
+  for(const[col,r]of[['#aaccff',BASE.orbitR],...PP.map((b,i)=>[LV[i].pcol,b.orbitR])]){
+    cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=6;
+    cx.beginPath();cx.arc(OW_W/2,OW_H/2,r,0,Math.PI*2);cx.stroke();
+  }
+  cx.restore();}
   {const sx2=OW_W/2,sy2=OW_H/2,pu=.5+.5*Math.sin(G.fr*.04);
   cx.save();cx.translate(sx2,sy2);
   cx.shadowColor='#ffe070';cx.shadowBlur=50+pu*40;
