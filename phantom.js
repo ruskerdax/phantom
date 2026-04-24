@@ -96,7 +96,7 @@ const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Ma
 function wHit(x,y,r,li){if(y<0)return false;const d=LV[li],t=d.terrain;for(let i=0;i<t.length-1;i++)if(dseg(x,y,t[i][0],t[i][1],t[i+1][0],t[i+1][1])<r)return true;if(!pip(x,y,t))return true;for(const o of d.obs){if(pip(x,y,o))return true;for(let i=0;i<o.length;i++){const j=(i+1)%o.length;if(dseg(x,y,o[i][0],o[i][1],o[j][0],o[j][1])<r)return true;}}return false;}
 
 // Game state
-let G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0};
+let G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,baseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0};
 function addBounty(n){G.bounty+=n;}
 const PLAYER_SHIP={maxHp:15,maxEnergy:100};
 const ENERGY_PICKUP=38;
@@ -234,7 +234,7 @@ function updOW(){
   if(sdist<22){owKillShip();return;}
   s.vx+=sdx*500/(sdist*sdist*sdist);s.vy+=sdy*500/(sdist*sdist*sdist);}
   const bp=owPos(BASE);ow.nearBase=Math.hypot(s.x-bp.x,s.y-bp.y)<BASE.r+28;
-  if(iFir()&&ow.nearBase){s.hp=s.maxHp;s.energy=s.maxEnergy;G.credits+=G.bounty;G.bounty=0;G.st='base';return;}
+  if(iFir()&&ow.nearBase){G.credits+=G.bounty;G.bounty=0;G.baseSel=0;G.st='base';return;}
   ow.nearP=-1;
   for(let i=0;i<LV.length;i++){if(G.cleared[i])continue;const pp=owPos(PP[i]);if(Math.hypot(s.x-pp.x,s.y-pp.y)<LV[i].pr+28){ow.nearP=i;break;}}
   if(iFir()&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
@@ -601,6 +601,11 @@ function drBase(near){
 }
 function drawBaseMenu(){
   drawOW();
+  const s=G.OW.s;
+  const repairCost=(s.maxHp-s.hp)*100;
+  const rechargeCost=Math.ceil((s.maxEnergy-s.energy)*10);
+  const costs=[repairCost,rechargeCost];
+  const maxed=[s.hp>=s.maxHp,s.energy>=s.maxEnergy];
   cx.save();
   cx.fillStyle='rgba(0,12,8,.92)';
   const pw=360,ph=220,px=W/2-pw/2,py=H/2-ph/2;
@@ -608,11 +613,33 @@ function drawBaseMenu(){
   cx.strokeStyle='#aaccff';cx.shadowColor='#aaccff';cx.shadowBlur=18;cx.lineWidth=1.5;
   cx.strokeRect(px,py,pw,ph);
   cx.shadowBlur=12;cx.fillStyle='#aaccff';cx.font='bold 22px monospace';cx.textAlign='center';
-  cx.fillText('FRIENDLY BASE',W/2,py+44);
-  cx.shadowBlur=0;cx.fillStyle='#0f8';cx.font='13px monospace';
-  cx.fillText('SHIP REPAIRED AND RECHARGED',W/2,py+90);
-  cx.fillStyle='#aaffcc';cx.fillText('CREDITS  '+G.credits,W/2,py+120);
-  cx.fillStyle='#446';cx.fillText('FIRE OR ESC TO LEAVE',W/2,py+160);
+  cx.fillText('FRIENDLY BASE',W/2,py+36);
+  cx.shadowBlur=0;cx.fillStyle='#aaffcc';cx.font='11px monospace';cx.textAlign='right';
+  cx.fillText('CREDITS  '+G.credits,px+pw-10,py+18);
+  const BITEMS=['REPAIR','RECHARGE','LEAVE'];
+  cx.font='13px monospace';
+  for(let i=0;i<BITEMS.length;i++){
+    const iy=py+78+i*40;
+    const sel=i===G.baseSel;
+    const disabled=i<2&&(maxed[i]||G.credits<costs[i]);
+    cx.fillStyle=sel?'#0f8':disabled?'#445':'#668';
+    cx.shadowColor='#0f8';cx.shadowBlur=sel?10:0;
+    cx.textAlign='left';
+    cx.fillText((sel?'▶ ':'  ')+BITEMS[i],px+14,iy);
+    if(i<2){
+      if(maxed[i]){
+        cx.fillStyle='#446';cx.shadowBlur=0;cx.textAlign='right';
+        cx.fillText('FULL',px+pw-14,iy);
+      }else{
+        const canAfford=G.credits>=costs[i];
+        cx.fillStyle=sel?(canAfford?'#aaffcc':'#f44'):'#446';
+        cx.shadowBlur=0;cx.textAlign='right';
+        cx.fillText(costs[i]+' CR',px+pw-14,iy);
+      }
+    }
+  }
+  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
+  cx.fillText('ESC TO LEAVE',W/2,py+ph-12);
   cx.restore();
 }
 function drawOW(){
@@ -987,6 +1014,24 @@ function update(){
   }
   if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='over'){G.st='title';}else{G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.st='title';}}return;}
   if(st==='dead_ow'||st==='dead_enc'||st==='dead_cv')return;
+  if(st==='base'){
+    const s=G.OW.s;
+    const repairCost=(s.maxHp-s.hp)*100;
+    const rechargeCost=Math.ceil((s.maxEnergy-s.energy)*10);
+    if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.baseSel=Math.max(0,G.baseSel-1);
+    if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.baseSel=Math.min(2,G.baseSel+1);
+    if(iEnter()||iFir()){
+      if(G.baseSel===0){
+        if(s.hp>=s.maxHp||G.credits<repairCost)tone(80,.1,'square',.06);
+        else{G.credits-=repairCost;s.hp=s.maxHp;tone(660,.2,'sine',.08);}
+      }else if(G.baseSel===1){
+        if(s.energy>=s.maxEnergy||G.credits<rechargeCost)tone(80,.1,'square',.06);
+        else{G.credits-=rechargeCost;s.energy=s.maxEnergy;tone(660,.2,'sine',.08);}
+      }else{G.st='overworld';}
+    }
+    if(iPause())G.st='overworld';
+    return;
+  }
   if(iPause()){
     if(G.paused){G.paused=false;}
     else{G.paused=true;G.pauseSel=0;}
@@ -1003,7 +1048,6 @@ function update(){
     }
     return;
   }
-  if(st==='base'){if(iFir()||iPause()){G.st='overworld';}return;}
   if(st==='overworld')updOW();
   else if(st==='enc_in'||st==='encounter'){if(st==='enc_in'&&G.ENC.introTimer>0){G.ENC.introTimer--;if(G.ENC.introTimer===0)G.st='encounter';}else updEnc();}
   else if(st==='play'||st==='esc')updCV();
