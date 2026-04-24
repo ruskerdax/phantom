@@ -409,7 +409,7 @@ function updEnc(){
     for(const rk of enc.rocks){const rd=Math.hypot(e.x-rk.x,e.y-rk.y);if(rd<rk.r+16){e.vx+=(e.x-rk.x)/rd*.3;e.vy+=(e.y-rk.y)/rd*.3;}}
     {const fw=ec.fire,ewp=WEAPONS[fw.wpn];
     if(ewp.type==='laser'&&e.pulsesLeft>0&&--e.pulseTimer<=0){const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;const res=castLaser(ox,oy,e.a,ewp.range,[{x:s.x,y:s.y,r:12}]);enc.lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:OET[e.t].enc.col});tone(550+e.t*80,.08,'sine',.04);if(res.hitIdx>=0&&!s.shld&&s.inv<=0){s.hp=Math.max(0,s.hp-ewp.dmg);s.inv=40;tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return;}}e.pulsesLeft--;if(e.pulsesLeft>0)e.pulseTimer=ewp.pulseCd;else e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);}
-    else if(e.pulsesLeft===0&&--e.timer<=0){if(ewp.type==='laser'){e.pulsesLeft=ewp.pulses;e.pulseTimer=1;}else{e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);const bas=fw.mode==='spin'?Array.from({length:fw.count},(_,k)=>e.spin+k*Math.PI*2/fw.count):Array.from({length:fw.count},(_,k)=>ta+(k-(fw.count-1)/2)*fw.spread);for(const ba of bas)enc.ebu.push({x:e.x+Math.sin(ba)*fw.offset,y:e.y-Math.cos(ba)*fw.offset,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd});tone(550+e.t*80,.04,'square',.03);}}}
+    else if(e.pulsesLeft===0&&--e.timer<=0){if(ewp.type==='laser'){e.pulsesLeft=ewp.pulses;e.pulseTimer=1;}else{e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);const bas=fw.mode==='spin'?Array.from({length:fw.count},(_,k)=>e.spin+k*Math.PI*2/fw.count):Array.from({length:fw.count},(_,k)=>ta+(k-(fw.count-1)/2)*fw.spread);for(const ba of bas)enc.ebu.push({x:e.x+Math.sin(ba)*fw.offset,y:e.y-Math.cos(ba)*fw.offset,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,col:OET[e.t].col});tone(550+e.t*80,.04,'square',.03);}}}
     if(s.inv<=0&&Math.hypot(e.x-s.x,e.y-s.y)<ec.r+9){
       if(s.shld){e.vx-=(dx/dist)*2;e.vy-=(dy/dist)*2;}
       else{s.hp=Math.max(0,s.hp-3);s.inv=50;tone(380,.1,'sawtooth',.1);if(s.hp<=0){encKillShip();return;}}
@@ -419,7 +419,7 @@ function updEnc(){
     for(const t of enc.hbase.turrets){
       if(!t.alive)continue;
       t.a+=angDiff(t.a,Math.atan2(s.x-t.x,-(s.y-t.y)))*.04;
-      if(--t.timer<=0){const ewp=WEAPONS[0];t.timer=100+Math.floor(Math.random()*40-20);const ba=t.a;enc.ebu.push({x:t.x+Math.sin(ba)*15,y:t.y-Math.cos(ba)*15,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd});tone(550,.04,'square',.03);}
+      if(--t.timer<=0){const ewp=WEAPONS[0];t.timer=100+Math.floor(Math.random()*40-20);const ba=t.a;enc.ebu.push({x:t.x+Math.sin(ba)*15,y:t.y-Math.cos(ba)*15,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,col:'#ff4444'});tone(550,.04,'square',.03);}
     }
   }
   for(let i=enc.ebu.length-1;i>=0;i--){
@@ -872,7 +872,7 @@ function drawEnc(){
   }
   for(const f of enc.fu)drEnergy(f.x,f.y,'#0f8');
   for(const b of enc.bul)drBullet(b.x,b.y,'#fff');
-  for(const b of enc.ebu)drBullet(b.x,b.y,et.enc.col);
+  for(const b of enc.ebu)drBullet(b.x,b.y,b.col);
   for(const lb of enc.lsb){const a=lb.l/8;cx.save();cx.globalAlpha=a;cx.strokeStyle=lb.col;cx.shadowColor=lb.col;cx.shadowBlur=10;cx.lineWidth=2;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.globalAlpha=a*.6;cx.strokeStyle='#fff';cx.lineWidth=1;cx.shadowBlur=0;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.restore();}
   drPts(enc.pts);
   if(enc.s.alive)drShip(enc.s.x,enc.s.y,enc.s.a,enc.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),enc.s.energy,enc.s.inv,G.fr);
