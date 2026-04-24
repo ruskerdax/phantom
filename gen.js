@@ -279,7 +279,7 @@ function genOWBodies(rng){
       const ex=OW_W/2+Math.cos(e.orbitA)*e.orbitR,ey=OW_H/2+Math.sin(e.orbitA)*e.orbitR;
       return Math.hypot(ix-ex,iy-ey)<minSep;
     }));
-    const orbitSpd=0.00030-(orbitR-minR)/(maxR-minR)*0.00015;
+    const orbitSpd=0.00060-(orbitR-minR)/(maxR-minR)*0.00030;
     bodies.push({orbitR,orbitA,orbitSpd});
   }
   return bodies;
@@ -291,7 +291,7 @@ function genABodies(rng,planetBodies){
   let orbitR,att=0;
   do{orbitR=minR+rng.fl(0,maxR-minR);att++;}
   while(att<60&&planetBodies.some(b=>Math.abs(b.orbitR-orbitR)<100));
-  const orbitSpd=0.00030-(orbitR-minR)/(maxR-minR)*0.00015;
+  const orbitSpd=0.00060-(orbitR-minR)/(maxR-minR)*0.00030;
   // minimum angle so trigger zones (r+28=78px each) don't overlap
   const minDa=2*Math.asin(Math.min(1,78/orbitR));
   const a1=rng.fl(0,Math.PI*2);
@@ -318,7 +318,7 @@ function genHBaseBody(rng,allBodies){
     const bx=OW_W/2+Math.cos(b.orbitA)*b.orbitR,by=OW_H/2+Math.sin(b.orbitA)*b.orbitR;
     return Math.hypot(ix-bx,iy-by)<440;
   }));
-  const orbitSpd=0.00030-(orbitR-minR)/(maxR-minR)*0.00015;
+  const orbitSpd=0.00060-(orbitR-minR)/(maxR-minR)*0.00030;
   return{orbitR,orbitA,orbitSpd,r:20};
 }
 // ---- Master world-generation entry point ----

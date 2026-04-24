@@ -668,9 +668,6 @@ function drawOW(){
   cx.save();cx.translate(sx2,sy2);
   cx.shadowColor='#ffe070';cx.shadowBlur=50+pu*40;
   cx.fillStyle='#fff4c0';cx.beginPath();cx.arc(0,0,20,0,Math.PI*2);cx.fill();
-  cx.fillStyle='#ffcc40';cx.beginPath();cx.arc(0,0,13,0,Math.PI*2);cx.fill();
-  cx.strokeStyle='rgba(255,210,60,.55)';cx.lineWidth=1.5;
-  for(let i=0;i<8;i++){const a=G.fr*.008+i*Math.PI/4,r1=23+pu*2,r2=36+pu*10;cx.beginPath();cx.moveTo(Math.cos(a)*r1,Math.sin(a)*r1);cx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);cx.stroke();}
   cx.restore();}
   for(let i=0;i<LV.length;i++){
     const p=owPos(PP[i]),d=LV[i];
