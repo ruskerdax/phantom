@@ -264,10 +264,11 @@ function updEnc(){
     for(const rk of enc.rocks){const rd=Math.hypot(e.x-rk.x,e.y-rk.y);if(rd<rk.r+16){e.vx+=(e.x-rk.x)/rd*.3;e.vy+=(e.y-rk.y)/rd*.3;}}
     if(--e.timer<=0){
       e.timer=ec.fr+Math.floor(Math.random()*40-20);
-      const ewp=WEAPONS[0];
-      if(e.t===1){for(let k=0;k<3;k++){const ba=e.spin+k*Math.PI*2/3;enc.ebu.push({x:e.x+Math.sin(ba)*10,y:e.y-Math.cos(ba)*10,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life});}}
-      else if(e.t===2){for(let k=-1;k<=1;k++){const ba=ta+k*.2;enc.ebu.push({x:e.x+Math.sin(ba)*22,y:e.y-Math.cos(ba)*22,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life});}}
-      else{enc.ebu.push({x:e.x+Math.sin(ta)*14,y:e.y-Math.cos(ta)*14,vx:Math.sin(ta)*ewp.spd,vy:-Math.cos(ta)*ewp.spd,l:ewp.life});}
+      const fw=ec.fire,ewp=WEAPONS[fw.wpn];
+      const bas=fw.mode==='spin'
+        ?Array.from({length:fw.count},(_,k)=>e.spin+k*Math.PI*2/fw.count)
+        :Array.from({length:fw.count},(_,k)=>ta+(k-(fw.count-1)/2)*fw.spread);
+      for(const ba of bas)enc.ebu.push({x:e.x+Math.sin(ba)*fw.offset,y:e.y-Math.cos(ba)*fw.offset,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life});
       tone(550+e.t*80,.04,'square',.03);
     }
     if(s.inv<=0&&Math.hypot(e.x-s.x,e.y-s.y)<ec.r+9){
