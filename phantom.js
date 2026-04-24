@@ -254,6 +254,8 @@ function updOW(){
   ow.nearHBase=false;
   if(!G.hbCleared){const hbp=owPos(HBASE);if(Math.hypot(s.x-hbp.x,s.y-hbp.y)<HBASE.r+28)ow.nearHBase=true;}
   if(iFir()&&ow.nearHBase){startHBaseEnc();return;}
+  {const sgp=owPos(SLIPGATE);ow.nearSlipgate=Math.hypot(s.x-sgp.x,s.y-sgp.y)<SLIPGATE.r+28;}
+  if(iFir()&&ow.nearSlipgate){G.st='slipgate';return;}
   for(let i=0;i<ow.en.length;i++){
     const e=ow.en[i];if(!e.alive)continue;
     const et=OET[e.t];e.spin+=.04+e.t*.015;
@@ -609,6 +611,36 @@ function drBase(near){
   if(near){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.fillText('[ FIRE TO DOCK ]',x,y+r+16);}
   cx.restore();
 }
+function drSlipgate(near){
+  const{x,y}=owPos(SLIPGATE),pu=.5+.5*Math.sin(G.fr*.045);
+  const col='#aa99cc';
+  cx.save();
+  cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=6+pu*14;cx.lineWidth=2.5;
+  cx.beginPath();cx.ellipse(x,y,28,17,0,0,Math.PI*2);cx.stroke();
+  cx.lineWidth=1.2;cx.globalAlpha=.55;
+  cx.beginPath();cx.ellipse(x,y,20,12,0,0,Math.PI*2);cx.stroke();
+  cx.globalAlpha=1;cx.shadowBlur=0;cx.fillStyle=col;cx.font='bold 10px monospace';cx.textAlign='center';
+  cx.fillText('SLIPGATE',x,y-28-8);
+  if(near){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.fillText('[ FIRE TO ENTER ]',x,y+28+16);}
+  cx.restore();
+}
+function drawSlipgateMenu(){
+  drawOW();
+  cx.save();
+  const pw=360,ph=200,px=W/2-pw/2,py=H/2-ph/2;
+  cx.fillStyle='rgba(4,0,12,.92)';cx.fillRect(px,py,pw,ph);
+  cx.strokeStyle='#aa99cc';cx.shadowColor='#aa99cc';cx.shadowBlur=18;cx.lineWidth=1.5;
+  cx.strokeRect(px,py,pw,ph);
+  cx.shadowBlur=12;cx.fillStyle='#aa99cc';cx.font='bold 22px monospace';cx.textAlign='center';
+  cx.fillText('SLIPGATE',W/2,py+40);
+  cx.shadowBlur=0;cx.fillStyle='#8877aa';cx.font='bold 15px monospace';
+  cx.fillText('COMING SOON',W/2,py+90);
+  cx.fillStyle='#554466';cx.font='11px monospace';
+  cx.fillText('A gateway to the next star system.',W/2,py+115);
+  cx.fillStyle='#334';cx.font='11px monospace';
+  cx.fillText('ESC TO LEAVE',W/2,py+ph-14);
+  cx.restore();
+}
 function drawBaseMenu(){
   drawOW();
   const s=G.OW.s;
@@ -660,7 +692,7 @@ function drawOW(){
   drDust(camX-(ow.pcx??camX),camY-(ow.pcy??camY));ow.pcx=camX;ow.pcy=camY;
   cx.save();cx.translate(-camX,-camY);
   {cx.save();cx.lineWidth=1;cx.globalAlpha=.65;
-  const arrowBodies=[['#aaccff',BASE.orbitR,BASE],...PP.map((b,i)=>[LV[i].pcol,b.orbitR,b]),...(G.hbCleared?[]:[[`#ff4444`,HBASE.orbitR,HBASE]])];
+  const arrowBodies=[['#aaccff',BASE.orbitR,BASE],...PP.map((b,i)=>[LV[i].pcol,b.orbitR,b]),...(G.hbCleared?[]:[[`#ff4444`,HBASE.orbitR,HBASE]]),['#aa99cc',SLIPGATE.orbitR,SLIPGATE]];
   cx.setLineDash([4,2]);
   for(const[col,r]of arrowBodies){
     cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=6;
@@ -741,6 +773,7 @@ function drawOW(){
   for(const f of ow.fu)drEnergy(f.x,f.y,'#0f8');
   drPts(ow.pts);
   drBase(ow.nearBase);
+  drSlipgate(ow.nearSlipgate);
   if(s.alive)drShip(s.x,s.y,s.a,s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),s.energy,s.inv,G.fr);
   cx.restore();
   drHUD(s.energy,s.maxEnergy,s.hp,s.maxHp);
@@ -1064,6 +1097,10 @@ function update(){
     if(iPause())G.st='overworld';
     return;
   }
+  if(st==='slipgate'){
+    if(iPause())G.st='overworld';
+    return;
+  }
   if(iPause()){
     if(G.paused){G.paused=false;}
     else{G.paused=true;G.pauseSel=0;}
@@ -1094,6 +1131,7 @@ function draw(){
   if(st==='rebuild')return drawRebuild();
   if(st==='done')return drawScreen('SECTOR LIBERATED!','CREDITS  '+G.credits,'#fd0','ENTER OR START TO PLAY AGAIN');
   if(st==='base')return drawBaseMenu();
+  if(st==='slipgate')return drawSlipgateMenu();
   if(st==='overworld'||st==='dead_ow'){drawOW();if(st==='dead_ow'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px monospace';cx.textAlign='center';cx.fillText('SHIP DESTROYED',W/2,H/2);cx.restore();}}
   else if(st==='enc_in'||st==='encounter'||st==='dead_enc'){drawEnc();if(st==='dead_enc'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px monospace';cx.textAlign='center';cx.fillText('SHIP DESTROYED',W/2,H/2);cx.restore();}}
   else drawCV();

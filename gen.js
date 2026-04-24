@@ -7,6 +7,7 @@ let BASE=null;
 let AB=[];
 let AB_BELT=[];
 let HBASE=null;
+let SLIPGATE=null;
 
 // Seeded PRNG — mulberry32
 function mkRNG(seed){
@@ -321,6 +322,22 @@ function genHBaseBody(rng,allBodies){
   const orbitSpd=0.00060-(orbitR-minR)/(maxR-minR)*0.00030;
   return{orbitR,orbitA,orbitSpd,r:20};
 }
+// ---- Slipgate orbital parameters — always at maximum orbit radius ----
+function genSlipgateBody(rng,allBodies){
+  const orbitR=880;
+  let orbitA,ix,iy,att=0;
+  do{
+    orbitA=rng.fl(0,Math.PI*2);
+    ix=OW_W/2+Math.cos(orbitA)*orbitR;
+    iy=OW_H/2+Math.sin(orbitA)*orbitR;
+    att++;
+  }while(att<80&&allBodies.some(b=>{
+    const bx=OW_W/2+Math.cos(b.orbitA)*b.orbitR,by=OW_H/2+Math.sin(b.orbitA)*b.orbitR;
+    return Math.hypot(ix-bx,iy-by)<440;
+  }));
+  const orbitSpd=0.00060-(orbitR-200)/(880-200)*0.00030;
+  return{orbitR,orbitA,orbitSpd,r:26};
+}
 // ---- Master world-generation entry point ----
 function genWorld(seed){
   LV=LV_TMPL.map((tmpl,i)=>genLevel(tmpl,seedChild(seed,i)));
@@ -330,5 +347,6 @@ function genWorld(seed){
   const abData=genABodies(mkRNG(seedChild(seed,300)),bodies);
   AB=abData.bodies;AB_BELT=abData.belt;
   HBASE=genHBaseBody(mkRNG(seedChild(seed,400)),[bodies[0]]);
+  SLIPGATE=genSlipgateBody(mkRNG(seedChild(seed,500)),[...bodies,HBASE]);
   console.log(`[PHANTOM] world seed: 0x${seed.toString(16).toUpperCase().padStart(8,'0')}`);
 }
