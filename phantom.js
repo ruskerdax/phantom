@@ -229,7 +229,7 @@ function updOW(){
   if(s.y<bz&&s.vy<0)s.vy*=s.y/bz;
   if(s.y>OW_H-bz&&s.vy>0)s.vy*=(OW_H-s.y)/bz;}
   s.x=Math.max(0,Math.min(OW_W,s.x+s.vx));s.y=Math.max(0,Math.min(OW_H,s.y+s.vy));
-  if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
+  if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   if(sdist<22){owKillShip();return;}
   s.vx+=sdx*500/(sdist*sdist*sdist);s.vy+=sdy*500/(sdist*sdist*sdist);}
@@ -313,7 +313,7 @@ function updEnc(){
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}
   else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;ow.s.energy=s.energy;ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;ow.s.vx+=(Math.random()-.5)*1.5;ow.s.vy+=(Math.random()-.5)*1.5;ow.s.inv=80;G.ENC=null;G.st='overworld';return;}}
   else{s.x=wrap(s.x+s.vx,ew);s.y=wrap(s.y+s.vy,eh);}
-  if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
+  if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
   enc.cam.x+=(Math.max(0,Math.min(ew-W,s.x-W*.5))-enc.cam.x)*.12;
   enc.cam.y+=(Math.max(0,Math.min(eh-H,s.y-H*.5))-enc.cam.y)*.12;
   for(const rk of enc.rocks){rk.x=wrap(rk.x+rk.vx,ew);rk.y=wrap(rk.y+rk.vy,eh);}
@@ -457,7 +457,7 @@ function updCV(){
   if(iThr()&&!s.shld){const thr=s.energy>0?.13:.014;s.vx+=Math.sin(s.a)*thr;s.vy-=Math.cos(s.a)*thr;if(s.energy>0)s.energy=Math.max(0,s.energy-.09);}
   s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;const sp=Math.hypot(s.vx,s.vy);if(sp>5.5){s.vx=s.vx/sp*5.5;s.vy=s.vy/sp*5.5;}
   s.x+=s.vx;s.y+=s.vy;
-  if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
+  if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
   const wH=d.worldH||H;
   const tcy=Math.max(0,Math.min(wH-H,s.y-H*.45));
   cv.cam.y+=(tcy-cv.cam.y)*.12;
