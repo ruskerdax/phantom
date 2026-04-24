@@ -95,11 +95,12 @@ function wHit(x,y,r,li){if(y<0)return false;const d=LV[li],t=d.terrain;for(let i
 // Game state
 let G={st:'title',score:0,hi:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],OW:null,ENC:null,CV:null,paused:false,pauseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0};
 function addSc(n){G.score+=n;if(G.score>G.hi)G.hi=G.score;}
+const PLAYER_SHIP={maxHp:15,maxEnergy:100};
 const ENERGY_PICKUP=38;
-function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(100,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
+function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
 function boomAt(pts,x,y,c,n=14){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=.7+Math.random()*3;pts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:22+Math.random()*28,ml:50,c});}}
 function updPts(pts,gy=0){for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=gy;p.l--;if(p.l<=0)pts.splice(i,1);}}
-function mkShip(x,y){return{x,y,vx:0,vy:0,a:0,energy:100,alive:true,inv:120,scd:0,shld:false,hp:15,maxHp:15};}
+function mkShip(x,y){return{x,y,vx:0,vy:0,a:0,energy:PLAYER_SHIP.maxEnergy,maxEnergy:PLAYER_SHIP.maxEnergy,alive:true,inv:120,scd:0,shld:false,hp:PLAYER_SHIP.maxHp,maxHp:PLAYER_SHIP.maxHp};}
 let playerWeapon=WEAPONS[0];
 
 function owPos(b){const a=b.orbitA+G.owFr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
@@ -112,7 +113,7 @@ function owEnemyPos(t){
 function initOW(energy,sx,sy){
   const bp=owPos(BASE);
   G.OW={s:mkShip(sx??bp.x,sy??bp.y),en:[owEnemyPos(0),owEnemyPos(1),owEnemyPos(2)],fu:[],pts:[],nearP:-1,nearBase:false};
-  G.OW.s.energy=energy??100;G.OW.s.inv=120;
+  G.OW.s.energy=energy??G.OW.s.maxEnergy;G.OW.s.inv=120;
   G.st='overworld';
 }
 function owKillShip(){
@@ -166,7 +167,7 @@ function updOW(){
   if(sdist<22){owKillShip();return;}
   s.vx+=sdx*500/(sdist*sdist*sdist);s.vy+=sdy*500/(sdist*sdist*sdist);}
   const bp=owPos(BASE);ow.nearBase=Math.hypot(s.x-bp.x,s.y-bp.y)<BASE.r+28;
-  if(iFir()&&ow.nearBase){s.hp=s.maxHp;s.energy=100;G.st='base';return;}
+  if(iFir()&&ow.nearBase){s.hp=s.maxHp;s.energy=s.maxEnergy;G.st='base';return;}
   ow.nearP=-1;
   for(let i=0;i<LV.length;i++){if(G.cleared[i])continue;const pp=owPos(PP[i]);if(Math.hypot(s.x-pp.x,s.y-pp.y)<LV[i].pr+28){ow.nearP=i;break;}}
   if(iFir()&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
@@ -342,8 +343,8 @@ function cvBounce(s){
 }
 function enterLv(){
   const d=LV[G.lv],ow=G.OW,ls=G.lvState[G.lv];
-  G.CV={d,s:{...mkShip(d.ent.x,d.ent.y),energy:Math.max(25,ow?ow.s.energy:100),
-             hp:ow?ow.s.hp:15,maxHp:ow?ow.s.maxHp:15},
+  G.CV={d,s:{...mkShip(d.ent.x,d.ent.y),energy:Math.max(25,ow?ow.s.energy:PLAYER_SHIP.maxEnergy),
+             hp:ow?ow.s.hp:PLAYER_SHIP.maxHp,maxHp:ow?ow.s.maxHp:PLAYER_SHIP.maxHp},
     en:d.en.map((e,i)=>({...e,alive:ls?ls.en[i]:true,timer:20+Math.floor(Math.random()*80)})),
     fu:d.fu.map((f,i)=>({...f,got:ls?ls.fu[i]:false})),
     rx:ls?{...d.rx,hp:ls.rx.hp,alive:ls.rx.alive}:{...d.rx,alive:true},
@@ -470,7 +471,7 @@ function drEncEnemy(e){
 }
 function drEnergy(x,y,col){cx.save();cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=8;cx.lineWidth=1.5;cx.beginPath();cx.moveTo(x,y-9);cx.lineTo(x+7,y);cx.lineTo(x,y+9);cx.lineTo(x-7,y);cx.closePath();cx.stroke();cx.fillStyle=col;cx.font='bold 9px monospace';cx.textAlign='center';cx.shadowBlur=0;cx.fillText('🗲',x,y+3.5);cx.restore();}
 function drGPI(){cx.save();cx.textAlign='right';cx.font='11px monospace';if(GP.connected){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=6;cx.fillText('CTRL: '+GP.id.slice(0,22),W-6,H-8);}else{cx.fillStyle='#444';cx.shadowBlur=0;cx.fillText('NO CONTROLLER',W-6,H-8);}cx.restore();}
-function drHUD(energy,hp=15,maxHp=15){
+function drHUD(energy,maxEnergy=100,hp=15,maxHp=15){
   cx.save();cx.font='13px monospace';cx.fillStyle='#aaffcc';cx.shadowBlur=0;
   cx.textAlign='left';cx.fillText('SCORE '+G.score,8,18);cx.fillText('HI '+G.hi,8,34);
   cx.textAlign='center';cx.fillText('',W/2,18);
@@ -481,7 +482,7 @@ function drHUD(energy,hp=15,maxHp=15){
   cx.fillStyle=hf>.5?'#0f8':hf>.25?'#fa0':'#f40';cx.fillRect(W-81,7,hf*68,9);
   cx.fillStyle='#aaffcc';cx.fillText('ENERGY',W-88,32);
   cx.strokeRect(W-82,21,70,11);
-  cx.fillStyle=energy>20?'#0f8':'#f40';cx.fillRect(W-81,22,energy*.68,9);
+  cx.fillStyle=energy>maxEnergy*.2?'#0f8':'#f40';cx.fillRect(W-81,22,energy/maxEnergy*68,9);
   cx.restore();drGPI();
 }
 function drBullet(x,y,col='#fff'){cx.save();cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=6;cx.beginPath();cx.arc(x,y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
@@ -555,7 +556,7 @@ function drawOW(){
   drBase(ow.nearBase);
   if(s.alive)drShip(s.x,s.y,s.a,s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),s.energy,s.inv,G.fr);
   cx.restore();
-  drHUD(s.energy,s.hp,s.maxHp);
+  drHUD(s.energy,s.maxEnergy,s.hp,s.maxHp);
 }
 
 function drawEnc(){
@@ -589,7 +590,7 @@ function drawEnc(){
   if(enc.cleared){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=6+5*Math.abs(Math.sin(G.fr*.08));cx.fillText('ALL CLEAR — LEAVE THE AREA',W/2,18);}
   else{cx.fillStyle=et.enc.col;cx.fillText(enc.label+' — '+alive+' remaining  ·  '+enc.rocks.length+' asteroids',W/2,18);}
   cx.restore();
-  drHUD(enc.s.energy,enc.s.hp,enc.s.maxHp);
+  drHUD(enc.s.energy,enc.s.maxEnergy,enc.s.hp,enc.s.maxHp);
 }
 
 function drawCV(){
@@ -614,7 +615,7 @@ function drawCV(){
   drPts(cv.pts);
   if(cv.s.alive)drShip(cv.s.x,cv.s.y,cv.s.a,cv.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),cv.s.energy,cv.s.inv,G.fr);
   cx.restore();
-  drHUD(cv.s.energy,cv.s.hp,cv.s.maxHp);
+  drHUD(cv.s.energy,cv.s.maxEnergy,cv.s.hp,cv.s.maxHp);
   cx.save();cx.font='13px monospace';cx.fillStyle=col;cx.textAlign='center';cx.fillText(d.name,W/2,18);cx.restore();
   if(G.st==='esc'){const sec=Math.ceil(cv.esc/60);cx.save();cx.fillStyle=sec<=3?'#f40':'#ff0';cx.shadowColor=cx.fillStyle;cx.shadowBlur=12;cx.font='bold 20px monospace';cx.textAlign='center';cx.fillText('REACTOR CRITICAL — ESCAPE NOW!',W/2,52);cx.font='bold 34px monospace';cx.fillText(sec+'s',W/2,84);cx.restore();}
   if(G.st==='dead_cv'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px monospace';cx.textAlign='center';cx.fillText('SHIP DESTROYED',W/2,H/2);cx.restore();}
