@@ -628,7 +628,7 @@ function drawTitle(){
   cx.font='bold 72px monospace';cx.fillText('PHANTOM',W/2,H/2-100);
   cx.shadowBlur=0;cx.fillStyle='#acd';cx.font='14px monospace';
   cx.fillText('NAVIGATE THE STAR SYSTEM  ·  DESTROY REACTORS  ·  ESCAPE',W/2,H/2-55);
-  const rows=[['← → / LS','ROTATE'],['↑ / RT','THRUST'],['SPACE / X·LT','FIRE'],['SHIFT·S / LB·RB','SHIELD'],['Near a planet + FIRE','ENTER CAVE'],['',''],['Defeat enemies in space','TRIGGER ENCOUNTER'],['Destroy all in encounter','RETURN + ENERGY DROP'],['Shoot cave REACTOR','START COUNTDOWN'],['Fly out top gap','ESCAPE CAVE']];
+  const rows=[['A D / LS','ROTATE'],['W / RT','THRUST'],['J / LT','FIRE'],['I / LB·RB','SHIELD'],['Near a planet + FIRE','ENTER'],['',''],['Shoot cave REACTOR','START COUNTDOWN'],['Fly out top gap','ESCAPE']];
   cx.font='12px monospace';let ry=H/2-22;
   for(const[k,v]of rows){if(!k){ry+=10;continue;}cx.fillStyle='#557799';cx.textAlign='right';cx.fillText(k,W/2-6,ry);cx.fillStyle='#aaffcc';cx.textAlign='left';cx.fillText(v,W/2+10,ry);ry+=17;}
   const TITEMS=['PLAY GAME','OPTIONS'];
