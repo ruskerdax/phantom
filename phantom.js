@@ -93,7 +93,7 @@ const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Ma
 function wHit(x,y,r,li){if(y<0)return false;const d=LV[li],t=d.terrain;for(let i=0;i<t.length-1;i++)if(dseg(x,y,t[i][0],t[i][1],t[i+1][0],t[i+1][1])<r)return true;if(!pip(x,y,t))return true;for(const o of d.obs){if(pip(x,y,o))return true;for(let i=0;i<o.length;i++){const j=(i+1)%o.length;if(dseg(x,y,o[i][0],o[i][1],o[j][0],o[j][1])<r)return true;}}return false;}
 
 // Game state
-let G={st:'title',score:0,hi:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0};
+let G={st:'title',score:0,hi:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0};
 function addSc(n){G.score+=n;if(G.score>G.hi)G.hi=G.score;}
 const PLAYER_SHIP={maxHp:15,maxEnergy:100};
 const ENERGY_PICKUP=38;
@@ -189,14 +189,15 @@ function startAstEnc(){
 }
 function startHBaseEnc(){
   const ow=G.OW,ew=EW*2,eh=EH*2,HEX_R=150,hx=ew/2,hy=eh/2;
+  const hbs=G.hbState;
   const softpts=Array.from({length:6},(_,i)=>{
     const a=i*Math.PI/3+Math.PI/6,d=HEX_R*Math.sqrt(3)/2;
-    return{x:hx+Math.cos(a)*d,y:hy+Math.sin(a)*d,hp:1,alive:true};
+    return{x:hx+Math.cos(a)*d,y:hy+Math.sin(a)*d,hp:1,alive:hbs?hbs.softpts[i]:true};
   });
   const initCd=Math.round(WEAPONS[0].cd*60);
   const turrets=Array.from({length:6},(_,i)=>{
     const a=i*Math.PI/3;
-    return{x:hx+Math.cos(a)*HEX_R,y:hy+Math.sin(a)*HEX_R,a:a,timer:initCd+i*22,alive:true};
+    return{x:hx+Math.cos(a)*HEX_R,y:hy+Math.sin(a)*HEX_R,a:a,timer:initCd+i*22,alive:hbs?hbs.turrets[i]:true};
   });
   const hexPoly=Array.from({length:6},(_,i)=>{const a=i*Math.PI/3;return[hx+Math.cos(a)*HEX_R,hy+Math.sin(a)*HEX_R];});
   const encShip=mkShip(ew*.08,eh/2);encShip.energy=ow.s.energy;encShip.inv=90;
@@ -265,7 +266,7 @@ function encKillShip(){
 }
 function encWin(){
   const enc=G.ENC,ow=G.OW;
-  if(enc.isHBase)G.hbCleared=true;
+  if(enc.isHBase){G.hbCleared=true;G.hbState=null;}
   if(enc.owIdx!=null)ow.en[enc.owIdx].alive=false;
   ow.s.energy=enc.s.energy;
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
@@ -304,7 +305,9 @@ function updEnc(){
   if(s.shld)s.energy=Math.max(0,s.energy-.15);
   if(iThr()&&!s.shld){const thr=s.energy>0?.12:.013;s.vx+=Math.sin(s.a)*thr;s.vy-=Math.cos(s.a)*thr;if(s.energy>0)s.energy=Math.max(0,s.energy-.08);}
   const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
-  if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}else{s.x=wrap(s.x+s.vx,ew);s.y=wrap(s.y+s.vy,eh);}
+  if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}
+  else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;ow.s.energy=s.energy;ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;ow.s.vx+=(Math.random()-.5)*1.5;ow.s.vy+=(Math.random()-.5)*1.5;ow.s.inv=80;G.ENC=null;G.st='overworld';return;}}
+  else{s.x=wrap(s.x+s.vx,ew);s.y=wrap(s.y+s.vy,eh);}
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
   enc.cam.x+=(Math.max(0,Math.min(ew-W,s.x-W*.5))-enc.cam.x)*.12;
   enc.cam.y+=(Math.max(0,Math.min(eh-H,s.y-H*.5))-enc.cam.y)*.12;
@@ -961,7 +964,7 @@ function update(){
   if(st==='title'){
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.titleSel=0;
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.titleSel=1;
-    if(iEnter()){ia();if(G.titleSel===0){G.score=0;G.cleared=[false,false,false];G.lvState={};G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];initOW(100);}else{G.optFrom='title';G.st='options';}}
+    if(iEnter()){ia();if(G.titleSel===0){G.score=0;G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];initOW(100);}else{G.optFrom='title';G.st='options';}}
     return;
   }
   if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='over'){G.st='title';}else{G.score=0;G.cleared=[false,false,false];G.lvState={};G.st='title';}}return;}
