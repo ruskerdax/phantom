@@ -470,7 +470,7 @@ function owStartEnc(idx){
   const encShip=mkShip(EW*.08,EH/2);encShip.energy=Math.max(30,ow.s.energy);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   G.ENC={owIdx:idx,et:e.t,label:et.enc.cnt>1?'SWARM ATTACK':et.name+' ENCOUNTER',
-    s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],introTimer:70,winTimer:0,
+    s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],introTimer:70,cleared:false,
     cam:{x:0,y:Math.max(0,EH/2-H/2)}};
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
@@ -567,7 +567,7 @@ function updEnc(){
   if(s.shld)s.energy=Math.max(0,s.energy-.15);
   if(iThr()&&s.energy>0&&!s.shld){s.vx+=Math.sin(s.a)*.12;s.vy-=Math.cos(s.a)*.12;s.energy=Math.max(0,s.energy-.08);}
   const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
-  s.x=wrap(s.x+s.vx,EW);s.y=wrap(s.y+s.vy,EH);
+  if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>EW+30||s.y<-30||s.y>EH+30){encWin();return;}}else{s.x=wrap(s.x+s.vx,EW);s.y=wrap(s.y+s.vy,EH);}
   if(s.scd>0)s.scd--;if(s.inv>0)s.inv--;
   // camera smooth-follow
   enc.cam.x+=(Math.max(0,Math.min(EW-W,s.x-W*.5))-enc.cam.x)*.12;
@@ -605,7 +605,7 @@ function updEnc(){
   }
   // enemy AI
   const alive=enc.en.filter(e=>e.alive);
-  if(alive.length===0){if(!enc.winTimer)enc.winTimer=80;if(--enc.winTimer<=0){encWin();return;}}
+  if(alive.length===0&&!enc.cleared){enc.cleared=true;tone(880,.3,'sine',.07);}
   for(const e of alive){
     const ec=OET[e.t].enc;e.spin+=.05+e.t*.02;
     const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
@@ -876,8 +876,10 @@ function drawEnc(){
   if(enc.introTimer>0){const a=Math.min(1,(70-enc.introTimer)/20);cx.save();cx.globalAlpha=a;cx.fillStyle='rgba(0,0,0,.7)';cx.fillRect(0,H/2-36,W,72);cx.fillStyle=et.enc.col;cx.shadowColor=et.enc.col;cx.shadowBlur=20;cx.font='bold 32px monospace';cx.textAlign='center';cx.fillText(enc.label,W/2,H/2+4);cx.shadowBlur=0;cx.fillStyle='#668';cx.font='13px monospace';cx.fillText('DESTROY ALL ENEMIES TO ESCAPE',W/2,H/2+26);cx.globalAlpha=1;cx.restore();}
   // enemy count + asteroid count
   const alive=enc.en.filter(e=>e.alive).length;
-  cx.save();cx.font='13px monospace';cx.fillStyle=et.enc.col;cx.textAlign='center';
-  cx.fillText(enc.label+' — '+alive+' remaining  ·  '+enc.rocks.length+' asteroids',W/2,18);cx.restore();
+  cx.save();cx.font='13px monospace';cx.textAlign='center';
+  if(enc.cleared){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=6+5*Math.abs(Math.sin(G.fr*.08));cx.fillText('ALL CLEAR — LEAVE THE AREA',W/2,18);}
+  else{cx.fillStyle=et.enc.col;cx.fillText(enc.label+' — '+alive+' remaining  ·  '+enc.rocks.length+' asteroids',W/2,18);}
+  cx.restore();
   drHUD(enc.s.energy,enc.s.hp,enc.s.maxHp);
 }
 
