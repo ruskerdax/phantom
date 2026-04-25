@@ -12,6 +12,7 @@ function tone(f,d,t='square',v=.07){if(!AC)return;const sv=(G?G.sfxVol/10:1);if(
 // Keyboard
 const K={};
 document.addEventListener('keydown',e=>{
+  if(G&&G.seedInputOpen)return;
   if(!K[e.code])ia();K[e.code]=true;K[e.code+'j']=true;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','KeyW','KeyA','KeyS','KeyD','KeyJ','KeyI'].includes(e.code))e.preventDefault();
   if(G&&G.optListen==='key'){
@@ -96,7 +97,7 @@ const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Ma
 function wHit(x,y,r,li){if(y<0)return false;const d=LV[li],t=d.terrain;for(let i=0;i<t.length-1;i++)if(dseg(x,y,t[i][0],t[i][1],t[i+1][0],t[i+1][1])<r)return true;if(!pip(x,y,t))return true;for(const o of d.obs){if(pip(x,y,o))return true;for(let i=0;i<o.length;i++){const j=(i+1)%o.length;if(dseg(x,y,o[i][0],o[i][1],o[j][0],o[j][1])<r)return true;}}return false;}
 
 // Game state
-let G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,slipgateActive:false,slipMsg:0,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,baseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false};
+let G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,slipgateActive:false,slipMsg:0,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,baseSel:0,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,customSeed:null,seedInputOpen:false,slipSel:0};
 function addBounty(n){G.bounty+=n;}
 const PLAYER_SHIP={maxHp:15,maxEnergy:100};
 const ENERGY_PICKUP=38;
@@ -146,7 +147,8 @@ function doRebuild(){
 }
 function doJump(){
   const energy=G.OW.s.energy;
-  G.seed=(Math.random()*0xFFFFFFFF)>>>0;
+  if(G.customSeed!==null){G.seed=G.customSeed;G.customSeed=null;}
+  else{G.seed=(Math.random()*0xFFFFFFFF)>>>0;}
   G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;
   G.bounty=0;G.slipgateActive=false;G.slipMsg=0;
   genWorld(G.seed);
@@ -285,7 +287,7 @@ function updOW(){
   if(!G.hbCleared){const hbp=owPos(HBASE);if(Math.hypot(s.x-hbp.x,s.y-hbp.y)<HBASE.r+28)ow.nearHBase=true;}
   if(iFir()&&ow.nearHBase){startHBaseEnc();return;}
   {const sgp=owPos(SLIPGATE);ow.nearSlipgate=Math.hypot(s.x-sgp.x,s.y-sgp.y)<SLIPGATE.r+28;}
-  if(iFir()&&ow.nearSlipgate){G.st='slipgate';return;}
+  if(iFir()&&ow.nearSlipgate){G.slipSel=0;G.st='slipgate';return;}
   for(let i=0;i<ow.en.length;i++){
     const e=ow.en[i];if(!e.alive)continue;
     const et=OET[e.t];e.spin+=.04+e.t*.015;
@@ -615,23 +617,27 @@ function drawSlipgateMenu(){
   const active=G.slipgateActive;
   const col=active?'#cc99ff':'#aa99cc';
   cx.save();
-  const pw=360,ph=200,px=W/2-pw/2,py=H/2-ph/2;
+  const pw=400,ph=active?260:200,px=W/2-pw/2,py=H/2-ph/2;
   cx.fillStyle='rgba(4,0,12,.92)';cx.fillRect(px,py,pw,ph);
   cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=18;cx.lineWidth=1.5;
   cx.strokeRect(px,py,pw,ph);
   cx.shadowBlur=12;cx.fillStyle=col;cx.font='bold 22px monospace';cx.textAlign='center';
   cx.fillText('SLIPGATE',W/2,py+40);
   if(active){
-    cx.shadowBlur=0;cx.fillStyle='#cc99ff';cx.font='bold 15px monospace';
-    cx.fillText('JUMP TO NEW SYSTEM',W/2,py+88);
-    cx.fillStyle='#776688';cx.font='11px monospace';
-    cx.fillText('A new star system awaits beyond the gate.',W/2,py+110);
-    cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=8;cx.font='bold 12px monospace';
-    cx.fillText('[ ENTER TO JUMP ]',W/2,py+142);
+    const opts=['JUMP TO NEW SYSTEM','SET SEED'];
+    for(let i=0;i<2;i++){
+      const sel=i===G.slipSel;
+      cx.fillStyle=sel?'#cc99ff':'#776688';
+      cx.shadowColor='#cc99ff';cx.shadowBlur=sel?8:0;
+      cx.font=sel?'bold 14px monospace':'13px monospace';
+      cx.fillText((sel?'▶ ':'')+opts[i],W/2,py+86+i*40);
+    }
+    cx.shadowBlur=0;
+    const sv=G.customSeed!==null?'SEED  '+G.customSeed.toString(16).toUpperCase().padStart(8,'0'):'SEED  RANDOM';
+    cx.fillStyle='#443355';cx.font='11px monospace';
+    cx.fillText(sv,W/2,py+182);
   }else{
     cx.shadowBlur=0;cx.fillStyle='#8877aa';cx.font='bold 15px monospace';
-    cx.fillText('COMING SOON',W/2,py+88);
-    cx.fillStyle='#554466';cx.font='11px monospace';
     cx.fillText('Clear all sectors to activate the slipgate.',W/2,py+112);
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';
@@ -954,6 +960,37 @@ function drawPause(){
   cx.restore();
 }
 
+function showSeedInput(onConfirm){
+  G.seedInputOpen=true;
+  const overlay=document.getElementById('seed-overlay');
+  const input=document.getElementById('seed-input');
+  const form=document.getElementById('seed-form');
+  const errDiv=document.getElementById('seed-error');
+  const cancelBtn=document.getElementById('seed-cancel');
+  input.value=G.customSeed!==null?G.customSeed.toString(16).toUpperCase().padStart(8,'0'):'';
+  errDiv.textContent='';
+  overlay.style.display='flex';
+  setTimeout(()=>input.focus(),30);
+  function close(){
+    overlay.style.display='none';
+    G.seedInputOpen=false;
+    form.removeEventListener('submit',onSubmit);
+    cancelBtn.removeEventListener('click',onCancel);
+    document.removeEventListener('keydown',onEsc,true);
+  }
+  function onSubmit(e){
+    e.preventDefault();
+    const val=input.value.trim().toUpperCase();
+    if(val===''){close();onConfirm(null);return;}
+    if(!/^[0-9A-F]{1,8}$/.test(val)){errDiv.textContent='Enter up to 8 hex digits (0-9, A-F)';return;}
+    close();onConfirm(parseInt(val,16)>>>0);
+  }
+  function onCancel(){close();}
+  function onEsc(e){if(e.key==='Escape'){e.stopImmediatePropagation();close();}}
+  form.addEventListener('submit',onSubmit);
+  cancelBtn.addEventListener('click',onCancel);
+  document.addEventListener('keydown',onEsc,true);
+}
 function drawOptions(){
   cx.fillStyle='#000';cx.fillRect(0,0,W,H);drStars();
   cx.save();cx.textAlign='center';
@@ -961,9 +998,9 @@ function drawOptions(){
   cx.font='bold 28px monospace';cx.fillText('OPTIONS',W/2,70);
   cx.shadowBlur=0;cx.strokeStyle='#1a4a2a';cx.lineWidth=1;
   cx.beginPath();cx.moveTo(60,88);cx.lineTo(W-60,88);cx.stroke();
-  const items=['SOUND EFFECTS','MUSIC','CONTROLS','CHEAT MODE'];
-  const startY=130,rowH=80;
-  for(let i=0;i<4;i++){
+  const items=['SOUND EFFECTS','MUSIC','CONTROLS','CHEAT MODE','SEED'];
+  const startY=130,rowH=70;
+  for(let i=0;i<5;i++){
     const y=startY+i*rowH,sel=i===G.optSel;
     cx.textAlign='center';
     cx.fillStyle=sel?'#aaffcc':'#668';cx.shadowBlur=sel?4:0;cx.shadowColor='#0f8';
@@ -985,13 +1022,19 @@ function drawOptions(){
     } else if(i===2){
       cx.fillStyle=sel?'#446':'#334';cx.font='11px monospace';cx.textAlign='center';
       cx.fillText(sel?'ENTER OR ► TO OPEN':'',W/2,y+18);
-    } else {
+    } else if(i===3){
       const on=G.cheatMode;
       cx.fillStyle=on?(sel?'#ff8':'#664'):(sel?'#446':'#334');
       cx.shadowColor=on?'#ff8':'#0f8';cx.shadowBlur=on&&sel?8:0;
       cx.font='bold 13px monospace';cx.textAlign='center';
       cx.fillText(on?'ON':'OFF',W/2,y+18);
       cx.shadowBlur=0;
+    } else {
+      const sv=G.customSeed!==null?G.customSeed.toString(16).toUpperCase().padStart(8,'0'):'RANDOM';
+      cx.fillStyle=G.customSeed!==null?(sel?'#aaffcc':'#668'):(sel?'#446':'#334');
+      cx.font='bold 13px monospace';cx.textAlign='center';
+      cx.fillText(sv,W/2,y+18);
+      if(sel){cx.shadowBlur=0;cx.fillStyle='#446';cx.font='11px monospace';cx.fillText('ENTER OR ► TO SET',W/2,y+34);}
     }
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
@@ -1053,10 +1096,11 @@ function drawControls(){
 // ===================== MAIN LOOP =====================
 function update(){
   pollGP();
+  if(G.seedInputOpen)return;
   const st=G.st;
   if(st==='options'){
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.optSel=Math.max(0,G.optSel-1);
-    if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.optSel=Math.min(3,G.optSel+1);
+    if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.optSel=Math.min(4,G.optSel+1);
     if(G.optSel===0){
       if(jp('ArrowLeft')||GP.menuLeft){G.sfxVol=Math.max(0,G.sfxVol-1);tone(900,.04,'square',.05);}
       if(jp('ArrowRight')||GP.menuRight){G.sfxVol=Math.min(10,G.sfxVol+1);tone(900,.04,'square',.05);}
@@ -1067,6 +1111,8 @@ function update(){
       if(iEnter()||jp('ArrowRight')||GP.thrustj||GP.menuRight){G.ctrlSel=0;G.optCol=0;G.optListen=null;G.st='controls';return;}
     } else if(G.optSel===3){
       if(iEnter()||jp('ArrowLeft')||jp('ArrowRight')||GP.menuLeft||GP.menuRight){G.cheatMode=!G.cheatMode;tone(G.cheatMode?1200:400,.08,'square',.05);}
+    } else if(G.optSel===4){
+      if(iEnter()||jp('ArrowRight')||GP.menuRight){showSeedInput(v=>{G.customSeed=v;});}
     }
     if(iPause()){G.st=G.optFrom;if(G.optFrom!=='title')G.paused=true;}
     return;
@@ -1094,7 +1140,7 @@ function update(){
   if(st==='title'){
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.titleSel=0;
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.titleSel=1;
-    if(iEnter()){ia();if(G.titleSel===0){G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;G.slipgateActive=false;G.slipMsg=0;G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);playerWeapon=WEAPONS[0];secondaryWeapon=WEAPONS[2];const _sgp=owPos(SLIPGATE);initOW(100,_sgp.x,_sgp.y);}else{G.optFrom='title';G.st='options';}}
+    if(iEnter()){ia();if(G.titleSel===0){G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;G.slipgateActive=false;G.slipMsg=0;if(G.customSeed!==null){G.seed=G.customSeed;G.customSeed=null;}else{G.seed=(Math.random()*0xFFFFFFFF)>>>0;}genWorld(G.seed);playerWeapon=WEAPONS[0];secondaryWeapon=WEAPONS[2];const _sgp=owPos(SLIPGATE);initOW(100,_sgp.x,_sgp.y);}else{G.optFrom='title';G.st='options';}}
     return;
   }
   if(st==='rebuild'){if(iEnter()){ia();doRebuild();}return;}
@@ -1119,7 +1165,16 @@ function update(){
     return;
   }
   if(st==='slipgate'){
-    if(G.slipgateActive&&(iEnter()||iFir())){ia();doJump();return;}
+    if(G.slipgateActive){
+      if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.slipSel=Math.max(0,G.slipSel-1);
+      if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.slipSel=Math.min(1,G.slipSel+1);
+      if(iEnter()||iFir()){
+        ia();
+        if(G.slipSel===0){doJump();}
+        else{showSeedInput(v=>{G.customSeed=v;});}
+        return;
+      }
+    }
     if(iPause())G.st='overworld';
     return;
   }
