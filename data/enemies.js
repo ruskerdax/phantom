@@ -127,7 +127,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
   for(const rk of enc.rocks){const rd=Math.hypot(e.x-rk.x,e.y-rk.y);if(rd<rk.r+16){e.vx+=(e.x-rk.x)/rd*.3;e.vy+=(e.y-rk.y)/rd*.3;}}
   const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
   const fw=ec.fire,ewp=WEAPONS[fw.wpn];
-  if(ewp.type==='laser'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
+  if(ewp.wpnType==='beam gun'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
     const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;
     const res=castLaser(ox,oy,e.a,ewp.range,[{x:s.x,y:s.y,r:12}]);
     enc.lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ec.col});
@@ -136,7 +136,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
     e.pulsesLeft--;
     if(e.pulsesLeft>0)e.pulseTimer=ewp.pulseCd;else e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
   } else if(e.pulsesLeft===0&&--e.timer<=0){
-    if(ewp.type==='laser'){e.pulsesLeft=ewp.pulses;e.pulseTimer=1;}
+    if(ewp.wpnType==='beam gun'){e.pulsesLeft=ewp.pulses;e.pulseTimer=1;}
     else{
       e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
       const bas=fw.mode==='spin'?Array.from({length:fw.count},(_,k)=>e.spin+k*Math.PI*2/fw.count):Array.from({length:fw.count},(_,k)=>ta+(k-(fw.count-1)/2)*fw.spread);

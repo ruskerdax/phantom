@@ -1,7 +1,38 @@
 'use strict';
 
-const WEAPONS=[
-  {id:'mass driver',  type:'projectile', dmg:3, cd:0.5,  spd:7,  life:60},
-  {id:'railgun',      type:'projectile', dmg:2, cd:1.0,  spd:12, life:90},
-  {id:'laser cannon', type:'laser',      dmg:1, cd:1.0,  range:Math.round(W/3), pulses:3, pulseCd:5},
+// Weapon type behavior — firing mechanics for player weapons
+const WEAPON_TYPES = {
+  'kinetic gun': {
+    fire(wp, s, slot, bul) {
+      bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*wp.spd+s.vx*.3,vy:-Math.cos(s.a)*wp.spd+s.vy*.3,l:wp.life*wp.spd,dmg:wp.dmg});
+      if(slot===0)s.scd=Math.round(wp.cd*60);else s.scd2=Math.round(wp.cd*60);
+      tone(900,.04,'square',.05);
+    }
+  },
+  'beam gun': {
+    fire(wp, s, slot) {
+      if(slot===0){s.pulsesLeft=wp.pulses;s.pulseTimer=1;}
+      else{s.pulsesLeft2=wp.pulses;s.pulseTimer2=1;}
+    },
+    // Advances one laser pulse; returns castLaser result or null if timer not ready.
+    // Caller is responsible for building tgts (context-specific) and handling the hit.
+    tick(wp, s, slot, tgts, lsb) {
+      const[plK,ptK,cdK]=slot===0?['pulsesLeft','pulseTimer','scd']:['pulsesLeft2','pulseTimer2','scd2'];
+      if(--s[ptK]>0)return null;
+      const ox=s.x+Math.sin(s.a)*13,oy=s.y-Math.cos(s.a)*13;
+      const res=castLaser(ox,oy,s.a,wp.range,tgts);
+      lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:'#0cf'});
+      tone(1200,.08,'sine',.05);
+      s[plK]--;
+      if(s[plK]>0)s[ptK]=wp.pulseCd;else s[cdK]=Math.round(wp.cd*60);
+      return res;
+    }
+  }
+};
+
+// Weapon class definitions
+const WEAPONS = [
+  {id:'mass driver',  wpnType:'kinetic gun', dmg:3, cd:0.5, spd:7,  life:60},
+  {id:'railgun',      wpnType:'kinetic gun', dmg:2, cd:1.0, spd:12, life:90},
+  {id:'laser cannon', wpnType:'beam gun',    dmg:1, cd:1.0, range:Math.round(W/3), pulses:3, pulseCd:5},
 ];
