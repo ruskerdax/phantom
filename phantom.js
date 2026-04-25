@@ -913,7 +913,7 @@ function updEquipFlow(up,dn,lt,rt,ok,bk){
     while(G.loadout.weapons.length<ch.slots.length)G.loadout.weapons.push(null);
     G.loadout.weapons=G.loadout.weapons.slice(0,ch.slots.length);
     // update ship stats in-flight
-    const s=G.OW?.s;if(s){s.maxHp=ch.maxHp;s.maxEnergy=ch.maxEnergy;s.hp=Math.min(s.hp,s.maxHp);s.energy=Math.min(s.energy,s.maxEnergy);}
+    const s=G.OW?.s;if(s){s.maxHp=ch.maxHp;s.maxEnergy=ch.maxEnergy;s.hp=s.maxHp;s.energy=s.maxEnergy;}
     G.equipFlow=null;G.shopActionId=null;
     saveGame();tone(660,.2,'sine',.08);
   }else if(row===ch.slots.length+2&&ok){
