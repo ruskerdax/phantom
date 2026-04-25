@@ -109,6 +109,31 @@ const OET = [
       cx.restore();
       cx.restore();
     }
+  },
+  {
+    name:'FIEND', aiType:'interceptor',
+    col:'#39ff14', col2:'#aaff00',
+    owSpd:1.4, trigR:58, sc:200, energy:false, spinRate:.05,
+    enc:{cnt:1, hp:6, spd:2.2, r:13, col:'#39ff14', col2:'#aaff00',
+      fire:{wpn:2, offset:14},
+      groups:[{t:3,cnt:1},{t:3,cnt:2,chance:.33},{t:1,cnt:3,chance:.33}]},
+    drawOW(e){
+      cx.save();cx.translate(e.x,e.y);
+      if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
+      cx.strokeStyle=this.col;cx.shadowColor=this.col;cx.shadowBlur=10;cx.lineWidth=1.5;
+      cx.beginPath();cx.ellipse(0,2,16,6,0,0,Math.PI*2);cx.stroke();
+      cx.beginPath();cx.arc(0,-1,8,Math.PI,0);cx.stroke();
+      cx.globalAlpha=1;cx.restore();
+    },
+    drawEnc(e){
+      const ec=this.enc;
+      cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
+      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
+      cx.beginPath();cx.ellipse(0,2,13,5,0,0,Math.PI*2);cx.stroke();
+      cx.beginPath();cx.arc(0,-1,7,Math.PI,0);cx.stroke();
+      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
+      cx.restore();
+    }
   }
 ];
 
@@ -132,7 +157,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
     const res=castLaser(ox,oy,e.a,ewp.range,[{x:s.x,y:s.y,r:12}]);
     enc.lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ec.col});
     tone(550+e.t*80,.08,'sine',.04);
-    if(res.hitIdx>=0&&!s.shld&&s.inv<=0){s.hp=Math.max(0,s.hp-ewp.dmg);s.inv=40;tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return true;}}
+    if(res.hitIdx>=0&&!s.shld){s.hp=Math.max(0,s.hp-ewp.dmg);tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return true;}}
     e.pulsesLeft--;
     if(e.pulsesLeft>0)e.pulseTimer=ewp.pulseCd;else e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
   } else if(e.pulsesLeft===0&&--e.timer<=0){
@@ -144,9 +169,9 @@ function enemyUpdate(e, s, enc, ew, eh) {
       tone(550+e.t*80,.04,'square',.03);
     }
   }
-  if(s.inv<=0&&Math.hypot(e.x-s.x,e.y-s.y)<ec.r+9){
+  if(Math.hypot(e.x-s.x,e.y-s.y)<ec.r+9){
     if(s.shld){e.vx-=(dx/dist)*2;e.vy-=(dy/dist)*2;}
-    else{s.hp=Math.max(0,s.hp-3);s.inv=50;tone(380,.1,'sawtooth',.1);if(s.hp<=0){encKillShip();return true;}}
+    else{s.hp=Math.max(0,s.hp-3);tone(380,.1,'sawtooth',.1);if(s.hp<=0){encKillShip();return true;}}
   }
   return false;
 }

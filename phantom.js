@@ -124,7 +124,7 @@ function owEnemyPos(t,px,py,minDist=600){
 function initOW(energy,sx,sy){
   const bp=owPos(BASE);
   const px=sx??bp.x,py=sy??bp.y;
-  G.OW={s:mkShip(px,py),en:[owEnemyPos(0,px,py),owEnemyPos(1,px,py),owEnemyPos(2,px,py)],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1};
+  G.OW={s:mkShip(px,py),en:[owEnemyPos(0,px,py),owEnemyPos(1,px,py),owEnemyPos(2,px,py),owEnemyPos(3,px,py)],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1};
   G.OW.s.energy=energy??G.OW.s.maxEnergy;G.OW.s.inv=120;
   G.st='overworld';
 }
@@ -361,12 +361,12 @@ function updEnc(){
   enc.cam.x+=(Math.max(0,Math.min(ew-W,s.x-W*.5))-enc.cam.x)*.12;
   enc.cam.y+=(Math.max(0,Math.min(eh-H,s.y-H*.5))-enc.cam.y)*.12;
   for(const rk of enc.rocks){rk.x=wrap(rk.x+rk.vx,ew);rk.y=wrap(rk.y+rk.vy,eh);}
-  for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(s.inv<=0&&Math.hypot(s.x-rk.x,s.y-rk.y)<rk.r+7){
+  for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(Math.hypot(s.x-rk.x,s.y-rk.y)<rk.r+7){
     const spd=Math.hypot(s.vx,s.vy);
     const rd=Math.hypot(s.x-rk.x,s.y-rk.y)||1;const nx=(s.x-rk.x)/rd;const ny=(s.y-rk.y)/rd;
     const dot=s.vx*nx+s.vy*ny;if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}s.vx*=.55;s.vy*=.55;s.x+=nx*10;s.y+=ny*10;
     const dmg=Math.round((spd/5.5)*5);
-    if(!s.shld&&dmg>0){s.hp=Math.max(0,s.hp-dmg);s.inv=40;tone(180,.15,'sawtooth',.12);}
+    if(!s.shld&&dmg>0){s.hp=Math.max(0,s.hp-dmg);tone(180,.15,'sawtooth',.12);}
     if(dmg>0){rk.hp-=dmg;boomAt(enc.pts,rk.x,rk.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);}
     if(s.hp<=0){encKillShip();return;}break;
   }}
@@ -415,7 +415,7 @@ function updEnc(){
     if(enc.isHBase&&pip(b.x,b.y,enc.hbase.hexPoly)){enc.ebu.splice(i,1);continue;}
     if(Math.hypot(b.x-s.x,b.y-s.y)<12){
       enc.ebu.splice(i,1);
-      if(!s.shld&&s.inv<=0){s.hp=Math.max(0,s.hp-3);s.inv=40;tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return;}}
+      if(!s.shld){s.hp=Math.max(0,s.hp-3);tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return;}}
     }
   }
 }
@@ -456,9 +456,9 @@ function cvBounce(s){
   if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}
   s.vx*=.55;s.vy*=.55;
   s.x+=nx*10;s.y+=ny*10;
-  if(!s.shld&&s.inv<=0){
+  if(!s.shld){
     const dmg=Math.round((spd/5.5)*5);
-    if(dmg>0){s.hp=Math.max(0,s.hp-dmg);s.inv=30;tone(Math.max(60,200-spd*18),.12,'sawtooth',.1);}
+    if(dmg>0){s.hp=Math.max(0,s.hp-dmg);tone(Math.max(60,200-spd*18),.12,'sawtooth',.1);}
   }
 }
 function enterLv(){
@@ -525,7 +525,7 @@ function updCV(){
     if(b.l<=0||b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,G.lv)){cv.ebu.splice(i,1);continue;}
     if(Math.hypot(b.x-s.x,b.y-s.y)<12){
       cv.ebu.splice(i,1);
-      if(!s.shld&&s.inv<=0){s.hp=Math.max(0,s.hp-3);s.inv=40;tone(380,.08,'square',.08);if(s.hp<=0){cvKillShip();return;}}
+      if(!s.shld){s.hp=Math.max(0,s.hp-3);tone(380,.08,'square',.08);if(s.hp<=0){cvKillShip();return;}}
     }
   }
 }
