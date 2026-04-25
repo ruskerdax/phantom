@@ -1290,7 +1290,7 @@ function drawShipConfig(){
 }
 
 function drawPause(){
-  if(G.pauseSel===1&&G.paused)return drawShipConfig();
+  if(G.showShipConfig&&G.paused)return drawShipConfig();
   const PITEMS=pauseItems();
   const ph=G.cheatMode?480:260,pw=300,px=W/2-pw/2,py=H/2-ph/2;
   cx.save();
@@ -1526,8 +1526,8 @@ function update(){
     return;
   }
   if(iPause()){
-    if(G.paused){if(G.pauseSel===1)G.pauseSel=0;else G.paused=false;}
-    else{G.paused=true;G.pauseSel=0;}
+    if(G.paused){if(G.showShipConfig){G.showShipConfig=false;}else G.paused=false;}
+    else{G.paused=true;G.pauseSel=0;G.showShipConfig=false;}
     return;
   }
   if(G.paused){
@@ -1536,7 +1536,7 @@ function update(){
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.pauseSel=Math.min(PITEMS.length-1,G.pauseSel+1);
     if(iEnter()||GP.thrustj){
       if(G.pauseSel===0){G.paused=false;}
-      else if(G.pauseSel===1){/* SHIP CONFIG — draw handled in drawPause */}
+      else if(G.pauseSel===1){G.showShipConfig=true;}
       else if(G.pauseSel===2){G.optFrom=st;G.paused=false;G.st='options';}
       else if(G.cheatMode&&G.pauseSel===3){
         G.OW.s.hp=G.OW.s.maxHp;G.OW.s.energy=G.OW.s.maxEnergy;
