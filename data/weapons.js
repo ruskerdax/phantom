@@ -34,5 +34,17 @@ const WEAPON_TYPES = {
 const WEAPONS = [
   {id:'mass driver',  wpnType:'kinetic gun', dmg:3, cd:0.5, spd:7,  life:60},
   {id:'railgun',      wpnType:'kinetic gun', dmg:2, cd:1.0, spd:12, life:90},
-  {id:'laser cannon', wpnType:'beam gun',    dmg:1, cd:1.0, range:Math.round(W/3), pulses:3, pulseCd:5},
+  {id:'laser cannon', wpnType:'beam gun',    dmg:1, cd:1.0, range:Math.round(W/3), pulses:3, pulseCd:5, energyCost:1},
 ];
+
+// Fire a weapon, deducting energyCost if defined and the ship tracks energy.
+// Returns false if the ship lacks energy, true otherwise.
+// Enemies (no s.energy) ignore energyCost and always fire.
+function tryFire(wp, wt, s, slot, bul) {
+  if (wp.energyCost !== undefined && s.energy !== undefined) {
+    if (s.energy < wp.energyCost) return false;
+    s.energy = Math.max(0, s.energy - wp.energyCost);
+  }
+  wt.fire(wp, s, slot, bul);
+  return true;
+}
