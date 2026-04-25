@@ -1,0 +1,73 @@
+'use strict';
+
+const CHASSIS = [
+  {
+    id: 'kestrel',
+    name: 'KESTREL LIGHT',
+    desc: 'Balanced starter hull.',
+    maxHp: 15,
+    maxEnergy: 100,
+    thrMul: 1.0,
+    reverse: false,
+    slots: [{type:'kinetic'},{type:'beam'}],
+    licensePrice: 0,
+    buildPrice: 0,
+  },
+  {
+    id: 'sparrow',
+    name: 'SPARROW SCOUT',
+    desc: 'Fast and energy-rich. Light armor.',
+    maxHp: 10,
+    maxEnergy: 140,
+    thrMul: 1.3,
+    reverse: false,
+    slots: [{type:'kinetic'}],
+    licensePrice: 4000,
+    buildPrice: 600,
+  },
+  {
+    id: 'ironclad',
+    name: 'IRONCLAD HEAVY',
+    desc: 'Heavy armor and firepower. Reduced speed.',
+    maxHp: 28,
+    maxEnergy: 75,
+    thrMul: 0.75,
+    reverse: false,
+    slots: [{type:'kinetic'},{type:'kinetic'}],
+    licensePrice: 6000,
+    buildPrice: 900,
+  },
+  {
+    id: 'viper',
+    name: 'VIPER RUNNER',
+    desc: 'Agile hull with reverse thrusters.',
+    maxHp: 12,
+    maxEnergy: 120,
+    thrMul: 1.15,
+    reverse: true,
+    slots: [{type:'kinetic'},{type:'beam'}],
+    licensePrice: 5500,
+    buildPrice: 750,
+  },
+];
+
+const AUX_ITEMS = [
+  {
+    id: 'shield_std',
+    name: 'STANDARD SHIELD',
+    desc: 'Deflects damage while active.',
+    effect: 'shield',
+    energyDrain: 0.15,
+    licensePrice: 0,
+    buildPrice: 0,
+  },
+  {
+    id: 'shield_heavy',
+    name: 'HEAVY SHIELD',
+    desc: 'Stronger deflection at higher energy cost.',
+    effect: 'shield',
+    energyDrain: 0.25,
+    licensePrice: 3500,
+    buildPrice: 500,
+  },
+];
