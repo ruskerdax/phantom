@@ -49,7 +49,7 @@ function resetSave() {
 }
 
 function buildSaveData() {
-  const s = G.ENC?.s ?? G.CV?.s ?? G.OW?.s;
+  const s = G.ENC?.s ?? G.site?.s ?? G.OW?.s;
   return {
     credits: G.credits,
     bounty: G.bounty,
