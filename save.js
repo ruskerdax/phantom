@@ -15,6 +15,8 @@ function defaultSave() {
     slipgateActive: false,
     seed: 0,
     visitedSeeds: [],
+    tutorialDone: false,
+    prevSeed: null,
     currentHp: null,
     currentEnergy: null,
     sfxVol: 10,
@@ -34,6 +36,8 @@ function loadSave() {
     if (typeof d.loadout.aux !== 'string')   d.loadout.aux = def.loadout.aux;
     if (typeof d.loadout.chassis !== 'string') d.loadout.chassis = def.loadout.chassis;
     if (!Array.isArray(d.visitedSeeds))      d.visitedSeeds = [];
+    if (typeof d.tutorialDone !== 'boolean') d.tutorialDone = false;
+    if (!('prevSeed' in d))                  d.prevSeed = null;
     if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
     return d;
@@ -62,6 +66,8 @@ function buildSaveData() {
     slipgateActive: G.slipgateActive,
     seed: G.seed,
     visitedSeeds: [...G.visitedSeeds],
+    tutorialDone: G.tutorialDone,
+    prevSeed: G.prevSeed,
     currentHp: (s?.alive && s.hp > 0) ? s.hp : null,
     currentEnergy: (s?.alive && s.hp > 0) ? s.energy : null,
     sfxVol: G.sfxVol,

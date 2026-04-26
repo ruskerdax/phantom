@@ -1,5 +1,9 @@
 'use strict';
 
+const TUTORIAL_SEED = 0xDEADB33F;
+const NEIGHBOR_MIN  = 3;
+const NEIGHBOR_MAX  = 8;
+
 // Level data and planet positions — populated by genWorld()
 let LV=[];
 let PP=[];

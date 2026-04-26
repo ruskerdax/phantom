@@ -2,7 +2,7 @@
 
 // Master game state. G.st drives the state machine — update() and draw() both branch on it so only one
 // sub-system runs per frame. Active mode data lives in sub-objects: G.OW (overworld), G.ENC (encounter), G.site (site).
-var G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,site:null,paused:false,pauseSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',weapons:['mass driver','laser cannon'],aux:'shield_std'},visitedSeeds:[]};
+var G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,site:null,paused:false,pauseSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',weapons:['mass driver','laser cannon'],aux:'shield_std'},visitedSeeds:[],tutorialDone:false,prevSeed:null};
 function addBounty(n){G.bounty+=n;}
 function activeChassisObj(){return CHASSIS.find(c=>c.id===G.loadout.chassis)||CHASSIS[0];}
 function activeAuxObj(){return AUX_ITEMS.find(a=>a.id===G.loadout.aux)||null;}
@@ -37,6 +37,10 @@ function startFromSave(){
   G.lvState=sv?.lvState??{};
   G.slipgateActive=sv?.slipgateActive??false;
   G.slipMsg=0;
+  G.tutorialDone=sv?.tutorialDone??false;
+  G.prevSeed=sv?.prevSeed??null;
+  // Treat any pre-existing non-tutorial run as having left the tutorial.
+  if(sv&&sv.seed!==TUTORIAL_SEED&&!G.tutorialDone)G.tutorialDone=true;
   if(G.customSeed!==null){G.seed=G.customSeed;G.customSeed=null;}
   else if(sv?.seed){G.seed=sv.seed;}
   else{G.seed=(Math.random()*0xFFFFFFFF)>>>0;}
