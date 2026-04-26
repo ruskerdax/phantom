@@ -344,7 +344,7 @@ function updOW(){
   if(!G.hbCleared){const hbp=owPos(HBASE);if(Math.hypot(s.x-hbp.x,s.y-hbp.y)<HBASE.r+28)ow.nearHBase=true;}
   {const sgp=owPos(SLIPGATE);ow.nearSlipgate=Math.hypot(s.x-sgp.x,s.y-sgp.y)<SLIPGATE.r+28;}
   const owFired=iFir();
-  if(owFired&&ow.nearBase){G.credits+=G.bounty;G.bounty=0;G.baseSel=0;G.baseTab=0;G.shopSel=0;G.shopActionId=null;G.equipFlow=null;G.st='base';return;}
+  if(owFired&&ow.nearBase){G.credits+=G.bounty;G.bounty=0;G.baseSel=0;G.baseTab=0;G.shopSel=0;G.shopActionId=null;G.equipFlow=null;G.baseEnterFr=G.fr;G.st='base';return;}
   if(owFired&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
   if(owFired&&ow.nearAst>=0){startAstEnc();return;}
   if(owFired&&ow.nearHBase){startHBaseEnc();return;}
@@ -1000,6 +1000,7 @@ function execShopAction(opt){
 }
 
 function updBase(){
+  if(G.fr-G.baseEnterFr<6)return; // ignore inputs briefly so the fire button that entered the base doesn't immediately trigger a menu action
   const up=jp('ArrowUp')||jp('KeyW')||GP.menuUp;
   const dn=jp('ArrowDown')||jp('KeyS')||GP.menuDown;
   const lt=jp('ArrowLeft')||jp('KeyA')||GP.menuLeft;
