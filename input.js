@@ -4,7 +4,7 @@
 var K={};
 document.addEventListener('keydown',e=>{
   if(G&&G.seedInputOpen)return;
-  if(!K[e.code])ia();K[e.code]=true;K[e.code+'j']=true;
+  if(!K[e.code])ia();K[e.code]=true;if(!e.repeat)K[e.code+'j']=true;
   if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','KeyW','KeyA','KeyS','KeyD','KeyJ','KeyI'].includes(e.code))e.preventDefault();
   if(G&&G.optListen==='key'){
     const blocked=['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12','Tab','Escape'];
