@@ -170,7 +170,8 @@ function updRebuild(){
   }
 }
 
-function pauseItems(){return G.cheatMode?['RESUME','SHIP CONFIG','OPTIONS','REPAIR SHIP','TELEPORT TO SLIPGATE','JUMP TO SEED','CLEAR ALL SECTORS','ADD 10K CREDITS','ZERO CREDITS','INVINCIBILITY: '+(G.invincible?'ON':'OFF'),'QUIT TO TITLE']:['RESUME','SHIP CONFIG','OPTIONS','QUIT TO TITLE'];}
+function pauseItems(){return G.cheatMode?['RESUME','SHIP CONFIG','OPTIONS','CHEATS ▶','QUIT TO TITLE']:['RESUME','SHIP CONFIG','OPTIONS','QUIT TO TITLE'];}
+function cheatItems(){return['REPAIR SHIP','TELEPORT TO SLIPGATE','JUMP TO SEED','CLEAR ALL SECTORS','ADD 10K CREDITS','ZERO CREDITS','INVINCIBILITY: '+(G.invincible?'ON':'OFF'),'BACK'];}
 
 function drawShipConfig(){
   const ch=activeChassisObj(),ax=activeAuxObj();
@@ -209,10 +210,32 @@ function drawShipConfig(){
   cx.restore();
 }
 
+function drawCheatSub(){
+  const CITEMS=cheatItems();
+  const ph=380,pw=300,px=W/2-pw/2,py=H/2-ph/2;
+  cx.save();
+  cx.fillStyle='rgba(0,0,0,.75)';cx.fillRect(0,0,W,H);
+  cx.fillStyle='rgba(12,10,0,.97)';cx.fillRect(px,py,pw,ph);
+  cx.strokeStyle='#ff8';cx.shadowColor='#ff8';cx.shadowBlur=20;cx.lineWidth=1.5;cx.strokeRect(px,py,pw,ph);
+  cx.shadowBlur=14;cx.fillStyle='#ff8';cx.font='bold 22px monospace';cx.textAlign='center';
+  cx.fillText('CHEATS',W/2,py+38);
+  cx.shadowBlur=6;cx.font='bold 10px monospace';cx.fillText('CHEAT MODE',W/2,py+54);cx.shadowBlur=0;
+  cx.font='13px monospace';
+  for(let i=0;i<CITEMS.length;i++){
+    const iy=py+76+i*36,sel=i===G.cheatSubSel,isBack=i===CITEMS.length-1;
+    if(sel){cx.fillStyle=isBack?'#0f8':'#ffee44';cx.shadowColor=isBack?'#0f8':'#ff8';cx.shadowBlur=10;cx.fillText('▶ '+CITEMS[i],W/2,iy);}
+    else{cx.fillStyle=isBack?'#668':'#665500';cx.shadowBlur=0;cx.fillText(CITEMS[i],W/2,iy);}
+  }
+  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';
+  cx.fillText('ESC TO GO BACK',W/2,py+ph-20);
+  cx.restore();
+}
+
 function drawPause(){
   if(G.showShipConfig&&G.paused)return drawShipConfig();
+  if(G.cheatSub&&G.paused)return drawCheatSub();
   const PITEMS=pauseItems();
-  const ph=G.cheatMode?480:260,pw=300,px=W/2-pw/2,py=H/2-ph/2;
+  const ph=G.cheatMode?300:260,pw=300,px=W/2-pw/2,py=H/2-ph/2;
   cx.save();
   cx.fillStyle='rgba(0,0,0,.75)';cx.fillRect(0,0,W,H);
   cx.strokeStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=20;cx.lineWidth=1.5;
@@ -225,7 +248,7 @@ function drawPause(){
   for(let i=0;i<PITEMS.length;i++){
     const iy=py+76+i*36;
     const sel=i===G.pauseSel;
-    const isCheat=G.cheatMode&&i>=2&&i<=7;
+    const isCheat=G.cheatMode&&i===3;
     if(sel){cx.fillStyle=isCheat?'#ffee44':'#0f8';cx.shadowColor=isCheat?'#ff8':'#0f8';cx.shadowBlur=10;cx.fillText('▶ '+PITEMS[i],W/2,iy);}
     else{cx.fillStyle=isCheat?'#665500':'#668';cx.shadowBlur=0;cx.fillText(PITEMS[i],W/2,iy);}
   }

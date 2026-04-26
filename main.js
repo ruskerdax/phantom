@@ -99,13 +99,33 @@ function update(){
     return;
   }
   if(iPause()){
-    if(G.paused){if(G.showShipConfig){G.showShipConfig=false;}else{G.paused=false;suppressMenuInput();}}
-    else{G.paused=true;G.pauseSel=0;G.showShipConfig=false;suppressMenuInput();}
+    if(G.paused){
+      if(G.cheatSub){G.cheatSub=false;suppressMenuInput();}
+      else if(G.showShipConfig){G.showShipConfig=false;}
+      else{G.paused=false;suppressMenuInput();}
+    }
+    else{G.paused=true;G.pauseSel=0;G.cheatSub=false;G.showShipConfig=false;suppressMenuInput();}
     return;
   }
   if(G.paused){
     const m=menuInput();
     if(G.showShipConfig&&m.confirm){G.showShipConfig=false;return;}
+    if(G.cheatSub){
+      const CITEMS=cheatItems();
+      if(m.up)G.cheatSubSel=Math.max(0,G.cheatSubSel-1);
+      if(m.down)G.cheatSubSel=Math.min(CITEMS.length-1,G.cheatSubSel+1);
+      if(m.confirm){
+        if(G.cheatSubSel===0){G.OW.s.hp=G.OW.s.maxHp;G.OW.s.energy=G.OW.s.maxEnergy;if(G.ENC){G.ENC.s.hp=G.ENC.s.maxHp;G.ENC.s.energy=G.ENC.s.maxEnergy;}tone(660,.2,'sine',.08);G.paused=false;G.cheatSub=false;}
+        else if(G.cheatSubSel===1){const sgp=owPos(SLIPGATE);G.OW.s.x=sgp.x;G.OW.s.y=sgp.y;G.OW.s.vx=0;G.OW.s.vy=0;if(G.ENC){G.ENC=null;G.site=null;}G.st='overworld';G.paused=false;G.cheatSub=false;}
+        else if(G.cheatSubSel===2){showSeedInput(v=>{if(v!=null){G.paused=false;G.cheatSub=false;jumpToSeed(v,null);}});}
+        else if(G.cheatSubSel===3){G.cleared=[true,true,true];G.slipgateActive=true;G.slipMsg=360;if(G.ENC){G.ENC=null;G.site=null;}G.st='overworld';G.paused=false;G.cheatSub=false;}
+        else if(G.cheatSubSel===4){G.credits+=10000;tone(880,.15,'sine',.07);G.paused=false;G.cheatSub=false;}
+        else if(G.cheatSubSel===5){G.credits=0;tone(220,.15,'sawtooth',.07);G.paused=false;G.cheatSub=false;}
+        else if(G.cheatSubSel===6){G.invincible=!G.invincible;tone(G.invincible?1200:400,.08,'square',.05);}
+        else if(G.cheatSubSel===7){G.cheatSub=false;}
+      }
+      return;
+    }
     const PITEMS=pauseItems();
     if(m.up)G.pauseSel=Math.max(0,G.pauseSel-1);
     if(m.down)G.pauseSel=Math.min(PITEMS.length-1,G.pauseSel+1);
@@ -113,25 +133,7 @@ function update(){
       if(G.pauseSel===0){G.paused=false;}
       else if(G.pauseSel===1){G.showShipConfig=true;}
       else if(G.pauseSel===2){G.optFrom=st;G.paused=false;G.st='options';}
-      else if(G.cheatMode&&G.pauseSel===3){
-        G.OW.s.hp=G.OW.s.maxHp;G.OW.s.energy=G.OW.s.maxEnergy;
-        if(G.ENC){G.ENC.s.hp=G.ENC.s.maxHp;G.ENC.s.energy=G.ENC.s.maxEnergy;}
-        tone(660,.2,'sine',.08);G.paused=false;
-      }
-      else if(G.cheatMode&&G.pauseSel===4){
-        const sgp=owPos(SLIPGATE);G.OW.s.x=sgp.x;G.OW.s.y=sgp.y;G.OW.s.vx=0;G.OW.s.vy=0;
-        if(G.ENC){G.ENC=null;G.site=null;}G.st='overworld';G.paused=false;
-      }
-      else if(G.cheatMode&&G.pauseSel===5){
-        showSeedInput(v=>{if(v!=null){G.paused=false;jumpToSeed(v,null);}});
-      }
-      else if(G.cheatMode&&G.pauseSel===6){
-        G.cleared=[true,true,true];G.slipgateActive=true;G.slipMsg=360;
-        if(G.ENC){G.ENC=null;G.site=null;}G.st='overworld';G.paused=false;
-      }
-      else if(G.cheatMode&&G.pauseSel===7){G.credits+=10000;tone(880,.15,'sine',.07);G.paused=false;}
-      else if(G.cheatMode&&G.pauseSel===8){G.credits=0;tone(220,.15,'sawtooth',.07);G.paused=false;}
-      else if(G.cheatMode&&G.pauseSel===9){G.invincible=!G.invincible;tone(G.invincible?1200:400,.08,'square',.05);}
+      else if(G.cheatMode&&G.pauseSel===3){G.cheatSub=true;G.cheatSubSel=0;}
       else if(G.pauseSel===PITEMS.length-1){G.paused=false;G.ENC=null;G.site=null;G.st='title';}
     }
     return;
