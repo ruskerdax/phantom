@@ -32,8 +32,8 @@ const WEAPON_TYPES = {
 
 // Weapon class definitions
 const WEAPONS = [
-  {id:'mass driver',  name:'MASS DRIVER',  wpnType:'kinetic gun', dmg:3, cd:0.5, spd:7,  life:60},
-  {id:'railgun',      name:'RAILGUN',      wpnType:'kinetic gun', dmg:2, cd:1.0, spd:12, life:90},
+  {id:'mass driver',  name:'MASS DRIVER',  wpnType:'kinetic gun', dmg:3, cd:1.0, spd:7,  life:60},
+  {id:'railgun',      name:'RAILGUN',      wpnType:'kinetic gun', dmg:2, cd:2.0, spd:12, life:90},
   {id:'pulse laser', name:'PULSE LASER', wpnType:'beam gun',    dmg:1, cd:2.0, range:267, pulses:5, pulseCd:5, energyCost:1},
   {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'beam gun',    dmg:8, cd:4.0, range:400, pulses:1, pulseCd:20, energyCost:2},
 ];
