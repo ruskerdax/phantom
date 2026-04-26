@@ -17,6 +17,7 @@ function defaultSave() {
     visitedSeeds: [],
     tutorialDone: false,
     prevSeed: null,
+    systemStates: {},
     currentHp: null,
     currentEnergy: null,
     sfxVol: 10,
@@ -38,6 +39,7 @@ function loadSave() {
     if (!Array.isArray(d.visitedSeeds))      d.visitedSeeds = [];
     if (typeof d.tutorialDone !== 'boolean') d.tutorialDone = false;
     if (!('prevSeed' in d))                  d.prevSeed = null;
+    if (!d.systemStates || typeof d.systemStates !== 'object') d.systemStates = {};
     if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
     return d;
@@ -68,6 +70,7 @@ function buildSaveData() {
     visitedSeeds: [...G.visitedSeeds],
     tutorialDone: G.tutorialDone,
     prevSeed: G.prevSeed,
+    systemStates: G.systemStates,
     currentHp: (s?.alive && s.hp > 0) ? s.hp : null,
     currentEnergy: (s?.alive && s.hp > 0) ? s.energy : null,
     sfxVol: G.sfxVol,
