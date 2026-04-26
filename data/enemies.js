@@ -137,6 +137,28 @@ const OET = [
   }
 ];
 
+const TURRET = {
+  col: '#f44',
+  r: 8,
+  update(t, ebu, s) {
+    t.a += angDiff(t.a, Math.atan2(s.x-t.x, -(s.y-t.y))) * .04;
+    if(--t.timer <= 0) {
+      const ewp=WEAPONS[0];
+      t.timer = 100 + Math.floor(Math.random()*40-20);
+      const ba=t.a;
+      ebu.push({x:t.x+Math.sin(ba)*15, y:t.y-Math.cos(ba)*15, vx:Math.sin(ba)*ewp.spd, vy:-Math.cos(ba)*ewp.spd, l:ewp.life*ewp.spd, dmg:ewp.dmg, col:this.col});
+      tone(550,.04,'square',.03);
+    }
+  },
+  draw(t) {
+    cx.save();cx.translate(t.x,t.y);
+    cx.strokeStyle=this.col;cx.shadowColor=this.col;cx.shadowBlur=8;cx.lineWidth=1.5;
+    cx.beginPath();cx.arc(0,0,8,0,Math.PI*2);cx.stroke();
+    cx.rotate(t.a);cx.beginPath();cx.moveTo(0,-8);cx.lineTo(0,-18);cx.stroke();
+    cx.restore();
+  }
+};
+
 function mkEncEnemy(type, x, y, timer) {
   const ec=OET[type].enc;
   return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, timer, alive:true, t:type, spin:0, pulsesLeft:0, pulseTimer:0};

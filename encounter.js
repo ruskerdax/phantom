@@ -100,11 +100,7 @@ function updEnc(){
   if(enc.isHBase&&!enc.cleared&&enc.hbase.softpts.every(sp=>!sp.alive)){enc.cleared=true;tone(880,.3,'sine',.07);}
   for(const e of alive){if(enemyUpdate(e,s,enc,ew,eh))return;}
   if(enc.isHBase&&!enc.cleared){
-    for(const t of enc.hbase.turrets){
-      if(!t.alive)continue;
-      t.a+=angDiff(t.a,Math.atan2(s.x-t.x,-(s.y-t.y)))*.04;
-      if(--t.timer<=0){const ewp=WEAPONS[0];t.timer=100+Math.floor(Math.random()*40-20);const ba=t.a;enc.ebu.push({x:t.x+Math.sin(ba)*15,y:t.y-Math.cos(ba)*15,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,dmg:ewp.dmg,col:'#ff4444'});tone(550,.04,'square',.03);}
-    }
+    for(const t of enc.hbase.turrets){if(t.alive)TURRET.update(t,enc.ebu,s);}
   }
   for(let i=enc.ebu.length-1;i>=0;i--){
     const b=enc.ebu[i];b.x=wrap(b.x+b.vx,ew);b.y=wrap(b.y+b.vy,eh);b.l-=Math.hypot(b.vx,b.vy);if(b.l<=0){enc.ebu.splice(i,1);continue;}
@@ -146,14 +142,7 @@ function drawEnc(){
       else{cx.strokeStyle='#442200';cx.shadowBlur=0;cx.lineWidth=1;}
       cx.beginPath();cx.arc(sp.x,sp.y,8,0,Math.PI*2);cx.stroke();cx.restore();
     }
-    for(const t of turrets){
-      if(!t.alive)continue;
-      cx.save();cx.translate(t.x,t.y);
-      cx.strokeStyle='#f44';cx.shadowColor='#f44';cx.shadowBlur=8;cx.lineWidth=1.5;
-      cx.beginPath();cx.arc(0,0,8,0,Math.PI*2);cx.stroke();
-      cx.rotate(t.a);cx.beginPath();cx.moveTo(0,-8);cx.lineTo(0,-18);cx.stroke();
-      cx.restore();
-    }
+    for(const t of turrets){if(t.alive)TURRET.draw(t);}
   }
   for(const f of enc.fu)drEnergy(f.x,f.y,'#0f8');
   for(const b of enc.bul)drBullet(b.x,b.y,'#fff');
