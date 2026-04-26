@@ -170,7 +170,7 @@ function owKillShip(){
   const ow=G.OW,s=ow.s;if(!s.alive)return;
   s.alive=false;boomAt(ow.pts,s.x,s.y,'#fff',28);boomAt(ow.pts,s.x,s.y,'#fa0',16);
   tone(200,.5,'sawtooth',.15);
-  G.st='dead_ow';
+  G.st='dead_ow';saveGame();
   setTimeout(()=>{G.st='rebuild';},1800);
 }
 function doRebuildFinalize(){
@@ -371,7 +371,7 @@ function encKillShip(){
   const enc=G.ENC,s=enc.s;if(!s.alive)return;
   s.alive=false;boomAt(enc.pts,s.x,s.y,'#fff',28);boomAt(enc.pts,s.x,s.y,'#fa0',16);
   tone(200,.5,'sawtooth',.15);
-  G.st='dead_enc';
+  G.st='dead_enc';saveGame();
   setTimeout(()=>{G.st='rebuild';},1800);
 }
 function encWin(){
@@ -541,7 +541,7 @@ function siteKillShip(){
   const site=G.site,s=site.s;if(!s.alive)return;
   s.alive=false;boomAt(site.pts,s.x,s.y,'#fff',28);boomAt(site.pts,s.x,s.y,'#fa0',18);
   tone(200,.5,'sawtooth',.15);
-  G.st='dead_site';
+  G.st='dead_site';saveGame();
   setTimeout(()=>{G.st='rebuild';},1800);
 }
 function updSite(){
@@ -1361,7 +1361,6 @@ function updRebuild(){
     const lch=CHASSIS.filter(c=>hasLicense(c.id)),nItems=lch.length+2;
     if(up)rf.sel=Math.max(0,rf.sel-1);
     if(dn)rf.sel=Math.min(nItems-1,rf.sel+1);
-    if(bk){ia();G.rebuildFlow=null;G.paused=false;G.ENC=null;G.site=null;G.st='title';return;}
     if(ok){
       ia();
       if(rf.sel===nItems-1){G.rebuildFlow=null;G.paused=false;G.ENC=null;G.site=null;G.st='title';return;}

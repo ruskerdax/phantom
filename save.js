@@ -62,8 +62,8 @@ function buildSaveData() {
     slipgateActive: G.slipgateActive,
     seed: G.seed,
     visitedSeeds: [...G.visitedSeeds],
-    currentHp: s?.hp ?? null,
-    currentEnergy: s?.energy ?? null,
+    currentHp: (s?.alive && s.hp > 0) ? s.hp : null,
+    currentEnergy: (s?.alive && s.hp > 0) ? s.energy : null,
     sfxVol: G.sfxVol,
     musVol: G.musVol,
   };
