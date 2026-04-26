@@ -350,14 +350,14 @@ function drawControls(){
     } else {
       cx.fillStyle=sel&&G.optCol===0?'#0f8':'#668';
       cx.shadowColor='#0f8';cx.shadowBlur=sel&&G.optCol===0?6:0;
-      cx.fillText('['+fmtKey(BND[a.id].key)+']',col1,y);
+      cx.fillText(BND[a.id].key!=null?'['+fmtKey(BND[a.id].key)+']':'[--]',col1,y);
     }
     if(listeningBtn){
       if(G.fr%30<15){cx.fillStyle='#ff0';cx.shadowColor='#ff0';cx.shadowBlur=10;cx.fillText('PRESS BTN...',col2,y);}
     } else {
       cx.fillStyle=sel&&G.optCol===1?'#0f8':'#668';
       cx.shadowColor='#0f8';cx.shadowBlur=sel&&G.optCol===1?6:0;
-      cx.fillText('['+fmtBtn(BND[a.id].btn)+']',col2,y);
+      cx.fillText(BND[a.id].btn!=null?'['+fmtBtn(BND[a.id].btn)+']':'[--]',col2,y);
     }
   }
   cx.shadowBlur=0;
@@ -368,6 +368,6 @@ function drawControls(){
   cx.font='bold 13px monospace';cx.fillText(rsel?'▶ RESET TO DEFAULTS':'RESET TO DEFAULTS',W/2,ry);
   cx.shadowBlur=0;
   cx.fillStyle='#334';cx.font='11px monospace';
-  cx.fillText('↑↓ SELECT ROW   ◄► SWITCH COLUMN   ENTER REMAP   ESC BACK',W/2,H-18);
+  cx.fillText('↑↓ SELECT ROW   ◄► SWITCH COLUMN   ENTER REMAP   BKSP CLEAR   ESC BACK',W/2,H-18);
   cx.restore();drGPI();scanlines();
 }

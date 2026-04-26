@@ -46,6 +46,7 @@ function update(){
         G.optListen=G.optCol===0?'key':'btn';
       }
     }
+    if(jp('Backspace')&&G.ctrlSel<ACT_DEFS.length){const b=BND[ACT_DEFS[G.ctrlSel].id];if(G.optCol===0)b.key=null;else b.btn=null;saveBND();}
     if(iPause()){G.st='options';G.optListen=null;}
     return;
   }
