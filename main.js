@@ -18,7 +18,7 @@ function update(){
       if(jp('ArrowLeft')||GP.menuLeft)G.musVol=Math.max(0,G.musVol-1);
       if(jp('ArrowRight')||GP.menuRight)G.musVol=Math.min(10,G.musVol+1);
     } else if(G.optSel===2){
-      if(iEnter()||jp('ArrowRight')||GP.thrustj||GP.menuRight){G.ctrlSel=0;G.optCol=0;G.optListen=null;G.st='controls';return;}
+      if(iEnter()||jp('ArrowRight')||GP.menuRight){G.ctrlSel=0;G.optCol=0;G.optListen=null;G.st='controls';return;}
     } else if(G.optSel===3){
       if(iEnter()||jp('ArrowLeft')||jp('ArrowRight')||GP.menuLeft||GP.menuRight){G.cheatMode=!G.cheatMode;tone(G.cheatMode?1200:400,.08,'square',.05);}
     } else if(G.optSel===4){
@@ -39,7 +39,7 @@ function update(){
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.ctrlSel=Math.min(nRows-1,G.ctrlSel+1);
     if(jp('ArrowLeft')||GP.menuLeft)G.optCol=0;
     if(jp('ArrowRight')||GP.menuRight)G.optCol=1;
-    if(iEnter()||jp('Space')||GP.thrustj){
+    if(iEnter()){
       if(G.ctrlSel===ACT_DEFS.length){
         ACT_DEFS.forEach(a=>{BND[a.id]={key:a.defKey,btn:a.defBtn};});saveBND();
       } else {
@@ -92,7 +92,7 @@ function update(){
     const PITEMS=pauseItems();
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.pauseSel=Math.max(0,G.pauseSel-1);
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.pauseSel=Math.min(PITEMS.length-1,G.pauseSel+1);
-    if(iEnter()||GP.thrustj){
+    if(iEnter()){
       if(G.pauseSel===0){G.paused=false;}
       else if(G.pauseSel===1){G.showShipConfig=true;}
       else if(G.pauseSel===2){G.optFrom=st;G.paused=false;G.st='options';}

@@ -77,5 +77,5 @@ function iThr(){return!!(kdown('thrust')||GP.thrust);}
 function iShd(f){const ax=activeAuxObj();return !!(ax&&ax.effect==='shield'&&f>0&&(kdown('shield')||GP.shield));}
 function iFir(){return!!(kdown('fire')||GP.fire);}
 function iFireSec(){return!!(kdown('fireSec')||GP.fireSec);}
-function iEnter(){return!!(jp('Enter')||jp('NumpadEnter')||GP.startj);}
+function iEnter(){return!!(jp('Enter')||jp('NumpadEnter')||GP.thrustj);}
 function iPause(){return!!(kjust('pause')||GP.startj);}
