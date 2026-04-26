@@ -256,8 +256,8 @@ function drawPause(){
   cx.fillText('CREDITS  '+G.credits,W/2,py+ph-46);
   cx.fillStyle='#334';cx.font='11px monospace';
   cx.fillText('ESC TO RESUME',W/2,py+ph-26);
-  cx.fillStyle='#223';cx.font='10px monospace';
-  cx.fillText('SEED  '+G.seed.toString(16).toUpperCase().padStart(8,'0'),W/2,py+ph-10);
+  if(G.cheatMode){cx.fillStyle='#223';cx.font='10px monospace';
+  cx.fillText('SEED  '+G.seed.toString(16).toUpperCase().padStart(8,'0'),W/2,py+ph-10);}
   cx.restore();
 }
 
