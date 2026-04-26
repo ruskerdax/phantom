@@ -11,8 +11,8 @@ const WEAPON_TYPES = {
   },
   'beam gun': {
     fire(wp, s, slot) {
-      if(slot===0){s.pulsesLeft=wp.pulses;s.pulseTimer=1;}
-      else{s.pulsesLeft2=wp.pulses;s.pulseTimer2=1;}
+      if(slot===0){s.pulsesLeft=wp.pulses;s.pulseTimer=wp.chargeDelay??1;}
+      else{s.pulsesLeft2=wp.pulses;s.pulseTimer2=wp.chargeDelay??1;}
     },
     // Advances one laser pulse; returns castLaser result or null if timer not ready.
     // Caller is responsible for building tgts (context-specific) and handling the hit.
@@ -21,8 +21,8 @@ const WEAPON_TYPES = {
       if(--s[ptK]>0)return null;
       const ox=s.x+Math.sin(s.a)*13,oy=s.y-Math.cos(s.a)*13;
       const res=castLaser(ox,oy,s.a,wp.range,tgts,walls);
-      lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:'#0cf'});
-      tone(1200,.08,'sine',.05);
+      lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:wp.beamColor??'#0cf',w:wp.beamWidth??2});
+      if(wp.beamSound)tone(...wp.beamSound);else tone(1200,.08,'sine',.05);
       s[plK]--;
       if(s[plK]>0)s[ptK]=wp.pulseCd;else s[cdK]=Math.round(wp.cd*60);
       return res;
@@ -35,7 +35,7 @@ const WEAPONS = [
   {id:'mass driver',  name:'MASS DRIVER',  wpnType:'kinetic gun', dmg:3, cd:1.0, spd:7,  life:60},
   {id:'railgun',      name:'RAILGUN',      wpnType:'kinetic gun', dmg:2, cd:2.0, spd:12, life:90},
   {id:'pulse laser', name:'PULSE LASER', wpnType:'beam gun',    dmg:1, cd:2.0, range:267, pulses:5, pulseCd:5, energyCost:1},
-  {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'beam gun',    dmg:8, cd:4.0, range:400, pulses:1, pulseCd:20, energyCost:2},
+  {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'beam gun',    dmg:8, cd:4.0, range:400, pulses:1, pulseCd:20, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#f80', beamSound:[120,.35,'sawtooth',.09]},
 ];
 
 // Fire a weapon, deducting energyCost if defined and the ship tracks energy.
