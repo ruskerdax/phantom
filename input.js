@@ -10,6 +10,7 @@ document.addEventListener('keydown',e=>{
     const blocked=['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12','Tab','Escape'];
     if(e.code==='Escape'){G.optListen=null;}
     else if(!blocked.includes(e.code)){BND[ACT_DEFS[G.ctrlSel].id].key=e.code;saveBND();G.optListen=null;}
+    K[e.code+'j']=false;
     e.preventDefault();
   }
 },{passive:false});
@@ -48,7 +49,7 @@ function pollGP(){
   const ax=gp.axes,bt=gp.buttons,dead=.18;
   if(G&&G.optListen==='btn'){
     for(let i=0;i<bt.length;i++){
-      if(bpressed(bt,i)&&!_gprev[i]){BND[ACT_DEFS[G.optSel].id].btn=i;saveBND();G.optListen=null;break;}
+      if(bpressed(bt,i)&&!_gprev[i]){BND[ACT_DEFS[G.ctrlSel].id].btn=i;saveBND();G.optListen=null;_gsh=true;_gmuh=true;_gmdh=true;_gmlh=true;_gmrh=true;_gtjh=true;break;}
     }
   }
   _gprev=bt.map(b=>!!(b&&(b.pressed||b.value>.3)));
