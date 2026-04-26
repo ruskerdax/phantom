@@ -123,12 +123,15 @@ function update(){
         if(G.ENC){G.ENC=null;G.site=null;}G.st='overworld';G.paused=false;
       }
       else if(G.cheatMode&&G.pauseSel===5){
+        showSeedInput(v=>{if(v!=null){G.paused=false;jumpToSeed(v,null);}});
+      }
+      else if(G.cheatMode&&G.pauseSel===6){
         G.cleared=[true,true,true];G.slipgateActive=true;G.slipMsg=360;
         if(G.ENC){G.ENC=null;G.site=null;}G.st='overworld';G.paused=false;
       }
-      else if(G.cheatMode&&G.pauseSel===6){G.credits+=10000;tone(880,.15,'sine',.07);G.paused=false;}
-      else if(G.cheatMode&&G.pauseSel===7){G.credits=0;tone(220,.15,'sawtooth',.07);G.paused=false;}
-      else if(G.cheatMode&&G.pauseSel===8){G.invincible=!G.invincible;tone(G.invincible?1200:400,.08,'square',.05);}
+      else if(G.cheatMode&&G.pauseSel===7){G.credits+=10000;tone(880,.15,'sine',.07);G.paused=false;}
+      else if(G.cheatMode&&G.pauseSel===8){G.credits=0;tone(220,.15,'sawtooth',.07);G.paused=false;}
+      else if(G.cheatMode&&G.pauseSel===9){G.invincible=!G.invincible;tone(G.invincible?1200:400,.08,'square',.05);}
       else if(G.pauseSel===PITEMS.length-1){G.paused=false;G.ENC=null;G.site=null;G.st='title';}
     }
     return;

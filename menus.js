@@ -170,7 +170,7 @@ function updRebuild(){
   }
 }
 
-function pauseItems(){return G.cheatMode?['RESUME','SHIP CONFIG','OPTIONS','REPAIR SHIP','TELEPORT TO SLIPGATE','CLEAR ALL SECTORS','ADD 10K CREDITS','ZERO CREDITS','INVINCIBILITY: '+(G.invincible?'ON':'OFF'),'QUIT TO TITLE']:['RESUME','SHIP CONFIG','OPTIONS','QUIT TO TITLE'];}
+function pauseItems(){return G.cheatMode?['RESUME','SHIP CONFIG','OPTIONS','REPAIR SHIP','TELEPORT TO SLIPGATE','JUMP TO SEED','CLEAR ALL SECTORS','ADD 10K CREDITS','ZERO CREDITS','INVINCIBILITY: '+(G.invincible?'ON':'OFF'),'QUIT TO TITLE']:['RESUME','SHIP CONFIG','OPTIONS','QUIT TO TITLE'];}
 
 function drawShipConfig(){
   const ch=activeChassisObj(),ax=activeAuxObj();
