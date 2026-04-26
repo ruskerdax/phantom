@@ -1676,6 +1676,7 @@ function update(){
   if(st==='overworld')updOW();
   else if(st==='enc_in'||st==='encounter'){if(st==='enc_in'&&G.ENC.introTimer>0){G.ENC.introTimer--;if(G.ENC.introTimer===0)G.st='encounter';}else updEnc();}
   else if(st==='play'||st==='esc')updCV();
+  if(G.fr%300===0&&(st==='overworld'||st==='encounter'||st==='play'||st==='esc'))saveGame();
 }
 
 function draw(){
