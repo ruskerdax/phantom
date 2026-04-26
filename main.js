@@ -90,6 +90,7 @@ function update(){
     return;
   }
   if(G.paused){
+    if(G.showShipConfig&&iEnter()){G.showShipConfig=false;return;}
     const PITEMS=pauseItems();
     if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.pauseSel=Math.max(0,G.pauseSel-1);
     if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.pauseSel=Math.min(PITEMS.length-1,G.pauseSel+1);

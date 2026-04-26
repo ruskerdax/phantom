@@ -202,7 +202,13 @@ function drawShipConfig(){
     cx.fillStyle='#446';cx.textAlign='left';cx.fillText(label,px+20,ry);
     cx.fillStyle='#aaffcc';cx.textAlign='right';cx.fillText(val,px+pw-20,ry);
   }
-  cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';cx.fillText('ESC TO CLOSE',W/2,py+ph-14);
+  // Go Back button
+  const btnW=120,btnH=26,btnX=W/2-btnW/2,btnY=py+ph-46;
+  cx.fillStyle='rgba(0,60,20,.9)';cx.fillRect(btnX,btnY,btnW,btnH);
+  cx.strokeStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=8;cx.lineWidth=1.2;cx.strokeRect(btnX,btnY,btnW,btnH);
+  cx.fillStyle='#0f8';cx.font='bold 13px monospace';cx.textAlign='center';cx.shadowBlur=6;
+  cx.fillText('◀  GO BACK',W/2,btnY+17);
+  cx.shadowBlur=0;
   cx.restore();
 }
 

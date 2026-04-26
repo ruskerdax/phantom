@@ -52,7 +52,7 @@ function jumpToSeed(newSeed,sourceSeed){
 }
 function slipNeighborList(){
   const list=genNeighbors(G.seed);
-  if(G.prevSeed!=null&&!list.includes(G.prevSeed))list[0]=G.prevSeed;
+  if(G.prevSeed!=null&&G.prevSeed!==TUTORIAL_SEED&&!list.includes(G.prevSeed))list[0]=G.prevSeed;
   return list;
 }
 function owStartEnc(idx){
