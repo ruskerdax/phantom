@@ -48,8 +48,8 @@ function startFromSave(){
   genWorld(G.seed);
   const ch=activeChassisObj();
   const energy=sv?.currentEnergy!=null?Math.min(sv.currentEnergy,ch.maxEnergy):ch.maxEnergy;
-  const bp=owPos(BASE);
-  initOW(energy,bp.x,bp.y);
+  const sp=(sv&&G.seed!==TUTORIAL_SEED)?owPos(SLIPGATE):owPos(BASE);
+  initOW(energy,sp.x,sp.y);
   if(sv?.currentHp!=null)G.OW.s.hp=Math.min(sv.currentHp,G.OW.s.maxHp);
   if(!G.visitedSeeds.includes(G.seed))G.visitedSeeds.push(G.seed);
   saveGame();
