@@ -61,9 +61,13 @@ function update(){
   if(st==='dead_ow'||st==='dead_enc'||st==='dead_site')return;
   if(st==='base'){updBase();return;}
   if(st==='slipgate'){
-    if(G.slipgateActive){
+    if(G.slipgateActive&&G.fr-G.slipEnterFr<6){kjust('fire');iEnter();}
+    if(G.slipgateActive&&G.fr-G.slipEnterFr>=6){
       const isTutFirst=G.seed===TUTORIAL_SEED&&!G.tutorialDone;
-      if(!isTutFirst){
+      if(isTutFirst){
+        if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.slipSel=0;
+        if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.slipSel=1;
+      } else {
         const nb=slipNeighborList();
         if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.slipSel=Math.max(0,G.slipSel-1);
         if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.slipSel=Math.min(nb.length,G.slipSel+1);
@@ -71,6 +75,7 @@ function update(){
       if(iEnter()||kjust('fire')){
         ia();
         if(isTutFirst){
+          if(G.slipSel===1){G.st='overworld';return;}
           G.tutorialDone=true;
           jumpToSeed((Math.random()*0xFFFFFFFF)>>>0,TUTORIAL_SEED);
         } else {

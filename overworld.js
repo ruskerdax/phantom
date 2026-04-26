@@ -209,7 +209,7 @@ function updOW(){
   if(owFired&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
   if(owFired&&ow.nearAst>=0){startAstEnc();return;}
   if(owFired&&ow.nearHBase){startHBaseEnc();return;}
-  if(owFired&&ow.nearSlipgate){G.slipSel=0;G.st='slipgate';return;}
+  if(owFired&&ow.nearSlipgate){G.slipSel=0;G.slipEnterFr=G.fr;G.st='slipgate';return;}
   for(let i=0;i<ow.en.length;i++){
     const e=ow.en[i];if(!e.alive)continue;
     const et=OET[e.t];e.spin+=.04+e.t*.015;
@@ -270,15 +270,22 @@ function drawSlipgateMenu(){
     cx.fillText('Clear all sectors to activate the slipgate.',W/2,py+112);
     cx.fillStyle='#334';cx.font='11px monospace';cx.fillText('ESC TO LEAVE',W/2,py+ph-14);
   } else if(G.seed===TUTORIAL_SEED&&!G.tutorialDone){
-    const pw=400,ph=240,px=W/2-pw/2,py=H/2-ph/2;
+    const sel=G.slipSel||0;
+    const pw=400,ph=260,px=W/2-pw/2,py=H/2-ph/2;
     cx.fillStyle='rgba(4,0,12,.92)';cx.fillRect(px,py,pw,ph);
     cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=18;cx.lineWidth=1.5;cx.strokeRect(px,py,pw,ph);
     cx.shadowBlur=12;cx.fillStyle=col;cx.font='bold 22px monospace';cx.fillText('SLIPGATE',W/2,py+40);
     cx.shadowBlur=0;cx.fillStyle='#8877aa';cx.font='12px monospace';
     cx.fillText('Slipspace coordinates are unstable.',W/2,py+76);
-    cx.fillText('Destination unknown.',W/2,py+94);
-    cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=8;cx.font='bold 14px monospace';
-    cx.fillText('▶  JUMP — SLIPSPACE DISTORTION',W/2,py+148);
+    cx.fillText('Destination unknown — slipgate distortion.',W/2,py+94);
+    cx.fillText('Really use the slipgate?',W/2,py+116);
+    const opts=['YES — JUMP','NO — STAY'];
+    opts.forEach((o,i)=>{
+      const s=i===sel;
+      cx.fillStyle=s?col:'#776688';cx.shadowColor=col;cx.shadowBlur=s?8:0;
+      cx.font=s?'bold 14px monospace':'13px monospace';
+      cx.fillText((s?'▶ ':' ')+o,W/2,py+158+i*30);
+    });
     cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.fillText('ESC TO LEAVE',W/2,py+ph-14);
   } else {
     const nb=slipNeighborList(),N=nb.length;
