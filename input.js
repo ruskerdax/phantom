@@ -32,8 +32,8 @@ function menuInput(opts){
   return {
     up:    !!(jp('ArrowUp')    || jp('KeyW') || GP.menuUp),
     down:  !!(jp('ArrowDown')  || jp('KeyS') || GP.menuDown),
-    left:  !!(jp('ArrowLeft')  || jp('KeyA') || GP.menuLeft),
-    right: !!(jp('ArrowRight') || jp('KeyD') || GP.menuRight),
+    left:  !!(jp('ArrowLeft')  || kjust('rotLeft')  || GP.menuLeft),
+    right: !!(jp('ArrowRight') || kjust('rotRight') || GP.menuRight),
     confirm: !!(iEnter() || (o.fireConfirms && iFir())),
     cancel:  !!iPause(),
     clear:   !!jp('Backspace'),
