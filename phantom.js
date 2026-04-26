@@ -44,7 +44,7 @@ function fmtBtn(i){const n=['A','B','X','Y','LB','RB','LT','RT','SEL','START','L
 
 // Gamepad
 let GP={connected:false,id:'',axL:0,thrust:false,fire:false,fireSec:false,shield:false,startj:false,menuUp:false,menuDown:false,menuLeft:false,menuRight:false,thrustj:false};
-let _gfh=false,_gfsh=false,_gsh=false,_gmuh=false,_gmdh=false,_gmlh=false,_gmrh=false,_gtjh=false,_gprev=[];
+let _gsh=false,_gmuh=false,_gmdh=false,_gmlh=false,_gmrh=false,_gtjh=false,_gprev=[];
 window.addEventListener('gamepadconnected',e=>{GP.connected=true;GP.id=e.gamepad.id;ia();tone(660,.2,'sine',.08);});
 window.addEventListener('gamepaddisconnected',()=>{GP.connected=false;GP.id='';});
 function bpressed(bt,i){return!!(bt[i]&&(bt[i].pressed||bt[i].value>.3));}
@@ -67,8 +67,8 @@ function pollGP(){
   const thrBtn=bpressed(bt,BND.thrust.btn);
   GP.thrust=rt>.3||dU||thrBtn;
   GP.shield=bpressed(bt,BND.shield.btn);
-  const fn=bpressed(bt,BND.fire.btn);GP.fire=fn&&!_gfh;_gfh=fn;
-  const fsn=bpressed(bt,BND.fireSec.btn);GP.fireSec=fsn&&!_gfsh;_gfsh=fsn;
+  GP.fire=bpressed(bt,BND.fire.btn);
+  GP.fireSec=bpressed(bt,BND.fireSec.btn);
   const sn=bpressed(bt,BND.pause.btn);GP.startj=sn&&!_gsh;_gsh=sn;
   const mu=dU||(ly<-.5);GP.menuUp=mu&&!_gmuh;_gmuh=mu;
   const dD=bpressed(bt,13);
@@ -82,8 +82,8 @@ function kjust(id){return jp(BND[id].key);}
 function iRot(){return kdown('rotLeft')?-1:kdown('rotRight')?1:GP.axL;}
 function iThr(){return!!(kdown('thrust')||GP.thrust);}
 function iShd(f){const ax=activeAuxObj();return !!(ax&&ax.effect==='shield'&&f>0&&(kdown('shield')||GP.shield));}
-function iFir(){return!!(kjust('fire')||GP.fire);}
-function iFireSec(){return!!(kjust('fireSec')||GP.fireSec);}
+function iFir(){return!!(kdown('fire')||GP.fire);}
+function iFireSec(){return!!(kdown('fireSec')||GP.fireSec);}
 function iEnter(){return!!(jp('Enter')||jp('NumpadEnter')||GP.startj);}
 function iPause(){return!!(kjust('pause')||GP.startj);}
 
@@ -434,7 +434,7 @@ function updEnc(){
     for(const t of enc.hbase.turrets){
       if(!t.alive)continue;
       t.a+=angDiff(t.a,Math.atan2(s.x-t.x,-(s.y-t.y)))*.04;
-      if(--t.timer<=0){const ewp=WEAPONS[0];t.timer=100+Math.floor(Math.random()*40-20);const ba=t.a;enc.ebu.push({x:t.x+Math.sin(ba)*15,y:t.y-Math.cos(ba)*15,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,col:'#ff4444'});tone(550,.04,'square',.03);}
+      if(--t.timer<=0){const ewp=WEAPONS[0];t.timer=100+Math.floor(Math.random()*40-20);const ba=t.a;enc.ebu.push({x:t.x+Math.sin(ba)*15,y:t.y-Math.cos(ba)*15,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,dmg:ewp.dmg,col:'#ff4444'});tone(550,.04,'square',.03);}
     }
   }
   for(let i=enc.ebu.length-1;i>=0;i--){
@@ -443,7 +443,7 @@ function updEnc(){
     if(enc.isHBase&&pip(b.x,b.y,enc.hbase.hexPoly)){enc.ebu.splice(i,1);continue;}
     if(Math.hypot(b.x-s.x,b.y-s.y)<12){
       enc.ebu.splice(i,1);
-      if(!s.shld&&!G.invincible){s.hp=Math.max(0,s.hp-3);tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return;}}
+      if(!s.shld&&!G.invincible){s.hp=Math.max(0,s.hp-b.dmg);tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return;}}
     }
   }
 }
@@ -546,14 +546,14 @@ function updCV(){
   for(const e of cv.en){
     if(!e.alive)continue;
     e.a+=angDiff(e.a,Math.atan2(s.x-e.x,-(s.y-e.y)))*.04;
-    if(--e.timer<=0){const ewp=WEAPONS[0];e.timer=100+Math.floor(Math.random()*40-20);cv.ebu.push({x:e.x+Math.sin(e.a)*15,y:e.y-Math.cos(e.a)*15,vx:Math.sin(e.a)*ewp.spd,vy:-Math.cos(e.a)*ewp.spd,l:ewp.life*ewp.spd});}
+    if(--e.timer<=0){const ewp=WEAPONS[0];e.timer=100+Math.floor(Math.random()*40-20);cv.ebu.push({x:e.x+Math.sin(e.a)*15,y:e.y-Math.cos(e.a)*15,vx:Math.sin(e.a)*ewp.spd,vy:-Math.cos(e.a)*ewp.spd,l:ewp.life*ewp.spd,dmg:ewp.dmg});}
   }
   for(let i=cv.ebu.length-1;i>=0;i--){
     const b=cv.ebu[i];b.x+=b.vx;b.y+=b.vy;b.l-=Math.hypot(b.vx,b.vy);
     if(b.l<=0||b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,G.lv)){cv.ebu.splice(i,1);continue;}
     if(Math.hypot(b.x-s.x,b.y-s.y)<12){
       cv.ebu.splice(i,1);
-      if(!s.shld&&!G.invincible){s.hp=Math.max(0,s.hp-3);tone(380,.08,'square',.08);if(s.hp<=0){cvKillShip();return;}}
+      if(!s.shld&&!G.invincible){s.hp=Math.max(0,s.hp-b.dmg);tone(380,.08,'square',.08);if(s.hp<=0){cvKillShip();return;}}
     }
   }
 }
