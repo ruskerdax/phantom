@@ -32,9 +32,9 @@ const WEAPON_TYPES = {
 
 // Weapon class definitions
 const WEAPONS = [
-  {id:'mass driver',  wpnType:'kinetic gun', dmg:3, cd:0.5, spd:7,  life:60},
-  {id:'railgun',      wpnType:'kinetic gun', dmg:2, cd:1.0, spd:12, life:90},
-  {id:'laser cannon', wpnType:'beam gun',    dmg:1, cd:1.0, range:Math.round(W/3), pulses:3, pulseCd:5, energyCost:1},
+  {id:'mass driver',  name:'MASS DRIVER',  wpnType:'kinetic gun', dmg:3, cd:0.5, spd:7,  life:60},
+  {id:'railgun',      name:'RAILGUN',      wpnType:'kinetic gun', dmg:2, cd:1.0, spd:12, life:90},
+  {id:'laser cannon', name:'LASER CANNON', wpnType:'beam gun',    dmg:1, cd:1.0, range:Math.round(W/3), pulses:3, pulseCd:5, energyCost:1},
 ];
 
 // Fire a weapon, deducting energyCost if defined and the ship tracks energy.
