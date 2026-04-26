@@ -31,6 +31,20 @@ function seedChild(parent,index){
   return h>>>0;
 }
 
+// Deterministically derive the neighbor list for a system.
+// Returns an array of uint32 seeds, length NEIGHBOR_MIN..NEIGHBOR_MAX.
+function genNeighbors(seed){
+  const rng=mkRNG(seedChild(seed,0x1000));
+  const count=rng.int(NEIGHBOR_MIN,NEIGHBOR_MAX);
+  const out=[];
+  for(let i=0;i<count;i++){
+    let n=seedChild(seed,0x2000+i);
+    if(n===seed||n===TUTORIAL_SEED||out.includes(n))n=seedChild(n,0xFA11BACC+i);
+    out.push(n>>>0);
+  }
+  return out;
+}
+
 // ---- Cave terrain generator ----
 function genTerrain(rng,wH){
   const mg=40,cx2=W/2;
