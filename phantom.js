@@ -165,16 +165,10 @@ function owKillShip(){
   G.st='dead_ow';
   setTimeout(()=>{G.st='rebuild';},1800);
 }
-function doRebuild(){
-  const bp=owPos(BASE);
-  if(G.credits>=2500)G.credits-=2500;
-  G.bounty=0;
-  G.ENC=null;G.CV=null;
+function doRebuildFinalize(){
+  const bp=owPos(BASE);G.ENC=null;G.CV=null;G.bounty=0;
   if(!G.OW){initOW(activeChassisObj().maxEnergy);return;}
-  G.OW.s=mkShip(bp.x,bp.y);
-  G.OW.s.inv=180;
-  G.st='overworld';
-  saveGame();
+  G.OW.s=mkShip(bp.x,bp.y);G.OW.s.inv=180;G.st='overworld';saveGame();tone(660,.2,'sine',.08);
 }
 function doJump(){
   const energy=G.OW.s.energy;
@@ -309,18 +303,19 @@ function updOW(){
   if(sdist<22){owKillShip();return;}
   s.vx+=sdx*500/(sdist*sdist*sdist);s.vy+=sdy*500/(sdist*sdist*sdist);}
   const bp=owPos(BASE);ow.nearBase=Math.hypot(s.x-bp.x,s.y-bp.y)<BASE.r+28;
-  if(iFir()&&ow.nearBase){G.credits+=G.bounty;G.bounty=0;G.baseSel=0;G.baseTab=0;G.shopSel=0;G.shopActionId=null;G.equipFlow=null;G.st='base';return;}
   ow.nearP=-1;
   for(let i=0;i<LV.length;i++){if(G.cleared[i])continue;const pp=owPos(PP[i]);if(Math.hypot(s.x-pp.x,s.y-pp.y)<LV[i].pr+28){ow.nearP=i;break;}}
-  if(iFir()&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
   ow.nearAst=-1;
   for(let ai=0;ai<2;ai++){const ap=owPos(AB[ai]);if(Math.hypot(s.x-ap.x,s.y-ap.y)<AB[ai].r+28){ow.nearAst=ai;break;}}
-  if(iFir()&&ow.nearAst>=0){startAstEnc();return;}
   ow.nearHBase=false;
   if(!G.hbCleared){const hbp=owPos(HBASE);if(Math.hypot(s.x-hbp.x,s.y-hbp.y)<HBASE.r+28)ow.nearHBase=true;}
-  if(iFir()&&ow.nearHBase){startHBaseEnc();return;}
   {const sgp=owPos(SLIPGATE);ow.nearSlipgate=Math.hypot(s.x-sgp.x,s.y-sgp.y)<SLIPGATE.r+28;}
-  if(iFir()&&ow.nearSlipgate){G.slipSel=0;G.st='slipgate';return;}
+  const owFired=iFir();
+  if(owFired&&ow.nearBase){G.credits+=G.bounty;G.bounty=0;G.baseSel=0;G.baseTab=0;G.shopSel=0;G.shopActionId=null;G.equipFlow=null;G.st='base';return;}
+  if(owFired&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
+  if(owFired&&ow.nearAst>=0){startAstEnc();return;}
+  if(owFired&&ow.nearHBase){startHBaseEnc();return;}
+  if(owFired&&ow.nearSlipgate){G.slipSel=0;G.st='slipgate';return;}
   for(let i=0;i<ow.en.length;i++){
     const e=ow.en[i];if(!e.alive)continue;
     const et=OET[e.t];e.spin+=.04+e.t*.015;
@@ -1234,26 +1229,146 @@ function drawScreen(title,sub,tc,prompt){
   cx.fillText('SEED  '+G.seed.toString(16).toUpperCase().padStart(8,'0'),W/2,H/2+95);
   cx.restore();drGPI();scanlines();
 }
+function licensedWeaponsForSlot(slotType){return WEAPONS.filter(w=>w.wpnType===slotType+' gun'&&hasLicense(w.id));}
+function rebuildTotalCost(chassisId,auxId){const ch=CHASSIS.find(c=>c.id===chassisId),ax=AUX_ITEMS.find(a=>a.id===auxId);return(ch?.buildPrice??0)+(ax?.buildPrice??0);}
 function drawRebuild(){
-  const canAfford=G.credits>=2500;
+  if(!G.rebuildFlow)G.rebuildFlow={phase:'chassis',sel:0};
+  const rf=G.rebuildFlow;
   cx.fillStyle='#000';cx.fillRect(0,0,W,H);drStars();
   cx.save();cx.textAlign='center';
   cx.shadowColor='#f40';cx.shadowBlur=28;cx.fillStyle='#f40';
-  cx.font='bold 46px monospace';cx.fillText('SHIP DESTROYED',W/2,H/2-96);
-  cx.shadowBlur=0;cx.fillStyle='#acd';cx.font='18px monospace';
-  if(canAfford){
-    cx.fillText('REBUILD COST: 2500 CREDITS',W/2,H/2-46);
-    cx.fillStyle='#8df';cx.fillText('CREDITS: '+G.credits,W/2,H/2-20);
-  } else {
-    cx.fillStyle='#fd8';cx.font='16px monospace';
-    cx.fillText('INSUFFICIENT FUNDS — CHARITABLE ASSISTANCE GRANTED',W/2,H/2-46);
-    cx.fillStyle='#8df';cx.font='18px monospace';cx.fillText('CREDITS: '+G.credits,W/2,H/2-20);
-  }
-  cx.fillStyle='#f86';cx.font='16px monospace';cx.fillText('BOUNTY FORFEIT: '+G.bounty,W/2,H/2+10);
-  if(Math.floor(G.fr/28)%2===0){cx.fillStyle='#668';cx.font='14px monospace';cx.fillText('ENTER OR START TO REBUILD',W/2,H/2+56);}
-  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';
-  cx.fillText('SEED  '+G.seed.toString(16).toUpperCase().padStart(8,'0'),W/2,H/2+86);
+  cx.font='bold 46px monospace';cx.fillText('SHIP DESTROYED',W/2,90);cx.shadowBlur=0;
+  if(rf.phase==='chassis')drawRebuildChassis(rf);else drawRebuildConfig(rf);
   cx.restore();drGPI();scanlines();
+}
+function drawRebuildChassis(rf){
+  const lch=CHASSIS.filter(c=>hasLicense(c.id));
+  const items=[...lch,'charity','quit'];
+  const rh=34,ph=52+lch.length*rh+10+2*rh+26,pw=520,px=W/2-pw/2,py=Math.max(110,H/2-ph/2);
+  cx.fillStyle='rgba(0,12,8,.97)';cx.fillRect(px,py,pw,ph);
+  cx.strokeStyle='#f84';cx.shadowColor='#f84';cx.shadowBlur=14;cx.lineWidth=1.5;cx.strokeRect(px,py,pw,ph);cx.shadowBlur=0;
+  cx.fillStyle='#f84';cx.font='bold 14px monospace';cx.textAlign='center';cx.shadowColor='#f84';cx.shadowBlur=8;
+  cx.fillText('SELECT REPLACEMENT HULL',W/2,py+26);cx.shadowBlur=0;
+  cx.strokeStyle='#3a1000';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+36);cx.lineTo(px+pw-10,py+36);cx.stroke();
+  for(let i=0;i<items.length;i++){
+    const item=items[i],isSel=i===rf.sel,iy=py+50+i*rh+(i>=lch.length?12:0);
+    if(i===lch.length){cx.strokeStyle='#3a1000';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+20,iy-8);cx.lineTo(px+pw-20,iy-8);cx.stroke();}
+    if(item==='charity'){
+      cx.fillStyle=isSel?'#fd8':'#553';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='left';
+      cx.fillText((isSel?'▶ ':'  ')+'CHARITY ASSISTANCE',px+14,iy);
+      cx.fillStyle=isSel?'#aa8':'#442';cx.font='11px monospace';cx.textAlign='right';
+      cx.fillText('FORFEIT ALL CREDITS & BOUNTY — DEFAULT SHIP FREE',px+pw-14,iy);
+    }else if(item==='quit'){
+      cx.fillStyle=isSel?'#f84':'#553';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='center';
+      cx.fillText((isSel?'▶ ':'  ')+'QUIT TO TITLE',W/2,iy);
+    }else{
+      const ch=item,cost=ch.buildPrice;
+      cx.fillStyle=isSel?'#0f8':'#446';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='left';
+      cx.fillText((isSel?'▶ ':'  ')+ch.name,px+14,iy);
+      cx.fillStyle=isSel?'#0a6':'#334';cx.font='11px monospace';cx.textAlign='right';
+      cx.fillText('HP '+ch.maxHp+'  NRG '+ch.maxEnergy+'  THR '+ch.thrMul+'x'+(ch.reverse?' REV':'')+'  HULL: '+(cost===0?'FREE':cost+' CR'),px+pw-14,iy);
+    }
+  }
+  cx.fillStyle='#8df';cx.font='13px monospace';cx.textAlign='center';
+  cx.fillText('CREDITS: '+G.credits+'  BOUNTY: '+G.bounty,W/2,py+ph+18);
+  cx.fillStyle='#334';cx.font='11px monospace';
+  cx.fillText('SEED  '+G.seed.toString(16).toUpperCase().padStart(8,'0'),W/2,py+ph+34);
+}
+function drawRebuildConfig(rf){
+  const ch=CHASSIS.find(c=>c.id===rf.chassisId);if(!ch)return;
+  const nRows=ch.slots.length+3,rh=36,pw=500,ph=52+nRows*rh+20,px=W/2-pw/2,py=Math.max(110,H/2-ph/2);
+  cx.fillStyle='rgba(0,12,8,.97)';cx.fillRect(px,py,pw,ph);
+  cx.strokeStyle='#f84';cx.shadowColor='#f84';cx.shadowBlur=14;cx.lineWidth=1.5;cx.strokeRect(px,py,pw,ph);cx.shadowBlur=0;
+  cx.fillStyle='#f84';cx.font='bold 14px monospace';cx.textAlign='center';cx.shadowColor='#f84';cx.shadowBlur=8;
+  cx.fillText('CONFIGURE: '+ch.name,W/2,py+26);cx.shadowBlur=0;
+  cx.strokeStyle='#3a1000';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+36);cx.lineTo(px+pw-10,py+36);cx.stroke();
+  for(let i=0;i<ch.slots.length;i++){
+    const sl=ch.slots[i],wpId=rf.slots[i],wp=wpId?WEAPONS.find(w=>w.id===wpId):null;
+    const isSel=rf.focus===i,iy=py+50+i*rh,opts=licensedWeaponsForSlot(sl.type);
+    cx.fillStyle=isSel?'#0f8':'#446';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='left';
+    cx.fillText((isSel?'▶ ':'  ')+'SLOT '+(i+1)+' ['+sl.type.toUpperCase()+']',px+14,iy);
+    cx.fillStyle=isSel?'#0f8':(wp?'#668':'#444');cx.textAlign='right';
+    cx.fillText((opts.length?'◄ ':' ')+(wp?wp.id.toUpperCase():'(empty)')+(opts.length?' ►':' '),px+pw-14,iy);
+  }
+  const auxRow=ch.slots.length,iy_aux=py+50+auxRow*rh,isSelAux=rf.focus===auxRow;
+  const ax=rf.auxId?AUX_ITEMS.find(a=>a.id===rf.auxId):null,auxOpts=AUX_ITEMS.filter(a=>hasLicense(a.id));
+  cx.fillStyle=isSelAux?'#0f8':'#446';cx.font=(isSelAux?'bold ':'')+'13px monospace';cx.textAlign='left';
+  cx.fillText((isSelAux?'▶ ':'  ')+'AUX',px+14,iy_aux);
+  cx.fillStyle=isSelAux?'#0f8':(ax?'#668':'#444');cx.textAlign='right';
+  cx.fillText((auxOpts.length>1?'◄ ':' ')+(ax?ax.name:'(none)')+(auxOpts.length>1?' ►':' '),px+pw-14,iy_aux);
+  const confirmRow=ch.slots.length+1,iy_conf=py+50+confirmRow*rh,isSelConf=rf.focus===confirmRow;
+  const totalCost=rebuildTotalCost(rf.chassisId,rf.auxId),canAfford=G.credits>=totalCost;
+  cx.fillStyle=isSelConf?(canAfford?'#0f8':'#f84'):'#446';cx.font=(isSelConf?'bold ':'')+'13px monospace';cx.textAlign='center';
+  cx.fillText((isSelConf?'▶ ':'  ')+'REBUILD  '+(totalCost===0?'FREE':totalCost+' CR')+(canAfford?'':'  — INSUFFICIENT'),W/2,iy_conf);
+  const backRow=ch.slots.length+2,iy_back=py+50+backRow*rh,isSelBack=rf.focus===backRow;
+  cx.fillStyle=isSelBack?'#f84':'#446';cx.font=(isSelBack?'bold ':'')+'13px monospace';cx.textAlign='center';
+  cx.fillText((isSelBack?'▶ ':'  ')+'BACK',W/2,iy_back);
+  if(rf.warnShown){cx.fillStyle='#f84';cx.font='11px monospace';cx.textAlign='center';cx.fillText('WARNING: no weapons equipped!',W/2,py+ph-10);}
+  cx.fillStyle=canAfford?'#8df':'#f84';cx.font='13px monospace';cx.textAlign='center';
+  cx.fillText('CREDITS: '+G.credits+(totalCost>0?'   COST: '+totalCost+' CR':''),W/2,py+ph+18);
+}
+function updRebuild(){
+  if(!G.rebuildFlow)G.rebuildFlow={phase:'chassis',sel:0};
+  const rf=G.rebuildFlow;
+  const up=jp('ArrowUp')||jp('KeyW')||GP.menuUp;
+  const dn=jp('ArrowDown')||jp('KeyS')||GP.menuDown;
+  const lt=jp('ArrowLeft')||jp('KeyA')||GP.menuLeft;
+  const rt=jp('ArrowRight')||jp('KeyD')||GP.menuRight;
+  const ok=iEnter()||iFir();const bk=iPause();
+  if(rf.phase==='chassis'){
+    const lch=CHASSIS.filter(c=>hasLicense(c.id)),nItems=lch.length+2;
+    if(up)rf.sel=Math.max(0,rf.sel-1);
+    if(dn)rf.sel=Math.min(nItems-1,rf.sel+1);
+    if(bk){ia();G.rebuildFlow=null;G.paused=false;G.ENC=null;G.CV=null;G.st='title';return;}
+    if(ok){
+      ia();
+      if(rf.sel===nItems-1){G.rebuildFlow=null;G.paused=false;G.ENC=null;G.CV=null;G.st='title';return;}
+      if(rf.sel===nItems-2){
+        const def=defaultSave();G.credits=0;G.bounty=0;
+        G.loadout={...def.loadout,weapons:[...def.loadout.weapons]};
+        def.licenses.forEach(id=>{if(!G.licenses.includes(id))G.licenses.push(id);});
+        G.rebuildFlow=null;doRebuildFinalize();return;
+      }
+      const ch=lch[rf.sel];
+      const auxId=hasLicense(G.loadout.aux)?G.loadout.aux:(AUX_ITEMS.find(a=>hasLicense(a.id))?.id??null);
+      const slots=ch.slots.map((sl,i)=>{
+        const curWp=G.loadout.weapons[i];
+        if(curWp&&hasLicense(curWp)){const wp=WEAPONS.find(w=>w.id===curWp);if(wp&&slotMatchesWeapon(sl,wp))return curWp;}
+        return licensedWeaponsForSlot(sl.type)[0]?.id??null;
+      });
+      rf.phase='config';rf.chassisId=ch.id;rf.slots=slots;rf.auxId=auxId;rf.focus=0;rf.warnShown=false;
+    }
+  }else{
+    const ch=CHASSIS.find(c=>c.id===rf.chassisId),nRows=ch.slots.length+3;
+    if(up)rf.focus=Math.max(0,rf.focus-1);
+    if(dn)rf.focus=Math.min(nRows-1,rf.focus+1);
+    const focus=rf.focus;
+    if(focus<ch.slots.length){
+      const sl=ch.slots[focus],opts=[null,...licensedWeaponsForSlot(sl.type)];
+      const curIdx=Math.max(0,opts.findIndex(w=>(w?.id??null)===rf.slots[focus]));
+      if(lt)rf.slots[focus]=opts[((curIdx-1)+opts.length)%opts.length]?.id??null;
+      if(rt)rf.slots[focus]=opts[(curIdx+1)%opts.length]?.id??null;
+    }else if(focus===ch.slots.length){
+      const auxOpts=[null,...AUX_ITEMS.filter(a=>hasLicense(a.id))];
+      const curIdx=Math.max(0,auxOpts.findIndex(a=>(a?.id??null)===rf.auxId));
+      if(lt)rf.auxId=auxOpts[((curIdx-1)+auxOpts.length)%auxOpts.length]?.id??null;
+      if(rt)rf.auxId=auxOpts[(curIdx+1)%auxOpts.length]?.id??null;
+    }else if(focus===ch.slots.length+1){
+      if(ok){
+        ia();
+        const hasWeapon=rf.slots.some(s=>s!==null);
+        if(!hasWeapon&&!rf.warnShown){rf.warnShown=true;return;}
+        const totalCost=rebuildTotalCost(rf.chassisId,rf.auxId);
+        if(G.credits<totalCost){tone(80,.1,'square',.06);return;}
+        G.credits-=totalCost;
+        G.loadout.chassis=rf.chassisId;G.loadout.weapons=[...rf.slots];
+        const wlen=ch.slots.length;while(G.loadout.weapons.length<wlen)G.loadout.weapons.push(null);
+        G.loadout.weapons=G.loadout.weapons.slice(0,wlen);G.loadout.aux=rf.auxId;
+        G.rebuildFlow=null;doRebuildFinalize();
+      }
+    }else if(ok||bk){rf.phase='chassis';}
+    if(bk&&focus<ch.slots.length+2)rf.phase='chassis';
+  }
 }
 
 function pauseItems(){return G.cheatMode?['RESUME','SHIP CONFIG','OPTIONS','REPAIR SHIP','TELEPORT TO SLIPGATE','CLEAR ALL SECTORS','ADD 10K CREDITS','ZERO CREDITS','INVINCIBILITY: '+(G.invincible?'ON':'OFF'),'QUIT TO TITLE']:['RESUME','SHIP CONFIG','OPTIONS','QUIT TO TITLE'];}
@@ -1507,7 +1622,7 @@ function update(){
     if(iEnter()){ia();if(G.titleSel===0){startFromSave();}else{G.optFrom='title';G.st='options';}}
     return;
   }
-  if(st==='rebuild'){if(iEnter()){ia();doRebuild();}return;}
+  if(st==='rebuild'){updRebuild();return;}
   if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='over'){G.st='title';}else{G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.st='title';}}return;}
   if(st==='dead_ow'||st==='dead_enc'||st==='dead_cv')return;
   if(st==='base'){updBase();return;}
