@@ -154,7 +154,7 @@ function owEnemyPos(t,px,py,minDist=600){
 function initOW(energy,sx,sy){
   const bp=owPos(BASE);
   const px=sx??bp.x,py=sy??bp.y;
-  G.OW={s:mkShip(px,py),en:[owEnemyPos(0,px,py),owEnemyPos(1,px,py),owEnemyPos(2,px,py),owEnemyPos(3,px,py)],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1};
+  G.OW={s:mkShip(px,py),en:[owEnemyPos(0,px,py),owEnemyPos(1,px,py),owEnemyPos(2,px,py),owEnemyPos(3,px,py)],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1,wanderTimer:2700,swarmTimer:1800};
   G.OW.s.energy=energy??G.OW.s.maxEnergy;G.OW.s.inv=120;
   G.st='overworld';
 }
@@ -168,7 +168,10 @@ function owKillShip(){
 function doRebuildFinalize(){
   const bp=owPos(BASE);G.ENC=null;G.CV=null;G.bounty=0;
   if(!G.OW){initOW(activeChassisObj().maxEnergy);return;}
-  G.OW.s=mkShip(bp.x,bp.y);G.OW.s.inv=180;G.st='overworld';saveGame();tone(660,.2,'sine',.08);
+  G.OW.s=mkShip(bp.x,bp.y);G.OW.s.inv=180;
+  G.OW.en=[owEnemyPos(0,bp.x,bp.y),owEnemyPos(1,bp.x,bp.y),owEnemyPos(2,bp.x,bp.y),owEnemyPos(3,bp.x,bp.y)];
+  G.OW.wanderTimer=2700;G.OW.swarmTimer=1800;
+  G.st='overworld';saveGame();tone(660,.2,'sine',.08);
 }
 function doJump(){
   const energy=G.OW.s.energy;
@@ -283,8 +286,26 @@ function startHBaseEnc(){
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
+function owEdgePos(t){
+  const m=60,edge=Math.floor(Math.random()*4);
+  let x,y;
+  if(edge===0){x=m+Math.random()*(OW_W-m*2);y=m;}
+  else if(edge===1){x=m+Math.random()*(OW_W-m*2);y=OW_H-m;}
+  else if(edge===2){x=m;y=m+Math.random()*(OW_H-m*2);}
+  else{x=OW_W-m;y=m+Math.random()*(OW_H-m*2);}
+  return{t,x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
+}
+function owHBaseSwarmPos(){
+  const hbp=owPos(HBASE);
+  const a=Math.random()*Math.PI*2,d=200+Math.random()*150;
+  const x=Math.max(40,Math.min(OW_W-40,hbp.x+Math.cos(a)*d));
+  const y=Math.max(40,Math.min(OW_H-40,hbp.y+Math.sin(a)*d));
+  return{t:1,x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
+}
 function updOW(){
   G.owFr++;if(G.slipMsg>0)G.slipMsg--;const ow=G.OW;updPts(ow.pts);
+  if(--ow.wanderTimer<=0){ow.wanderTimer=2700;ow.en.push(owEdgePos(Math.random()<.5?0:2));}
+  if(!G.hbCleared&&--ow.swarmTimer<=0){ow.swarmTimer=1800;ow.en.push(owHBaseSwarmPos());}
   for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,OW_W);f.y=wrap(f.y+f.vy,OW_H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
   const s=ow.s;if(!s.alive)return;
   s.a+=iRot()*(s.energy>0?.075:.0375);s.shld=false;
