@@ -11,7 +11,7 @@ function update(){
   if(st==='options'){
     const m=menuInput();
     if(m.up)G.optSel=Math.max(0,G.optSel-1);
-    if(m.down)G.optSel=Math.min(5,G.optSel+1);
+    if(m.down)G.optSel=Math.min(6,G.optSel+1);
     if(G.optSel===0){
       if(m.left){G.sfxVol=Math.max(0,G.sfxVol-1);tone(900,.04,'square',.05);}
       if(m.right){G.sfxVol=Math.min(10,G.sfxVol+1);tone(900,.04,'square',.05);}
@@ -25,6 +25,12 @@ function update(){
     } else if(G.optSel===4){
       if(m.confirm||m.right){showSeedInput(v=>{G.customSeed=v;});}
     } else if(G.optSel===5){
+      if(m.confirm||m.left||m.right){
+        if(!document.fullscreenElement){document.documentElement.requestFullscreen();}
+        else{document.exitFullscreen();}
+        tone(G.fullscreen?400:1200,.08,'square',.05);
+      }
+    } else if(G.optSel===6){
       if(m.confirm){resetSave();G.st=G.optFrom==='title'?'title':'title';G.paused=false;tone(220,.3,'sawtooth',.1);}
     }
     if(m.cancel){G.st=G.optFrom;if(G.optFrom!=='title')G.paused=true;}

@@ -276,9 +276,9 @@ function drawOptions(){
   cx.font='bold 28px monospace';cx.fillText('OPTIONS',W/2,70);
   cx.shadowBlur=0;cx.strokeStyle='#1a4a2a';cx.lineWidth=1;
   cx.beginPath();cx.moveTo(60,88);cx.lineTo(W-60,88);cx.stroke();
-  const items=['SOUND EFFECTS','MUSIC','CONTROLS','CHEAT MODE','SEED','RESET GAME'];
-  const startY=110,rowH=62;
-  for(let i=0;i<6;i++){
+  const items=['SOUND EFFECTS','MUSIC','CONTROLS','CHEAT MODE','SEED','FULLSCREEN','RESET GAME'];
+  const startY=110,rowH=52;
+  for(let i=0;i<7;i++){
     const y=startY+i*rowH,sel=i===G.optSel;
     cx.textAlign='center';
     cx.fillStyle=sel?'#aaffcc':'#668';cx.shadowBlur=sel?4:0;cx.shadowColor='#0f8';
@@ -313,6 +313,13 @@ function drawOptions(){
       cx.font='bold 13px monospace';cx.textAlign='center';
       cx.fillText(sv,W/2,y+18);
       if(sel){cx.shadowBlur=0;cx.fillStyle='#446';cx.font='11px monospace';cx.fillText('ENTER OR ► TO SET',W/2,y+34);}
+    } else if(i===5){
+      const on=G.fullscreen;
+      cx.fillStyle=on?(sel?'#0f8':'#2a6a4a'):(sel?'#446':'#334');
+      cx.shadowColor='#0f8';cx.shadowBlur=on&&sel?8:0;
+      cx.font='bold 13px monospace';cx.textAlign='center';
+      cx.fillText(on?'ON':'OFF',W/2,y+18);
+      cx.shadowBlur=0;
     } else {
       cx.fillStyle=sel?'#f84':'#446';cx.shadowColor='#f84';cx.shadowBlur=sel?8:0;
       cx.font='bold 12px monospace';cx.textAlign='center';

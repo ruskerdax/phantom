@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>PHANTOM</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh}canvas{display:block;max-width:100%;cursor:none}</style>
+<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden}canvas{display:block;cursor:none;image-rendering:pixelated;transform-origin:center center}</style>
 </head><body>
 <canvas id="g"></canvas>
 <div id="seed-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;align-items:center;justify-content:center;background:rgba(0,0,12,.9);z-index:10;">
@@ -34,4 +34,18 @@
 <script src="base.js"></script>
 <script src="menus.js"></script>
 <script src="main.js"></script>
+<script>
+function resizeCanvas(){
+  var c=document.getElementById('g');
+  var max=document.fullscreenElement?Infinity:1;
+  var s=Math.min(max,window.innerWidth/800,window.innerHeight/580);
+  c.style.transform='scale('+s+')';
+}
+window.addEventListener('resize',resizeCanvas);
+document.addEventListener('fullscreenchange',function(){
+  resizeCanvas();
+  if(typeof G!=='undefined')G.fullscreen=!!document.fullscreenElement;
+});
+resizeCanvas();
+</script>
 </body></html>
