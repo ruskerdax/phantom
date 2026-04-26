@@ -1,10 +1,10 @@
 'use strict';
 
-// Canvas
 const CV=document.getElementById('g'),cx=CV.getContext('2d');
 CV.width=W;CV.height=H;
 
-// Audio
+// Audio — all sound is synthesized at runtime via the Web Audio API; no audio files are loaded.
+// tone(f,d,t,v): spawns an oscillator at frequency f, ramps its gain to silence over d seconds, then stops.
 let AC=null;
 function ia(){if(!AC)try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}
 function tone(f,d,t='square',v=.07){if(!AC)return;const sv=(G?G.sfxVol/10:1);if(sv===0)return;try{const o=AC.createOscillator(),g=AC.createGain();o.connect(g);g.connect(AC.destination);o.type=t;o.frequency.setValueAtTime(f,AC.currentTime);o.frequency.exponentialRampToValueAtTime(Math.max(10,f*.3),AC.currentTime+d);g.gain.setValueAtTime(v*sv,AC.currentTime);g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+d);o.start();o.stop(AC.currentTime+d+.05)}catch(e){}}
@@ -24,6 +24,8 @@ document.addEventListener('keydown',e=>{
 },{passive:false});
 document.addEventListener('keyup',e=>K[e.code]=false);
 CV.addEventListener('click',()=>ia());
+// "Just pressed" — true only on the first frame a key goes down. The one-shot flag is set in keydown and
+// consumed here, so menu navigation fires once per press rather than every frame while the key is held.
 function jp(c){const v=K[c+'j'];K[c+'j']=false;return!!v;}
 
 // Action bindings
@@ -93,10 +95,12 @@ const SCOLS=['#ffffff','#aaaaff','#ffeebb','#aaffee','#ffaaaa'];
 // Motion dust — screen-space parallax particles, drift opposite player velocity
 const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Math.random()*H,r:.4+Math.random()*1.6,depth:.15+Math.random()*.7});return a;})();
 
-// Cave geometry — uses LV from gen.js, dseg/pip from util.js
+// Cave wall collision. pip() (point-in-polygon) returns false when the ship is outside the cave boundary — that's a hit.
+// dseg() measures distance to each wall segment to catch close-range overlap. LV from gen.js; dseg/pip from util.js.
 function wHit(x,y,r,li){if(y<0)return false;const d=LV[li],t=d.terrain;for(let i=0;i<t.length-1;i++)if(dseg(x,y,t[i][0],t[i][1],t[i+1][0],t[i+1][1])<r)return true;if(!pip(x,y,t))return true;for(const o of d.obs){if(pip(x,y,o))return true;for(let i=0;i<o.length;i++){const j=(i+1)%o.length;if(dseg(x,y,o[i][0],o[i][1],o[j][0],o[j][1])<r)return true;}}return false;}
 
-// Game state
+// Master game state. G.st drives the state machine — update() and draw() both branch on it so only one
+// sub-system runs per frame. Active mode data lives in sub-objects: G.OW (overworld), G.ENC (encounter), G.CV (cave).
 let G={st:'title',bounty:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,CV:null,paused:false,pauseSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:10,musVol:10,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',weapons:['mass driver','laser cannon'],aux:'shield_std'},visitedSeeds:[]};
 function addBounty(n){G.bounty+=n;}
 function activeChassisObj(){return CHASSIS.find(c=>c.id===G.loadout.chassis)||CHASSIS[0];}
@@ -108,9 +112,13 @@ function slotMatchesWeapon(slot,wp){return wp.wpnType===slot.type+' gun';}
 function compatibleSlots(wp){return activeChassisObj().slots.map((sl,i)=>({sl,i})).filter(({sl})=>slotMatchesWeapon(sl,wp));}
 const ENERGY_PICKUP=38;
 function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
+// Particle system: boomAt() spawns n particles in random directions; updPts() advances and culls them each frame.
+// drPts() fades each particle using its remaining lifetime ratio (p.l / p.ml) as the alpha value.
 function boomAt(pts,x,y,c,n=14){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=.7+Math.random()*3;pts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:22+Math.random()*28,ml:50,c});}}
 function updPts(pts,gy=0){for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=gy;p.l--;if(p.l<=0)pts.splice(i,1);}}
 function mkShip(x,y){const ch=activeChassisObj();return{x,y,vx:0,vy:0,a:0,energy:ch.maxEnergy,maxEnergy:ch.maxEnergy,alive:true,inv:120,scd:0,scd2:0,shld:false,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0};}
+// Ray-cast laser: marches a ray from (ox,oy) in direction a, finding the nearest target or wall segment.
+// Returns endpoint (x2,y2) and hitIdx: a target array index (>=0) or -1 if a wall stopped the ray first.
 function castLaser(ox,oy,a,range,targets,walls=[]){const rdx=Math.sin(a),rdy=-Math.cos(a),ex=ox+rdx*range,ey=oy+rdy*range;let bestT=range,hitIdx=-1;for(let i=0;i<targets.length;i++){const tg=targets[i];if(dseg(tg.x,tg.y,ox,oy,ex,ey)<tg.r){const t=(tg.x-ox)*rdx+(tg.y-oy)*rdy;if(t>0&&t<bestT){bestT=t;hitIdx=i;}}}for(const[x1,y1,x2,y2]of walls){const dx=x2-x1,dy=y2-y1,det=dx*rdy-dy*rdx;if(Math.abs(det)<1e-9)continue;const t=(dx*(y1-oy)-dy*(x1-ox))/det,u=(rdx*(y1-oy)-rdy*(x1-ox))/det;if(t>0&&t<bestT&&u>=0&&u<=1){bestT=t;hitIdx=-1;}}return{x2:ox+rdx*bestT,y2:oy+rdy*bestT,hitIdx};}
 
 function owPos(b){const a=b.orbitA+G.owFr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
@@ -309,9 +317,11 @@ function updOW(){
   for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,OW_W);f.y=wrap(f.y+f.vy,OW_H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
   const s=ow.s;if(!s.alive)return;
   s.a+=iRot()*(s.energy>0?.075:.0375);s.shld=false;
+  // sin(angle) = X component, -cos(angle) = Y component: canvas Y increases downward, so "forward" is -cos.
   if(iThr()){const tm=activeChassisObj().thrMul,thr=s.energy>0?.09*tm:.01;s.vx+=Math.sin(s.a)*thr;s.vy-=Math.cos(s.a)*thr;if(s.energy>0)s.energy=Math.max(0,s.energy-.035);}
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   const maxSpd=sdist<220?7:4.2;
+  // Normalize velocity vector then scale to maxSpd — the standard way to cap speed without distorting direction.
   const sp=Math.hypot(s.vx,s.vy);if(sp>maxSpd){s.vx=s.vx/sp*maxSpd;s.vy=s.vy/sp*maxSpd;}}
   {const bz=600;
   if(s.x<bz&&s.vx<0)s.vx*=s.x/bz;
@@ -320,6 +330,8 @@ function updOW(){
   if(s.y>OW_H-bz&&s.vy>0)s.vy*=(OW_H-s.y)/bz;}
   s.x=Math.max(0,Math.min(OW_W,s.x+s.vx));s.y=Math.max(0,Math.min(OW_H,s.y+s.vy));
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
+  // Inverse-square gravity well at the star (world center). Force grows rapidly as the ship gets close;
+  // flying into the star kills the ship instantly.
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   if(sdist<22){owKillShip();return;}
   s.vx+=sdx*500/(sdist*sdist*sdist);s.vy+=sdy*500/(sdist*sdist*sdist);}
@@ -407,6 +419,8 @@ function updEnc(){
   else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;ow.s.energy=s.energy;ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;ow.s.vx+=(Math.random()-.5)*1.5;ow.s.vy+=(Math.random()-.5)*1.5;ow.s.inv=80;G.ENC=null;G.st='overworld';return;}}
   else{s.x=wrap(s.x+s.vx,ew);s.y=wrap(s.y+s.vy,eh);}
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
+  // Lerp the camera toward the player (clamped to world bounds). The 0.12 multiplier controls follow speed —
+  // smaller values add more lag; 1.0 would snap instantly. Same pattern is used in the cave level.
   enc.cam.x+=(Math.max(0,Math.min(ew-W,s.x-W*.5))-enc.cam.x)*.12;
   enc.cam.y+=(Math.max(0,Math.min(eh-H,s.y-H*.5))-enc.cam.y)*.12;
   for(const rk of enc.rocks){rk.x=wrap(rk.x+rk.vx,ew);rk.y=wrap(rk.y+rk.vy,eh);}
@@ -498,6 +512,9 @@ function wNormal(x,y,li){
   }
   return{nx,ny};
 }
+// Bounce the ship off a cave wall. wNormal() returns the nearest wall's outward surface normal (nx,ny).
+// dot<0 means the ship is moving into the wall; subtracting 1.9x that component reflects the velocity.
+// All speed is then damped 45% and the ship is nudged clear of the surface to prevent re-collision.
 function cvBounce(s){
   const spd=Math.hypot(s.vx,s.vy);
   const{nx,ny}=wNormal(s.x,s.y,G.lv);
@@ -605,6 +622,9 @@ function drDust(vx,vy){
   cx.globalAlpha=1;cx.restore();
 }
 function drPts(pts){for(const p of pts){cx.save();cx.globalAlpha=Math.max(0,p.l/p.ml);cx.fillStyle=p.c;cx.beginPath();cx.arc(p.x,p.y,1.5,0,Math.PI*2);cx.fill();cx.restore();}}
+// Ship is a triangle in local space (tip at y=-10, pointing up), then translate() moves the canvas origin to
+// the ship's world position and rotate() spins the local axes to face angle a. Invincibility blinks by
+// skipping alternate 2-frame windows (fr%4 >= 2).
 function drShip(x,y,a,shld,thr,energy,inv,fr){
   if(inv>0&&fr%4>=2)return;
   cx.save();cx.translate(x,y);cx.rotate(a);
@@ -1717,6 +1737,8 @@ function draw(){
   if(G.paused)drawPause();
 }
 
+// Standard browser game loop: update all logic, render the current frame, advance the frame counter,
+// then schedule the next iteration via requestAnimationFrame (targets 60fps, synced to the display).
 function loop(){update();draw();G.fr++;requestAnimationFrame(loop);}
 // Restore audio settings from save, then show title (game starts on PLAY GAME)
 {const sv=loadSave();if(sv){G.sfxVol=sv.sfxVol??10;G.musVol=sv.musVol??10;}}
