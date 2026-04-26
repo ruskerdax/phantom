@@ -366,5 +366,13 @@ function genWorld(seed){
   AB=abData.bodies;AB_BELT=abData.belt;
   HBASE=genHBaseBody(mkRNG(seedChild(seed,400)),[bodies[0]]);
   SLIPGATE=genSlipgateBody(mkRNG(seedChild(seed,500)),[...bodies,HBASE]);
-  console.log(`[PHANTOM] world seed: 0x${seed.toString(16).toUpperCase().padStart(8,'0')}`);
+  const flavorRng=mkRNG(seedChild(seed,0x3000));
+  G.systemFlavor={
+    levelCount:  3,                                     // placeholder: flavorRng.int(2,4) clamped to 3
+    hasHostileBase: true,                               // placeholder: forced true
+    shopSeed:    seedChild(seed,0x3001),                // for future shop variation
+    encounterSeed: seedChild(seed,0x3002),              // for future encounter variation
+    tier:        flavorRng.int(1,5),
+  };
+  console.log(`[PHANTOM] world seed: 0x${seed.toString(16).toUpperCase().padStart(8,'0')}`,G.systemFlavor);
 }

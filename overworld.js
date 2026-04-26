@@ -32,10 +32,10 @@ function doRebuildFinalize(){
   G.OW.wanderTimer=2700;G.OW.swarmTimer=1800;
   G.st='overworld';saveGame();tone(660,.2,'sine',.08);
 }
-function doJump(){
+function jumpToSeed(newSeed,sourceSeed){
   const energy=G.OW.s.energy;
-  if(G.customSeed!==null){G.seed=G.customSeed;G.customSeed=null;}
-  else{G.seed=(Math.random()*0xFFFFFFFF)>>>0;}
+  G.prevSeed=sourceSeed;
+  G.seed=newSeed>>>0;
   G.cleared=[false,false,false];G.lvState={};G.hbCleared=false;G.hbState=null;
   G.bounty=0;G.slipgateActive=false;G.slipMsg=0;
   genWorld(G.seed);
@@ -44,6 +44,11 @@ function doJump(){
   initOW(energy,sgp.x,sgp.y);
   saveGame();
   tone(300,.15,'sine',.07);setTimeout(()=>tone(500,.15,'sine',.07),160);setTimeout(()=>tone(800,.4,'sine',.07),330);
+}
+function slipNeighborList(){
+  const list=genNeighbors(G.seed);
+  if(G.prevSeed!=null&&!list.includes(G.prevSeed))list[0]=G.prevSeed;
+  return list;
 }
 function owStartEnc(idx){
   const ow=G.OW,e=ow.en[idx],et=OET[e.t],ec=et.enc;
@@ -249,33 +254,52 @@ function drSlipgate(near){
 function drawSlipgateMenu(){
   drawOW();
   const active=G.slipgateActive;
-  const col=active?'#cc99ff':'#aa99cc';
-  cx.save();
-  const pw=400,ph=active?260:200,px=W/2-pw/2,py=H/2-ph/2;
-  cx.fillStyle='rgba(4,0,12,.92)';cx.fillRect(px,py,pw,ph);
-  cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=18;cx.lineWidth=1.5;
-  cx.strokeRect(px,py,pw,ph);
-  cx.shadowBlur=12;cx.fillStyle=col;cx.font='bold 22px monospace';cx.textAlign='center';
-  cx.fillText('SLIPGATE',W/2,py+40);
-  if(active){
-    const opts=['JUMP TO NEW SYSTEM','SET SEED'];
-    for(let i=0;i<2;i++){
-      const sel=i===G.slipSel;
-      cx.fillStyle=sel?'#cc99ff':'#776688';
-      cx.shadowColor='#cc99ff';cx.shadowBlur=sel?8:0;
-      cx.font=sel?'bold 14px monospace':'13px monospace';
-      cx.fillText((sel?'▶ ':'')+opts[i],W/2,py+86+i*40);
-    }
-    cx.shadowBlur=0;
-    const sv=G.customSeed!==null?'SEED  '+G.customSeed.toString(16).toUpperCase().padStart(8,'0'):'SEED  RANDOM';
-    cx.fillStyle='#443355';cx.font='11px monospace';
-    cx.fillText(sv,W/2,py+182);
-  }else{
+  const col='#cc99ff',dimCol='#aa99cc';
+  cx.save();cx.textAlign='center';
+  if(!active){
+    const pw=400,ph=200,px=W/2-pw/2,py=H/2-ph/2;
+    cx.fillStyle='rgba(4,0,12,.92)';cx.fillRect(px,py,pw,ph);
+    cx.strokeStyle=dimCol;cx.shadowColor=dimCol;cx.shadowBlur=18;cx.lineWidth=1.5;cx.strokeRect(px,py,pw,ph);
+    cx.shadowBlur=12;cx.fillStyle=dimCol;cx.font='bold 22px monospace';cx.fillText('SLIPGATE',W/2,py+40);
     cx.shadowBlur=0;cx.fillStyle='#8877aa';cx.font='bold 15px monospace';
     cx.fillText('Clear all sectors to activate the slipgate.',W/2,py+112);
+    cx.fillStyle='#334';cx.font='11px monospace';cx.fillText('ESC TO LEAVE',W/2,py+ph-14);
+  } else if(G.seed===TUTORIAL_SEED&&!G.tutorialDone){
+    const pw=400,ph=240,px=W/2-pw/2,py=H/2-ph/2;
+    cx.fillStyle='rgba(4,0,12,.92)';cx.fillRect(px,py,pw,ph);
+    cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=18;cx.lineWidth=1.5;cx.strokeRect(px,py,pw,ph);
+    cx.shadowBlur=12;cx.fillStyle=col;cx.font='bold 22px monospace';cx.fillText('SLIPGATE',W/2,py+40);
+    cx.shadowBlur=0;cx.fillStyle='#8877aa';cx.font='12px monospace';
+    cx.fillText('Slipspace coordinates are unstable.',W/2,py+76);
+    cx.fillText('Destination unknown.',W/2,py+94);
+    cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=8;cx.font='bold 14px monospace';
+    cx.fillText('▶  JUMP — SLIPSPACE DISTORTION',W/2,py+148);
+    cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.fillText('ESC TO LEAVE',W/2,py+ph-14);
+  } else {
+    const nb=slipNeighborList(),N=nb.length;
+    const rowH=30,ph=160+N*rowH,pw=400,px=W/2-pw/2,py=H/2-ph/2;
+    cx.fillStyle='rgba(4,0,12,.92)';cx.fillRect(px,py,pw,ph);
+    cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=18;cx.lineWidth=1.5;cx.strokeRect(px,py,pw,ph);
+    cx.shadowBlur=10;cx.fillStyle=col;cx.font='bold 20px monospace';cx.fillText('SLIPGATE',W/2,py+30);
+    cx.shadowBlur=0;cx.fillStyle='#776688';cx.font='11px monospace';
+    cx.fillText(N+' NEIGHBORING SYSTEM'+(N===1?'':'S')+' DETECTED',W/2,py+50);
+    for(let i=0;i<N;i++){
+      const n=nb[i],sel=i===G.slipSel;
+      const hexStr=n.toString(16).toUpperCase().padStart(8,'0');
+      const tag=(n===G.prevSeed?'  ← BACK':'')+(G.visitedSeeds.includes(n)?'  ★':'');
+      cx.fillStyle=sel?col:'#776688';cx.shadowColor=col;cx.shadowBlur=sel?8:0;
+      cx.font=sel?'bold 13px monospace':'12px monospace';
+      cx.fillText((sel?'▶ ':'  ')+hexStr+tag,W/2,py+80+i*rowH);
+    }
+    const divY=py+88+N*rowH;
+    cx.shadowBlur=0;cx.strokeStyle='#332244';cx.lineWidth=1;
+    cx.beginPath();cx.moveTo(px+20,divY);cx.lineTo(px+pw-20,divY);cx.stroke();
+    const setSeedSel=G.slipSel===N;
+    cx.fillStyle=setSeedSel?col:'#554466';cx.shadowColor=col;cx.shadowBlur=setSeedSel?8:0;
+    cx.font=setSeedSel?'bold 13px monospace':'12px monospace';
+    cx.fillText((setSeedSel?'▶ ':'  ')+'SET SEED',W/2,divY+22);
+    cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.fillText('ESC TO LEAVE',W/2,py+ph-12);
   }
-  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';
-  cx.fillText('ESC TO LEAVE',W/2,py+ph-14);
   cx.restore();
 }
 

@@ -61,12 +61,22 @@ function update(){
   if(st==='base'){updBase();return;}
   if(st==='slipgate'){
     if(G.slipgateActive){
-      if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.slipSel=Math.max(0,G.slipSel-1);
-      if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.slipSel=Math.min(1,G.slipSel+1);
-      if(iEnter()||iFir()){
+      const isTutFirst=G.seed===TUTORIAL_SEED&&!G.tutorialDone;
+      if(!isTutFirst){
+        const nb=slipNeighborList();
+        if(jp('ArrowUp')||jp('KeyW')||GP.menuUp)G.slipSel=Math.max(0,G.slipSel-1);
+        if(jp('ArrowDown')||jp('KeyS')||GP.menuDown)G.slipSel=Math.min(nb.length,G.slipSel+1);
+      }
+      if(iEnter()||kjust('fire')){
         ia();
-        if(G.slipSel===0){doJump();}
-        else{showSeedInput(v=>{G.customSeed=v;});}
+        if(isTutFirst){
+          G.tutorialDone=true;
+          jumpToSeed((Math.random()*0xFFFFFFFF)>>>0,TUTORIAL_SEED);
+        } else {
+          const nb=slipNeighborList();
+          if(G.slipSel<nb.length){jumpToSeed(nb[G.slipSel],G.seed);}
+          else{showSeedInput(v=>{if(v!=null)jumpToSeed(v,null);});}
+        }
         return;
       }
     }
@@ -134,5 +144,5 @@ function draw(){
 function loop(){update();draw();G.fr++;requestAnimationFrame(loop);}
 // Restore audio settings from save, then show title (game starts on PLAY GAME)
 {const sv=loadSave();if(sv){G.sfxVol=sv.sfxVol??10;G.musVol=sv.musVol??10;}}
-G.seed=(Math.random()*0xFFFFFFFF)>>>0;genWorld(G.seed);
+G.seed=TUTORIAL_SEED;genWorld(G.seed);
 loop();
