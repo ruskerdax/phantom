@@ -64,7 +64,7 @@ function update(){
   if(st==='dead_ow'||st==='dead_enc'||st==='dead_site')return;
   if(st==='base'){updBase();return;}
   if(st==='slipgate'){
-    const m=menuInput({fireConfirms:true});
+    const m=menuInput({fireConfirms:false});
     if(G.slipgateActive){
       const isTutFirst=G.seed===TUTORIAL_SEED&&!G.tutorialDone;
       if(isTutFirst){

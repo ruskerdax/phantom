@@ -285,7 +285,7 @@ function execShopAction(opt){
 }
 
 function updBase(){
-  const m=menuInput({fireConfirms:true});
+  const m=menuInput({fireConfirms:false});
   const up=m.up,dn=m.down,lt=m.left,rt=m.right,ok=m.confirm,bk=m.cancel;
   if(G.equipFlow){updEquipFlow(up,dn,lt,rt,ok,bk);return;}
   if(G.shopActionId!==null){
