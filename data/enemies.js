@@ -170,8 +170,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
     }
   }
   if(Math.hypot(e.x-s.x,e.y-s.y)<ec.r+9){
-    if(s.shld){e.vx-=(dx/dist)*2;e.vy-=(dy/dist)*2;}
-    else if(!G.invincible){s.hp=Math.max(0,s.hp-3);tone(380,.1,'sawtooth',.1);if(s.hp<=0){encKillShip();return true;}}
+    e.vx-=(dx/dist)*2;e.vy-=(dy/dist)*2;
   }
   return false;
 }
