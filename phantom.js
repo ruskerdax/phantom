@@ -755,9 +755,9 @@ function drawBaseHeader(px,py,pw){
   const tw=(pw-24)/4;
   for(let i=0;i<4;i++){
     const tx=px+12+i*tw,sel=i===G.baseTab;
+    cx.strokeStyle=sel?'#0f8':'#335';cx.shadowColor='#0f8';cx.shadowBlur=sel?8:0;cx.lineWidth=1;
     cx.fillStyle=sel?'rgba(0,40,20,.9)':'rgba(0,15,8,.6)';
     cx.fillRect(tx,py+32,tw-2,22);
-    cx.strokeStyle=sel?'#0f8':'#335';cx.shadowColor='#0f8';cx.shadowBlur=sel?8:0;cx.lineWidth=1;
     cx.strokeRect(tx,py+32,tw-2,22);
     cx.fillStyle=sel?'#0f8':'#558';cx.font=sel?'bold 11px monospace':'11px monospace';
     cx.textAlign='center';cx.fillText(tabs[i],tx+tw/2-1,py+47);
