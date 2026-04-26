@@ -93,8 +93,8 @@ function update(){
     return;
   }
   if(iPause()){
-    if(G.paused){if(G.showShipConfig){G.showShipConfig=false;}else G.paused=false;}
-    else{G.paused=true;G.pauseSel=0;G.showShipConfig=false;}
+    if(G.paused){if(G.showShipConfig){G.showShipConfig=false;}else{G.paused=false;suppressMenuInput();}}
+    else{G.paused=true;G.pauseSel=0;G.showShipConfig=false;suppressMenuInput();}
     return;
   }
   if(G.paused){
