@@ -20,6 +20,26 @@ document.getElementById('g').addEventListener('click',()=>ia());
 // consumed here, so menu navigation fires once per press rather than every frame while the key is held.
 function jp(c){const v=K[c+'j'];K[c+'j']=false;return!!v;}
 
+// ===================== MENU INPUT =====================
+function isRebinding(){ return G.optListen==='key' || G.optListen==='btn'; }
+function suppressMenuInput(frames=6){ G.menuSuppressUntil = G.fr + frames; }
+function menuInputSuppressed(){ return G.fr < (G.menuSuppressUntil||0); }
+function menuInput(opts){
+  const o = opts || {};
+  if(isRebinding() || menuInputSuppressed()){
+    return {up:false,down:false,left:false,right:false,confirm:false,cancel:false,clear:false};
+  }
+  return {
+    up:    !!(jp('ArrowUp')    || jp('KeyW') || GP.menuUp),
+    down:  !!(jp('ArrowDown')  || jp('KeyS') || GP.menuDown),
+    left:  !!(jp('ArrowLeft')  || jp('KeyA') || GP.menuLeft),
+    right: !!(jp('ArrowRight') || jp('KeyD') || GP.menuRight),
+    confirm: !!(iEnter() || (o.fireConfirms && iFir())),
+    cancel:  !!iPause(),
+    clear:   !!jp('Backspace'),
+  };
+}
+
 // Action bindings
 var ACT_DEFS=[
   {id:'rotLeft', label:'ROTATE LEFT',  defKey:'KeyA',      defBtn:14},

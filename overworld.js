@@ -205,11 +205,11 @@ function updOW(){
   if(!G.hbCleared){const hbp=owPos(HBASE);if(Math.hypot(s.x-hbp.x,s.y-hbp.y)<HBASE.r+28)ow.nearHBase=true;}
   {const sgp=owPos(SLIPGATE);ow.nearSlipgate=Math.hypot(s.x-sgp.x,s.y-sgp.y)<SLIPGATE.r+28;}
   const owFired=iFir();
-  if(owFired&&ow.nearBase){G.credits+=G.bounty;G.bounty=0;G.baseSel=0;G.baseTab=0;G.shopSel=0;G.shopActionId=null;G.equipFlow=null;G.baseEnterFr=G.fr;G.st='base';return;}
+  if(owFired&&ow.nearBase){G.credits+=G.bounty;G.bounty=0;G.baseSel=0;G.baseTab=0;G.shopSel=0;G.shopActionId=null;G.equipFlow=null;suppressMenuInput();G.st='base';return;}
   if(owFired&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
   if(owFired&&ow.nearAst>=0){startAstEnc();return;}
   if(owFired&&ow.nearHBase){startHBaseEnc();return;}
-  if(owFired&&ow.nearSlipgate){G.slipSel=0;G.slipEnterFr=G.fr;G.st='slipgate';return;}
+  if(owFired&&ow.nearSlipgate){G.slipSel=0;suppressMenuInput();G.st='slipgate';return;}
   for(let i=0;i<ow.en.length;i++){
     const e=ow.en[i];if(!e.alive)continue;
     const et=OET[e.t];e.spin+=.04+e.t*.015;

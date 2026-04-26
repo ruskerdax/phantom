@@ -285,13 +285,8 @@ function execShopAction(opt){
 }
 
 function updBase(){
-  if(G.fr-G.baseEnterFr<6)return; // ignore inputs briefly so the fire button that entered the base doesn't immediately trigger a menu action
-  const up=jp('ArrowUp')||jp('KeyW')||GP.menuUp;
-  const dn=jp('ArrowDown')||jp('KeyS')||GP.menuDown;
-  const lt=jp('ArrowLeft')||jp('KeyA')||GP.menuLeft;
-  const rt=jp('ArrowRight')||jp('KeyD')||GP.menuRight;
-  const ok=iEnter()||iFir();
-  const bk=iPause();
+  const m=menuInput({fireConfirms:true});
+  const up=m.up,dn=m.down,lt=m.left,rt=m.right,ok=m.confirm,bk=m.cancel;
   if(G.equipFlow){updEquipFlow(up,dn,lt,rt,ok,bk);return;}
   if(G.shopActionId!==null){
     const items=shopItemsForTab(G.baseTab);

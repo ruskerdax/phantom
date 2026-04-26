@@ -113,11 +113,8 @@ function drawRebuildConfig(rf){
 function updRebuild(){
   if(!G.rebuildFlow)G.rebuildFlow={phase:'chassis',sel:0};
   const rf=G.rebuildFlow;
-  const up=jp('ArrowUp')||jp('KeyW')||GP.menuUp;
-  const dn=jp('ArrowDown')||jp('KeyS')||GP.menuDown;
-  const lt=jp('ArrowLeft')||jp('KeyA')||GP.menuLeft;
-  const rt=jp('ArrowRight')||jp('KeyD')||GP.menuRight;
-  const ok=iEnter()||iFir();const bk=iPause();
+  const m=menuInput({fireConfirms:true});
+  const up=m.up,dn=m.down,lt=m.left,rt=m.right,ok=m.confirm,bk=m.cancel;
   if(rf.phase==='chassis'){
     const lch=CHASSIS.filter(c=>hasLicense(c.id)),nItems=lch.length+2;
     if(up)rf.sel=Math.max(0,rf.sel-1);
