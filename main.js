@@ -23,14 +23,12 @@ function update(){
     } else if(G.optSel===3){
       if(m.confirm||m.left||m.right){G.cheatMode=!G.cheatMode;tone(G.cheatMode?1200:400,.08,'square',.05);}
     } else if(G.optSel===4){
-      if(m.confirm||m.right){showSeedInput(v=>{G.customSeed=v;});}
-    } else if(G.optSel===5){
       if(m.confirm||m.left||m.right){
         if(!document.fullscreenElement){document.documentElement.requestFullscreen();}
         else{document.exitFullscreen();}
         tone(G.fullscreen?400:1200,.08,'square',.05);
       }
-    } else if(G.optSel===6){
+    } else if(G.optSel===5){
       if(m.confirm){resetSave();G.st=G.optFrom==='title'?'title':'title';G.paused=false;tone(220,.3,'sawtooth',.1);}
     }
     if(m.cancel){G.st=G.optFrom;if(G.optFrom!=='title')G.paused=true;}
@@ -79,7 +77,7 @@ function update(){
       } else {
         const nb=slipNeighborList();
         if(m.up)G.slipSel=Math.max(0,G.slipSel-1);
-        if(m.down)G.slipSel=Math.min(nb.length,G.slipSel+1);
+        if(m.down)G.slipSel=Math.min(nb.length-1,G.slipSel+1);
       }
       if(m.confirm){
         ia();
@@ -89,8 +87,7 @@ function update(){
           jumpToSeed((Math.random()*0xFFFFFFFF)>>>0,TUTORIAL_SEED);
         } else {
           const nb=slipNeighborList();
-          if(G.slipSel<nb.length){jumpToSeed(nb[G.slipSel],G.seed);}
-          else{showSeedInput(v=>{if(v!=null)jumpToSeed(v,null);});}
+          jumpToSeed(nb[G.slipSel],G.seed);
         }
         return;
       }
