@@ -10,6 +10,12 @@ function owEnemyPos(t,px,py,minDist=600){
   }while(px!=null&&Math.hypot(x-px,y-py)<minDist&&attempts<30);
   return{t,x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
 }
+function encSpawnPos(ew,eh,placed,minPlayer,minPeer,sx,sy){
+  let x,y,att=0;
+  do{x=80+Math.random()*(ew-160);y=80+Math.random()*(eh-160);att++;}
+  while(att<50&&(Math.hypot(x-sx,y-sy)<minPlayer||placed.some(p=>Math.hypot(x-p.x,y-p.y)<minPeer)));
+  placed.push({x,y});return{x,y};
+}
 function mkFleet(id,x,y,opts){
   const f={id,x,y,vx:0,vy:0,a:0,alive:true,flash:0,
     state:'idle',comp:rollFleetComp(id),routeIdx:0,postBody:null,postOrbit:null,sysOrbit:null,spawnTimer:0};
@@ -103,21 +109,23 @@ function owStartEnc(idx){
     }
     const total=spawns.reduce((s,g)=>s+g.cnt,0);
     let ei=0;
+    const placed=[],spawnX=EW*.08,spawnY=EH/2;
     for(const sp of spawns){
       const gec=OET[sp.t].enc,initCd=Math.round(WEAPONS[gec.fire.wpn].cd*60);
       for(let i=0;i<sp.cnt;i++){
-        const x=total===1?EW-160:EW-200+Math.cos((ei/total)*Math.PI*2)*60;
-        const y=total===1?EH/2+(Math.random()*80-40):EH/2+Math.sin((ei/total)*Math.PI*2)*60;
+        const{x,y}=encSpawnPos(EW,EH,placed,280,120,spawnX,spawnY);
         ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));
         ei++;
       }
     }
   } else {
     const initCd=Math.round(WEAPONS[ec.fire.wpn].cd*60);
+    const placed=[],spawnX=EW*.08,spawnY=EH/2;
     if(ec.cnt===1){
-      ens.push(mkEncEnemy(e.t,EW-160,EH/2+(Math.random()*80-40),initCd));
+      const{x,y}=encSpawnPos(EW,EH,placed,280,120,spawnX,spawnY);
+      ens.push(mkEncEnemy(e.t,x,y,initCd));
     } else {
-      for(let i=0;i<ec.cnt;i++){const a=(i/ec.cnt)*Math.PI*2;ens.push(mkEncEnemy(e.t,EW-200+Math.cos(a)*60,EH/2+Math.sin(a)*60,initCd+i*18));}
+      for(let i=0;i<ec.cnt;i++){const{x,y}=encSpawnPos(EW,EH,placed,280,120,spawnX,spawnY);ens.push(mkEncEnemy(e.t,x,y,initCd+i*18));}
     }
   }
   const rng=mkRNG(seedChild(G.seed,200+idx));
@@ -196,11 +204,11 @@ function owStartFleetEnc(fi){
   const ow=G.OW,f=ow.fleets[fi];
   const ens=[],total=f.comp.reduce((s,g)=>s+g.cnt,0);
   let ei=0;
+  const placed=[],spawnX=EW*.08,spawnY=EH/2;
   for(const sp of f.comp){
     const gec=OET[sp.t].enc,initCd=Math.round(WEAPONS[gec.fire.wpn].cd*60);
     for(let i=0;i<sp.cnt;i++){
-      const x=total===1?EW-160:EW-200+Math.cos((ei/total)*Math.PI*2)*60;
-      const y=total===1?EH/2+(Math.random()*80-40):EH/2+Math.sin((ei/total)*Math.PI*2)*60;
+      const{x,y}=encSpawnPos(EW,EH,placed,280,120,spawnX,spawnY);
       ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));
       ei++;
     }
@@ -208,11 +216,11 @@ function owStartFleetEnc(fi){
   const rng=mkRNG(seedChild(G.seed,300+fi));
   const rocks=[],tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
   let rockCount=0;for(let i=0;i<8;i++)if(rng.fl(0,1)<.25)rockCount++;
-  const spawnX=EW*.08,minSpawnDist=120;
+  const minSpawnDist=120;
   for(let i=0;i<rockCount;i++){
     let rx,ry,att=0;
     do{rx=rng.fl(60,EW-60);ry=rng.fl(60,EH-60);att++;}
-    while(Math.hypot(rx-spawnX,ry-EH/2)<minSpawnDist&&att<30);
+    while(Math.hypot(rx-spawnX,ry-spawnY)<minSpawnDist&&att<30);
     const tier=rng.int(0,2),td=tierDefs[tier];
     rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:td.r[0]+rng.fl(0,td.r[1]),hp:td.hp,maxHp:td.hp,tier});
   }

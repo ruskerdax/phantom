@@ -406,6 +406,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
   e.vx*=.975;e.vy*=.975;const es=Math.hypot(e.vx,e.vy);if(es>ec.spd){e.vx=e.vx/es*ec.spd;e.vy=e.vy/es*ec.spd;}
   e.x=wrap(e.x+e.vx,ew);e.y=wrap(e.y+e.vy,eh);
   for(const rk of enc.rocks){const rd=Math.hypot(e.x-rk.x,e.y-rk.y);if(rd<rk.r+16){e.vx+=(e.x-rk.x)/rd*.3;e.vy+=(e.y-rk.y)/rd*.3;}}
+  for(const oe of enc.en){if(oe===e||!oe.alive)continue;const od=Math.hypot(e.x-oe.x,e.y-oe.y)||1;const minD=ec.r+OET[oe.t].enc.r;if(od<minD){const nx=(e.x-oe.x)/od,ny=(e.y-oe.y)/od;const push=(minD-od)/minD*.5;e.vx+=nx*push;e.vy+=ny*push;}}
   const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
   const fw=ec.fire,ewp=WEAPONS[fw.wpn];
   if(ewp.wpnType==='beam gun'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
