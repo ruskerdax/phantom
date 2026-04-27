@@ -74,8 +74,8 @@ const ENEMY_TYPES = {
       const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy)+jitter;
       const orb=ta+Math.PI/2;
       e.a+=angDiff(e.a,ta)*(ec.turn??.12);
-      e.vx+=(dx/dist)*ec.spd*.04+Math.cos(orb)*ec.spd*.06;
-      e.vy+=(dy/dist)*ec.spd*.04+Math.sin(orb)*ec.spd*.06;
+      e.vx+=(dx/dist)*ec.spd*.06+Math.cos(orb)*ec.spd*.04;
+      e.vy+=(dy/dist)*ec.spd*.06+Math.sin(orb)*ec.spd*.04;
     }
   },
   carrier: {
