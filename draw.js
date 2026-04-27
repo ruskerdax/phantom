@@ -75,7 +75,7 @@ function drHUD(energy,maxEnergy=100,hp=15,maxHp=15){
   cx.fillStyle='#aaffcc';cx.fillText('ENERGY',W-88,32);
   cx.strokeRect(W-82,21,70,11);
   cx.fillStyle=energy>maxEnergy*.2?'#0f8':'#f40';cx.fillRect(W-81,22,energy/maxEnergy*68,9);
-  cx.restore();drGPI();
+  cx.restore();
 }
 function drBullet(x,y,col='#fff'){cx.save();cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=6;cx.beginPath();cx.arc(x,y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
 function scanlines(){cx.save();cx.globalAlpha=.035;cx.fillStyle='#000';for(let y=0;y<H;y+=2)cx.fillRect(0,y,W,1);cx.restore();}
