@@ -299,16 +299,18 @@ function drawOptions(){
   cx.font='bold 28px monospace';cx.fillText('OPTIONS',W/2,70);
   cx.shadowBlur=0;cx.strokeStyle='#1a4a2a';cx.lineWidth=1;
   cx.beginPath();cx.moveTo(60,88);cx.lineTo(W-60,88);cx.stroke();
-  const items=['SOUND EFFECTS','MUSIC','CONTROLS','CHEAT MODE','FULLSCREEN','RESET GAME'];
-  const startY=110,rowH=52;
-  for(let i=0;i<6;i++){
+  const items=['CONTROLS','SOUND EFFECTS','MUSIC','CHEAT MODE','FULLSCREEN','CLEAR GAME DATA','RETURN'];
+  const startY=140,rowH=52;
+  for(let i=0;i<7;i++){
     const y=startY+i*rowH,sel=i===G.optSel;
     cx.textAlign='center';
     cx.fillStyle=sel?'#aaffcc':'#668';cx.shadowBlur=sel?4:0;cx.shadowColor='#0f8';
     cx.font='bold 13px monospace';
     cx.fillText((sel?'▶ ':'')+items[i],W/2,y);
-    if(i===0||i===1){
-      const vol=i===0?G.sfxVol:G.musVol;
+    if(i===0){
+      // CONTROLS - no sub-text
+    } else if(i===1||i===2){
+      const vol=i===1?G.sfxVol:G.musVol;
       const slotW=22,gap=4,totalW=10*(slotW+gap)-gap;
       const slotX=W/2-totalW/2;
       for(let s=0;s<10;s++){
@@ -320,9 +322,6 @@ function drawOptions(){
       cx.shadowBlur=0;
       cx.fillStyle='#446';cx.font='11px monospace';cx.textAlign='center';
       cx.fillText(vol*10+'%',W/2,y+42);
-    } else if(i===2){
-      cx.fillStyle=sel?'#446':'#334';cx.font='11px monospace';cx.textAlign='center';
-      cx.fillText(sel?'ENTER OR ► TO OPEN':'',W/2,y+18);
     } else if(i===3){
       const on=G.cheatMode;
       cx.fillStyle=on?(sel?'#ff8':'#664'):(sel?'#446':'#334');
@@ -337,15 +336,46 @@ function drawOptions(){
       cx.font='bold 13px monospace';cx.textAlign='center';
       cx.fillText(on?'ON':'OFF',W/2,y+18);
       cx.shadowBlur=0;
-    } else {
+    } else if(i===5){
       cx.fillStyle=sel?'#f84':'#446';cx.shadowColor='#f84';cx.shadowBlur=sel?8:0;
-      cx.font='bold 12px monospace';cx.textAlign='center';
-      cx.fillText(sel?'▶ CONFIRM RESET? ENTER TO ERASE SAVE':'ERASE ALL SAVE DATA',W/2,y+18);cx.shadowBlur=0;
+      cx.font='bold 13px monospace';cx.textAlign='center';
+      cx.fillText('',W/2,y+18);cx.shadowBlur=0;
+    } else if(i===6){
+      // RETURN - styled as normal option (green)
     }
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
   cx.fillText('↑↓ SELECT   ◄► ADJUST / OPEN   ESC BACK',W/2,H-18);
   cx.restore();drGPI();scanlines();
+}
+
+function drawClearDataDialog(){
+  const pw=480,ph=140,px=W/2-pw/2,py=H/2-ph/2;
+  cx.save();
+  cx.fillStyle='rgba(0,0,0,.85)';cx.fillRect(0,0,W,H);
+  cx.fillStyle='rgba(0,12,8,.97)';cx.fillRect(px,py,pw,ph);
+  cx.strokeStyle='#f84';cx.shadowColor='#f84';cx.shadowBlur=14;cx.lineWidth=1.5;cx.strokeRect(px,py,pw,ph);
+  cx.shadowBlur=0;cx.fillStyle='#f84';cx.font='bold 14px monospace';cx.textAlign='center';
+  cx.fillText('CLEAR ALL GAME DATA?',W/2,py+28);
+  cx.shadowBlur=0;cx.fillStyle='#acd';cx.font='12px monospace';
+  cx.fillText('Are you sure?',W/2,py+56);
+  cx.fillText('This will reset the game.',W/2,py+72);
+  const btnW=100,btnH=24,btnGap=20;
+  const btn1X=W/2-btnW-btnGap/2,btn2X=W/2+btnGap/2;
+  const btnY=py+ph-42;
+  const sel=G.clearDataSel;
+  for(let b=0;b<2;b++){
+    const bx=b===0?btn1X:btn2X;
+    const label=b===0?'BACK':'CONFIRM';
+    const isSel=b===sel;
+    cx.fillStyle=isSel?'rgba(0,60,20,.9)':'rgba(0,30,10,.7)';
+    cx.fillRect(bx,btnY,btnW,btnH);
+    cx.strokeStyle=isSel?'#0f8':'#446';cx.shadowColor=isSel?'#0f8':'#000';cx.shadowBlur=isSel?8:0;cx.lineWidth=1.2;
+    cx.strokeRect(bx,btnY,btnW,btnH);
+    cx.fillStyle=isSel?'#0f8':'#668';cx.font='bold 11px monospace';cx.textAlign='center';
+    cx.fillText(isSel?'▶ '+label:label,bx+btnW/2,btnY+16);
+  }
+  cx.shadowBlur=0;cx.restore();
 }
 
 function drawControls(){

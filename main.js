@@ -9,17 +9,28 @@ function update(){
   if(G.seedInputOpen)return;
   const st=G.st;
   if(st==='options'){
+    if(G.clearDataSel!==undefined){
+      const m=menuInput({fireConfirms:false});
+      if(m.left)G.clearDataSel=0;
+      if(m.right)G.clearDataSel=1;
+      if(m.confirm){
+        if(G.clearDataSel===1){resetSave();G.st=G.optFrom==='title'?'title':'title';G.paused=false;tone(220,.3,'sawtooth',.1);}
+        delete G.clearDataSel;
+      }
+      if(m.cancel){delete G.clearDataSel;}
+      return;
+    }
     const m=menuInput();
     if(m.up)G.optSel=Math.max(0,G.optSel-1);
     if(m.down)G.optSel=Math.min(6,G.optSel+1);
     if(G.optSel===0){
+      if(m.confirm||m.right){G.ctrlSel=0;G.optCol=0;G.optListen=null;G.st='controls';return;}
+    } else if(G.optSel===1){
       if(m.left){G.sfxVol=Math.max(0,G.sfxVol-1);tone(900,.04,'square',.05);}
       if(m.right){G.sfxVol=Math.min(10,G.sfxVol+1);tone(900,.04,'square',.05);}
-    } else if(G.optSel===1){
+    } else if(G.optSel===2){
       if(m.left)G.musVol=Math.max(0,G.musVol-1);
       if(m.right)G.musVol=Math.min(10,G.musVol+1);
-    } else if(G.optSel===2){
-      if(m.confirm||m.right){G.ctrlSel=0;G.optCol=0;G.optListen=null;G.st='controls';return;}
     } else if(G.optSel===3){
       if(m.confirm||m.left||m.right){G.cheatMode=!G.cheatMode;tone(G.cheatMode?1200:400,.08,'square',.05);}
     } else if(G.optSel===4){
@@ -29,7 +40,9 @@ function update(){
         tone(G.fullscreen?400:1200,.08,'square',.05);
       }
     } else if(G.optSel===5){
-      if(m.confirm){resetSave();G.st=G.optFrom==='title'?'title':'title';G.paused=false;tone(220,.3,'sawtooth',.1);}
+      if(m.confirm){G.clearDataSel=0;}
+    } else if(G.optSel===6){
+      if(m.confirm){G.st=G.optFrom;if(G.optFrom!=='title')G.paused=true;}
     }
     if(m.cancel){G.st=G.optFrom;if(G.optFrom!=='title')G.paused=true;}
     return;
@@ -144,7 +157,7 @@ function update(){
 function draw(){
   const st=G.st;
   if(st==='title')return drawTitle();
-  if(st==='options')return drawOptions();
+  if(st==='options'){drawOptions();if(G.clearDataSel!==undefined)return drawClearDataDialog();return;}
   if(st==='controls')return drawControls();
   if(st==='over')return drawScreen('GAME OVER','','#f40','ENTER OR START TO CONTINUE');
   if(st==='rebuild')return drawRebuild();
