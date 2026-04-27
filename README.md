@@ -4,7 +4,7 @@
 
 Phantom is a top-down space shooter inspired primarily by *Gravitar*, *Tyrian*, and *Brigador*. Fly an inertial-physics ship through a procedurally generated star system, fight fleets in open-space encounters, and descend into cave-site levels to liberate the sector.
 
-Play the latest version [here](https://raw.githack.com/ruskerdax/phantom/master/phantom.html) (thanks, [Seth](https://github.com/sethrobinson)). You may need to clear your cache if you've played before.
+Play the latest version [here](https://raw.githack.com/patricksimpson/phantom/master/phantom.html) (thanks, [Seth](https://github.com/sethrobinson)). You may need to clear your cache if you've played before.
 
 ## Running locally
 
