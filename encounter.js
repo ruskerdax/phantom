@@ -150,6 +150,7 @@ function drawEnc(){
   for(const lb of enc.lsb){const a=lb.l/8,bw=lb.w||2;cx.save();cx.globalAlpha=a;cx.strokeStyle=lb.col;cx.shadowColor=lb.col;cx.shadowBlur=10;cx.lineWidth=bw;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.globalAlpha=a*.6;cx.strokeStyle='#fff';cx.lineWidth=Math.max(1,bw/2);cx.shadowBlur=0;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.restore();}
   drPts(enc.pts);
   if(enc.s.alive)drShip(enc.s.x,enc.s.y,enc.s.a,enc.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),enc.s.energy,enc.s.inv,G.fr);
+  if(enc.s.alive)drAimCone(enc.s);
   cx.restore();
   if(enc.introTimer>0){const a=Math.min(1,(70-enc.introTimer)/20);cx.save();cx.globalAlpha=a;cx.fillStyle='rgba(0,0,0,.7)';cx.fillRect(0,H/2-36,W,72);cx.fillStyle=et.enc.col;cx.shadowColor=et.enc.col;cx.shadowBlur=20;cx.font='bold 32px monospace';cx.textAlign='center';cx.fillText(enc.label,W/2,H/2+4);cx.shadowBlur=0;cx.fillStyle='#668';cx.font='13px monospace';cx.fillText(enc.isAst&&!enc.en.length?'YOU MAY LEAVE AT ANY TIME':enc.isHBase?'DESTROY ALL SOFT POINTS TO ESCAPE':'DESTROY ALL ENEMIES TO ESCAPE',W/2,H/2+26);cx.globalAlpha=1;cx.restore();}
   const alive=enc.en.filter(e=>e.alive).length;

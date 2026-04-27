@@ -135,6 +135,7 @@ function drawSite(){
   for(const lb of site.lsb){const a=lb.l/8,bw=lb.w||2;cx.save();cx.globalAlpha=a;cx.strokeStyle=lb.col;cx.shadowColor=lb.col;cx.shadowBlur=10;cx.lineWidth=bw;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.globalAlpha=a*.6;cx.strokeStyle='#fff';cx.lineWidth=Math.max(1,bw/2);cx.shadowBlur=0;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.restore();}
   drPts(site.pts);
   if(site.s.alive)drShip(site.s.x,site.s.y,site.s.a,site.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),site.s.energy,site.s.inv,G.fr);
+  if(site.s.alive)drAimCone(site.s);
   cx.restore();
   drHUD(site.s.energy,site.s.maxEnergy,site.s.hp,site.s.maxHp);
   cx.save();cx.font='13px monospace';cx.fillStyle=col;cx.textAlign='center';cx.fillText(d.name,W/2,18);cx.restore();

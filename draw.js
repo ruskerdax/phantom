@@ -44,6 +44,23 @@ function drShip(x,y,a,shld,thr,energy,inv,fr){
   else if(thr&&energy<=0){cx.strokeStyle='#f22';cx.shadowColor='#f22';cx.shadowBlur=6;cx.beginPath();cx.moveTo(-1.5,7);cx.lineTo(0,9+Math.random()*2);cx.lineTo(1.5,7);cx.stroke();}
   cx.restore();
 }
+// All distances are in pixels from the ship center.
+const CONE={innerR:50,outerR:350,half:15*Math.PI/180,gap:3,dot:1,col:'#ffb060',alpha:0.3,alphaRot:0.5};
+function drAimCone(s){
+  const c=CONE,a=s.a;
+  cx.save();
+  cx.globalAlpha=iRot()!==0?c.alphaRot:c.alpha;
+  cx.strokeStyle=c.col;
+  cx.lineWidth=c.dot*2;
+  cx.lineCap='round';
+  cx.setLineDash([0,c.gap]);
+  cx.lineDashOffset=-c.dot;
+  for(const da of[-c.half,0,c.half]){
+    const dx=Math.sin(a+da),dy=-Math.cos(a+da);
+    cx.beginPath();cx.moveTo(s.x+dx*c.innerR,s.y+dy*c.innerR);cx.lineTo(s.x+dx*c.outerR,s.y+dy*c.outerR);cx.stroke();
+  }
+  cx.restore();
+}
 function drEnergy(x,y,col){cx.save();cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=8;cx.lineWidth=1.5;cx.beginPath();cx.moveTo(x,y-9);cx.lineTo(x+7,y);cx.lineTo(x,y+9);cx.lineTo(x-7,y);cx.closePath();cx.stroke();cx.fillStyle=col;cx.font='bold 9px monospace';cx.textAlign='center';cx.shadowBlur=0;cx.fillText('🗲',x,y+3.5);cx.restore();}
 function drGPI(){cx.save();cx.textAlign='right';cx.font='11px monospace';if(GP.connected){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=6;cx.fillText('CTRL: '+GP.id.slice(0,22),W-6,H-8);}else{cx.fillStyle='#444';cx.shadowBlur=0;cx.fillText('NO CONTROLLER',W-6,H-8);}cx.restore();}
 function drHUD(energy,maxEnergy=100,hp=15,maxHp=15){
