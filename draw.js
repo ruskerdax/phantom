@@ -45,7 +45,7 @@ function drShip(x,y,a,shld,thr,energy,inv,fr){
   cx.restore();
 }
 // All distances are in pixels from the ship center.
-const CONE={innerR:50,outerR:350,half:15*Math.PI/180,gap:3,dot:1,col:'#ffb060',alpha:0.3,alphaRot:0.5};
+const CONE={innerR:30,outerR:350,half:15*Math.PI/180,gap:3,dot:1,col:'#ffb060',alpha:0.3,alphaRot:0.5};
 function drAimCone(s){
   const c=CONE,a=s.a;
   cx.save();

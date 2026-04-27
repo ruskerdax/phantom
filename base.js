@@ -103,7 +103,12 @@ function drawBaseShop(){
     cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+8,dy-10);cx.lineTo(px+pw-8,dy-10);cx.stroke();
     cx.fillStyle='#669';cx.font='11px monospace';cx.textAlign='left';
     let detail='';
-    if(G.baseTab===1){const ch=item;detail=`HP ${ch.maxHp}  ENERGY ${ch.maxEnergy}  THR ${ch.thrMul}x${ch.reverse?' REV':''}  SLOTS: `+ch.slots.map(s=>s.type.toUpperCase()).join(' + ');}
+    if(G.baseTab===1){
+      const ch=item;
+      const t=ch.thrust;
+      const revStr = t.rev>0 ? `  REV ${t.rev}` : '';
+      detail=`HP ${ch.maxHp}  ENERGY ${ch.maxEnergy}  FWD ${t.fwd}${revStr}  ROT ${t.rotAccel}  SLOTS: `+ch.slots.map(s=>s.type.toUpperCase()).join(' + ');
+    }
     else if(G.baseTab===2){const wp=item;detail=`TYPE: ${wp.wpnType.toUpperCase()}  DMG ${wp.dmg}  CD ${wp.cd}s`+(wp.range?`  RANGE ${wp.range}`:'');}
     else if(G.baseTab===3){const ax=item;detail=`${ax.desc}  DRAIN ${ax.energyDrain}/frame`;}
     cx.fillText(detail,px+12,dy+6);

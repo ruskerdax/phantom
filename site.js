@@ -41,7 +41,7 @@ function siteBounce(s){
   const{nx,ny}=wNormal(s.x,s.y,G.lv);
   const dot=s.vx*nx+s.vy*ny;
   if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}
-  s.vx*=.55;s.vy*=.55;
+  s.vx*=.55;s.vy*=.55;s.va*=.55;
   s.x+=nx*10;s.y+=ny*10;
   if(!s.shld&&!G.invincible){
     const dmg=Math.round((spd/5.5)*5);
@@ -68,9 +68,13 @@ function siteKillShip(){
 function updSite(){
   const site=G.site;updPts(site.pts,.06);for(let i=site.lsb.length-1;i>=0;i--){if(--site.lsb[i].l<=0)site.lsb.splice(i,1);}
   const s=site.s,d=site.d;if(!s.alive)return;
-  s.a+=iRot()*(s.energy>0?.065:.0325);s.shld=iShd(s.energy);
+  applyRotation(s, iRot(), s.energy<=0);
+  s.shld=iShd(s.energy);
   if(s.shld){const ax=activeAuxObj();s.energy=Math.max(0,s.energy-(ax?.energyDrain??0.17));}
-  if(iThr()&&!s.shld){const tm=activeChassisObj().thrMul,thr=s.energy>0?.13*tm:.014;s.vx+=Math.sin(s.a)*thr;s.vy-=Math.cos(s.a)*thr;if(s.energy>0)s.energy=Math.max(0,s.energy-.045);}
+  if(iThr()&&!s.shld){
+    applyLinearThrust(s, 1, s.energy<=0);
+    if(s.energy>0) s.energy=Math.max(0,s.energy-.045);
+  }
   s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;const sp=Math.hypot(s.vx,s.vy);if(sp>5.5){s.vx=s.vx/sp*5.5;s.vy=s.vy/sp*5.5;}
   s.x+=s.vx;s.y+=s.vy;
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;

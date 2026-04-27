@@ -177,9 +177,13 @@ function updOW(){
   if(!G.hbCleared&&--ow.swarmTimer<=0){ow.swarmTimer=1800;ow.en.push(owHBaseSwarmPos());}
   for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,OW_W);f.y=wrap(f.y+f.vy,OW_H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
   const s=ow.s;if(!s.alive)return;
-  s.a+=iRot()*(s.energy>0?.075:.0375);s.shld=false;
+  applyRotation(s, iRot(), s.energy<=0);
+  s.shld=false;
   // sin(angle) = X component, -cos(angle) = Y component: canvas Y increases downward, so "forward" is -cos.
-  if(iThr()){const tm=activeChassisObj().thrMul,thr=s.energy>0?.09*tm:.01;s.vx+=Math.sin(s.a)*thr;s.vy-=Math.cos(s.a)*thr;if(s.energy>0)s.energy=Math.max(0,s.energy-.035);}
+  if(iThr()){
+    applyLinearThrust(s, 1, s.energy<=0);
+    if(s.energy>0) s.energy=Math.max(0,s.energy-.035);
+  }
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   const maxSpd=sdist<220?7:4.2;
   // Normalize velocity vector then scale to maxSpd — the standard way to cap speed without distorting direction.
