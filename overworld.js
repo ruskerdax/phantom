@@ -16,6 +16,28 @@ function encSpawnPos(ew,eh,placed,minPlayer,minPeer,sx,sy){
   while(att<50&&(Math.hypot(x-sx,y-sy)<minPlayer||placed.some(p=>Math.hypot(x-p.x,y-p.y)<minPeer)));
   placed.push({x,y});return{x,y};
 }
+// Place an enemy along an arc near the arena border, centered on contactA.
+// Distributes idx-of-total along an ~80deg arc, jittered slightly, then runs
+// a short repulsion pass against already-placed peers.
+function encClusterPos(ew,eh,placed,minPeer,contactA,idx,total){
+  const cx=ew/2,cy=eh/2;
+  const baseR=Math.min(ew,eh)/2-120;
+  const arc=Math.PI*0.16;
+  const t=total>1?(idx/(total-1))-0.5:0;
+  const a=contactA+t*arc+(Math.random()-0.5)*0.08;
+  const r=baseR*(0.85+Math.random()*0.12);
+  let x=cx+Math.sin(a)*r,y=cy-Math.cos(a)*r;
+  for(let att=0;att<8;att++){
+    let moved=false;
+    for(const p of placed){
+      const dx=x-p.x,dy=y-p.y,d=Math.hypot(dx,dy)||1;
+      if(d<minPeer){const push=(minPeer-d)+1;x+=(dx/d)*push;y+=(dy/d)*push;moved=true;}
+    }
+    if(!moved)break;
+  }
+  x=Math.max(80,Math.min(ew-80,x));y=Math.max(80,Math.min(eh-80,y));
+  placed.push({x,y});return{x,y};
+}
 function mkFleet(id,x,y,opts){
   const f={id,x,y,vx:0,vy:0,a:0,alive:true,flash:0,
     state:'idle',comp:rollFleetComp(id),routeIdx:0,postBody:null,postOrbit:null,sysOrbit:null,spawnTimer:0};
@@ -98,9 +120,10 @@ function slipNeighborList(){
   if(G.prevSeed!=null&&G.prevSeed!==TUTORIAL_SEED&&!list.includes(G.prevSeed))list[0]=G.prevSeed;
   return list;
 }
-function owStartEnc(idx){
+function owStartEnc(idx,contactA,playerA){
   const ow=G.OW,e=ow.en[idx],et=OET[e.t],ec=et.enc;
   const ens=[];
+  const spawnX=EW/2,spawnY=EH/2;
   if(ec.groups){
     const spawns=[];
     for(const grp of ec.groups){
@@ -109,29 +132,28 @@ function owStartEnc(idx){
     }
     const total=spawns.reduce((s,g)=>s+g.cnt,0);
     let ei=0;
-    const placed=[],spawnX=EW*.08,spawnY=EH/2;
+    const placed=[];
     for(const sp of spawns){
       const gec=OET[sp.t].enc,initCd=Math.round(WEAPONS[gec.fire.wpn].cd*60);
       for(let i=0;i<sp.cnt;i++){
-        const{x,y}=encSpawnPos(EW,EH,placed,280,120,spawnX,spawnY);
+        const{x,y}=encClusterPos(EW,EH,placed,140,contactA,ei,total);
         ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));
         ei++;
       }
     }
   } else {
     const initCd=Math.round(WEAPONS[ec.fire.wpn].cd*60);
-    const placed=[],spawnX=EW*.08,spawnY=EH/2;
-    if(ec.cnt===1){
-      const{x,y}=encSpawnPos(EW,EH,placed,280,120,spawnX,spawnY);
-      ens.push(mkEncEnemy(e.t,x,y,initCd));
-    } else {
-      for(let i=0;i<ec.cnt;i++){const{x,y}=encSpawnPos(EW,EH,placed,280,120,spawnX,spawnY);ens.push(mkEncEnemy(e.t,x,y,initCd+i*18));}
+    const placed=[];
+    const total=ec.cnt;
+    for(let i=0;i<total;i++){
+      const{x,y}=encClusterPos(EW,EH,placed,140,contactA,i,total);
+      ens.push(mkEncEnemy(e.t,x,y,initCd+i*18));
     }
   }
   const rng=mkRNG(seedChild(G.seed,200+idx));
   const rocks=[];
   let rockCount=0;for(let i=0;i<8;i++)if(rng.fl(0,1)<.25)rockCount++;
-  const spawnX=EW*.08,spawnY=EH/2,minSpawnDist=120;
+  const minSpawnDist=120;
   const tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
   for(let i=0;i<rockCount;i++){
     let rx,ry,attempts=0;
@@ -140,12 +162,12 @@ function owStartEnc(idx){
     const tier=rng.int(0,2);const td=tierDefs[tier];
     rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:td.r[0]+rng.fl(0,td.r[1]),hp:td.hp,maxHp:td.hp,tier});
   }
-  const encShip=mkShip(EW*.08,EH/2);encShip.energy=ow.s.energy;encShip.inv=90;
-  encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
+  const encShip=mkShip(spawnX,spawnY);encShip.energy=ow.s.energy;encShip.inv=90;
+  encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
   const label=ec.groups?et.name+' ENCOUNTER':(ec.cnt>1?'SWARM ATTACK':et.name+' ENCOUNTER');
   G.ENC={owIdx:idx,et:e.t,label,
     s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
-    ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2)}};
+    ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2))}};
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
@@ -200,15 +222,15 @@ function startHBaseEnc(){
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
-function owStartFleetEnc(fi){
+function owStartFleetEnc(fi,contactA,playerA){
   const ow=G.OW,f=ow.fleets[fi];
   const ens=[],total=f.comp.reduce((s,g)=>s+g.cnt,0);
   let ei=0;
-  const placed=[],spawnX=EW*.08,spawnY=EH/2;
+  const placed=[],spawnX=EW/2,spawnY=EH/2;
   for(const sp of f.comp){
     const gec=OET[sp.t].enc,initCd=Math.round(WEAPONS[gec.fire.wpn].cd*60);
     for(let i=0;i<sp.cnt;i++){
-      const{x,y}=encSpawnPos(EW,EH,placed,280,120,spawnX,spawnY);
+      const{x,y}=encClusterPos(EW,EH,placed,140,contactA,ei,total);
       ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));
       ei++;
     }
@@ -224,13 +246,13 @@ function owStartFleetEnc(fi){
     const tier=rng.int(0,2),td=tierDefs[tier];
     rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:td.r[0]+rng.fl(0,td.r[1]),hp:td.hp,maxHp:td.hp,tier});
   }
-  const encShip=mkShip(spawnX,EH/2);encShip.energy=ow.s.energy;encShip.inv=90;
-  encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
+  const encShip=mkShip(spawnX,spawnY);encShip.energy=ow.s.energy;encShip.inv=90;
+  encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
   // Use the first comp type as the representative for encounter color; fall back to index 4.
   const repType=f.comp.length>0?f.comp[0].t:4;
   G.ENC={owIdx:null,fleetIdx:fi,et:repType,label:f.id+' FLEET',
     s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
-    ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2)}};
+    ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2))}};
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
@@ -310,7 +332,7 @@ function updOW(){
     if(e.flash>0)e.flash--;
     if(s.inv<=0&&dist<et.trigR){
       if(s.shld){e.vx-=(dx/dist)*3;e.vy-=(dy/dist)*3;e.flash=12;}
-      else{owStartEnc(i);return;}
+      else{const cdx=e.x-s.x,cdy=e.y-s.y;const contactA=Math.atan2(cdx,-cdy);owStartEnc(i,contactA,s.a);return;}
     }
   }
   for(let fi=0;fi<ow.fleets.length;fi++){
@@ -376,7 +398,7 @@ function updFleet(f,fi,s){
   }
   if(s.inv<=0&&dist<F.trigR){
     if(s.shld){f.vx-=(dx/dist)*3;f.vy-=(dy/dist)*3;f.flash=12;}
-    else{owStartFleetEnc(fi);return true;}
+    else{const cdx=f.x-s.x,cdy=f.y-s.y;const contactA=Math.atan2(cdx,-cdy);owStartFleetEnc(fi,contactA,s.a);return true;}
   }
   return false;
 }

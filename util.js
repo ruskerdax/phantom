@@ -1,7 +1,7 @@
 'use strict';
 
 const W=800,H=580;
-const EW=Math.round(W*2.6),EH=Math.round(W*2.6);
+const EW=Math.round(W*3.9),EH=Math.round(W*3.9);
 const OW_W=Math.round(W*5),OW_H=Math.round(W*5);
 
 function dseg(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;if(!l2)return Math.hypot(px-ax,py-ay);const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l2));return Math.hypot(px-ax-t*dx,py-ay-t*dy);}
