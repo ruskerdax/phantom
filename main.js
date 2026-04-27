@@ -53,13 +53,15 @@ function update(){
       return;
     }
     const m=menuInput();
-    const nRows=ACT_DEFS.length+1;
+    const nRows=ACT_DEFS.length+2;
     if(m.up)G.ctrlSel=Math.max(0,G.ctrlSel-1);
     if(m.down)G.ctrlSel=Math.min(nRows-1,G.ctrlSel+1);
     if(m.left)G.optCol=0;
     if(m.right)G.optCol=1;
     if(m.confirm){
       if(G.ctrlSel===ACT_DEFS.length){
+        G.st='options';G.optListen=null;
+      } else if(G.ctrlSel===ACT_DEFS.length+1){
         ACT_DEFS.forEach(a=>{BND[a.id]={key:a.defKey,btn:a.defBtn};});saveBND();
       } else {
         G.optListen=G.optCol===0?'key':'btn';

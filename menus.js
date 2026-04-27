@@ -302,16 +302,15 @@ function drawOptions(){
   const items=['CONTROLS','SOUND EFFECTS','MUSIC','CHEAT MODE','FULLSCREEN','CLEAR GAME DATA','RETURN'];
   const startY=140,rowH=52;
   for(let i=0;i<7;i++){
-    const y=startY+i*rowH,sel=i===G.optSel;
+    const y=startY+i*rowH-(i>=1?12:0),sel=i===G.optSel;
     cx.textAlign='center';
     cx.fillStyle=sel?'#aaffcc':'#668';cx.shadowBlur=sel?4:0;cx.shadowColor='#0f8';
     cx.font='bold 13px monospace';
     cx.fillText((sel?'▶ ':'')+items[i],W/2,y);
     if(i===0){
-      // CONTROLS - no sub-text
     } else if(i===1||i===2){
       const vol=i===1?G.sfxVol:G.musVol;
-      const slotW=22,gap=4,totalW=10*(slotW+gap)-gap;
+      const slotW=22,gap=0,totalW=10*(slotW+gap)-gap;
       const slotX=W/2-totalW/2;
       for(let s=0;s<10;s++){
         const filled=s<vol;
@@ -320,8 +319,6 @@ function drawOptions(){
         cx.fillRect(slotX+s*(slotW+gap),y+14,slotW,12);
       }
       cx.shadowBlur=0;
-      cx.fillStyle='#446';cx.font='11px monospace';cx.textAlign='center';
-      cx.fillText(vol*10+'%',W/2,y+42);
     } else if(i===3){
       const on=G.cheatMode;
       cx.fillStyle=on?(sel?'#ff8':'#664'):(sel?'#446':'#334');
@@ -418,11 +415,13 @@ function drawControls(){
     }
   }
   cx.shadowBlur=0;
-  const ry=startY+ACT_DEFS.length*rowH+8,rsel=G.ctrlSel===ACT_DEFS.length;
+  const ry=startY+ACT_DEFS.length*rowH+8,retSel=G.ctrlSel===ACT_DEFS.length,rsel=G.ctrlSel===ACT_DEFS.length+1;
   cx.beginPath();cx.moveTo(60,ry-24);cx.lineTo(W-60,ry-24);cx.strokeStyle='#1a4a2a';cx.stroke();
   cx.textAlign='center';
+  cx.fillStyle=retSel?'#0f8':'#668';cx.shadowColor='#0f8';cx.shadowBlur=retSel?8:0;
+  cx.font='bold 13px monospace';cx.fillText(retSel?'▶ RETURN':'RETURN',W/2,ry);
   cx.fillStyle=rsel?'#f84':'#446';cx.shadowColor='#f84';cx.shadowBlur=rsel?8:0;
-  cx.font='bold 13px monospace';cx.fillText(rsel?'▶ RESET TO DEFAULTS':'RESET TO DEFAULTS',W/2,ry);
+  cx.fillText(rsel?'▶ RESET TO DEFAULTS':'RESET TO DEFAULTS',W/2,ry+rowH);
   cx.shadowBlur=0;
   cx.fillStyle='#334';cx.font='11px monospace';
   cx.fillText('↑↓ SELECT ROW   ◄► SWITCH COLUMN   ENTER REMAP   BKSP CLEAR   ESC BACK',W/2,H-18);
