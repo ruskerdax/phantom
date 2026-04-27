@@ -60,7 +60,7 @@ function drawRebuildChassis(rf){
       cx.fillStyle=isSel?'#fd8':'#553';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='left';
       cx.fillText((isSel?'▶ ':'  ')+'CHARITY ASSISTANCE',px+14,iy);
       cx.fillStyle=isSel?'#aa8':'#442';cx.font='11px monospace';cx.textAlign='right';
-      cx.fillText('FORFEIT ALL CREDITS & BOUNTY — DEFAULT SHIP FREE',px+pw-14,iy);
+      cx.fillText('FORFEIT ALL CREDITS & STAKE — DEFAULT SHIP FREE',px+pw-14,iy);
     }else if(item==='quit'){
       cx.fillStyle=isSel?'#f84':'#553';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='center';
       cx.fillText((isSel?'▶ ':'  ')+'QUIT TO TITLE',W/2,iy);
@@ -73,7 +73,7 @@ function drawRebuildChassis(rf){
     }
   }
   cx.fillStyle='#8df';cx.font='13px monospace';cx.textAlign='center';
-  cx.fillText('CREDITS: '+G.credits+'  BOUNTY: '+G.bounty,W/2,py+ph+18);
+  cx.fillText('CREDITS: '+G.credits+'  STAKE: '+G.stake,W/2,py+ph+18);
   cx.fillStyle='#334';cx.font='11px monospace';
   cx.fillText('SEED  '+G.seed.toString(16).toUpperCase().padStart(8,'0'),W/2,py+ph+34);
 }
@@ -123,7 +123,7 @@ function updRebuild(){
       ia();
       if(rf.sel===nItems-1){G.rebuildFlow=null;G.paused=false;G.ENC=null;G.site=null;G.st='title';return;}
       if(rf.sel===nItems-2){
-        const def=defaultSave();G.credits=0;G.bounty=0;
+        const def=defaultSave();G.credits=0;G.stake=0;
         G.loadout={...def.loadout,weapons:[...def.loadout.weapons]};
         def.licenses.forEach(id=>{if(!G.licenses.includes(id))G.licenses.push(id);});
         G.rebuildFlow=null;doRebuildFinalize();return;

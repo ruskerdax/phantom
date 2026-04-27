@@ -61,7 +61,7 @@ function owKillShip(){
   setTimeout(()=>{G.st='rebuild';},1800);
 }
 function doRebuildFinalize(){
-  const bp=owPos(BASE);G.ENC=null;G.site=null;G.bounty=0;
+  const bp=owPos(BASE);G.ENC=null;G.site=null;G.stake=0;
   if(!G.OW){initOW(activeChassisObj().maxEnergy);return;}
   G.OW.s=mkShip(bp.x,bp.y);G.OW.s.inv=180;
   G.OW.en=[];G.OW.fleets=[];
@@ -79,7 +79,7 @@ function jumpToSeed(newSeed,sourceSeed){
   const prev=G.systemStates[G.seed];
   if(prev){G.cleared=[...prev.cleared];G.slipgateActive=prev.slipgateActive;G.hbCleared=prev.hbCleared;G.hbState=prev.hbState;G.lvState=prev.lvState;}
   else{G.cleared=[false,false,false];G.slipgateActive=false;G.hbCleared=false;G.hbState=null;G.lvState={};}
-  G.bounty=0;G.slipMsg=0;
+  G.stake=0;G.slipMsg=0;
   genWorld(G.seed);
   if(!G.visitedSeeds.includes(G.seed))G.visitedSeeds.push(G.seed);
   const sgp=owPos(SLIPGATE);
@@ -285,7 +285,7 @@ function updOW(){
   if(!G.hbCleared){const hbp=owPos(HBASE);if(Math.hypot(s.x-hbp.x,s.y-hbp.y)<HBASE.r+28)ow.nearHBase=true;}
   {const sgp=owPos(SLIPGATE);ow.nearSlipgate=Math.hypot(s.x-sgp.x,s.y-sgp.y)<SLIPGATE.r+28;}
   const owFired=iFir();
-  if(owFired&&ow.nearBase){G.credits+=G.bounty;G.bounty=0;G.baseSel=0;G.baseTab=0;G.shopSel=0;G.shopActionId=null;G.equipFlow=null;suppressMenuInput();G.st='base';return;}
+  if(owFired&&ow.nearBase){G.credits+=G.stake;G.stake=0;G.baseSel=0;G.baseTab=0;G.shopSel=0;G.shopActionId=null;G.equipFlow=null;suppressMenuInput();G.st='base';return;}
   if(owFired&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
   if(owFired&&ow.nearAst>=0){startAstEnc();return;}
   if(owFired&&ow.nearHBase){startHBaseEnc();return;}

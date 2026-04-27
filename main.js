@@ -77,7 +77,7 @@ function update(){
     return;
   }
   if(st==='rebuild'){updRebuild();return;}
-  if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='over'){G.st='title';}else{G.bounty=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.st='title';}}return;}
+  if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='over'){G.st='title';}else{G.stake=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.st='title';}}return;}
   if(st==='dead_ow'||st==='dead_enc'||st==='dead_site')return;
   if(st==='base'){updBase();return;}
   if(st==='slipgate'){

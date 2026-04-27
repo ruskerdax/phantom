@@ -65,7 +65,7 @@ function drEnergy(x,y,col){cx.save();cx.strokeStyle=col;cx.shadowColor=col;cx.sh
 function drGPI(){cx.save();cx.textAlign='right';cx.font='11px monospace';if(GP.connected){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=6;cx.fillText('CTRL: '+GP.id.slice(0,22),W-6,H-8);}else{cx.fillStyle='#444';cx.shadowBlur=0;cx.fillText('NO CONTROLLER',W-6,H-8);}cx.restore();}
 function drHUD(energy,maxEnergy=100,hp=15,maxHp=15){
   cx.save();cx.font='13px monospace';cx.fillStyle='#aaffcc';cx.shadowBlur=0;
-  cx.textAlign='left';cx.fillText('BOUNTY '+G.bounty,8,18);
+  cx.textAlign='left';cx.fillText('STAKE '+G.stake,8,18);
   cx.textAlign='center';cx.fillText('',W/2,18);
   cx.textAlign='right';
   const hf=Math.max(0,hp/maxHp);
