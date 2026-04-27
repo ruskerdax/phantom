@@ -12,6 +12,7 @@ function encWin(){
   const enc=G.ENC,ow=G.OW;
   if(enc.isHBase){G.hbCleared=true;G.hbState=null;}
   if(enc.owIdx!=null)ow.en[enc.owIdx].alive=false;
+  if(enc.fleetIdx!=null)ow.fleets[enc.fleetIdx].alive=false;
   ow.s.energy=enc.s.energy;
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
   ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;

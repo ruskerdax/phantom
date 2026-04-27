@@ -10,11 +10,47 @@ function owEnemyPos(t,px,py,minDist=600){
   }while(px!=null&&Math.hypot(x-px,y-py)<minDist&&attempts<30);
   return{t,x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
 }
+function mkFleet(id,x,y,opts){
+  const f={id,x,y,vx:0,vy:0,a:0,alive:true,flash:0,
+    state:'idle',comp:rollFleetComp(id),routeIdx:0,postBody:null,postOrbit:null,sysOrbit:null,spawnTimer:0};
+  if(opts?.postBody){
+    f.postBody=opts.postBody;
+    f.postOrbit={r:opts.orbitR||120,a:Math.random()*Math.PI*2,aSpd:opts.aSpd||.0006};
+  }
+  const F=fleetDef(id);
+  if(F.spawnsHunters)f.spawnTimer=F.spawnsHunters.everyFrames;
+  return f;
+}
+function seedSystemFleets(px,py){
+  const ow=G.OW;
+  // 2 Hunters orbiting at mid-system range
+  for(let i=0;i<2;i++){const p=owEnemyPos(0,px,py);ow.fleets.push(mkFleet('HUNTER',p.x,p.y));}
+  // 1 Patrol
+  {const p=owEnemyPos(0,px,py);ow.fleets.push(mkFleet('PATROL',p.x,p.y));}
+  // 1 Swarm per uncleared cave level
+  for(let i=0;i<PP.length;i++){
+    if(G.cleared[i])continue;
+    const bp=owPos(PP[i]),a=Math.random()*Math.PI*2,r=80+Math.random()*60;
+    ow.fleets.push(mkFleet('SWARM',bp.x+Math.cos(a)*r,bp.y+Math.sin(a)*r,{postBody:PP[i],orbitR:r,aSpd:.0008}));
+  }
+  // 1 Swarm per asteroid field
+  for(let ai=0;ai<AB.length;ai++){
+    const ap=owPos(AB[ai]),a=Math.random()*Math.PI*2,r=100+Math.random()*60;
+    ow.fleets.push(mkFleet('SWARM',ap.x+Math.cos(a)*r,ap.y+Math.sin(a)*r,{postBody:AB[ai],orbitR:r,aSpd:.0007}));
+  }
+  // Armada at HBASE
+  if(!G.hbCleared){
+    const hp=owPos(HBASE),a=Math.random()*Math.PI*2,r=280+Math.random()*80;
+    ow.fleets.push(mkFleet('ARMADA',hp.x+Math.cos(a)*r,hp.y+Math.sin(a)*r,{postBody:HBASE,orbitR:r,aSpd:.0004}));
+  }
+}
 function initOW(energy,sx,sy){
   const bp=owPos(BASE);
   const px=sx??bp.x,py=sy??bp.y;
-  G.OW={s:mkShip(px,py),en:[owEnemyPos(0,px,py),owEnemyPos(1,px,py),owEnemyPos(2,px,py),owEnemyPos(3,px,py)],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1,wanderTimer:2700,swarmTimer:1800};
+  G.OW={s:mkShip(px,py),en:[],fleets:[],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1,
+    slipgateSpawnTimer:1800,convoySpawnTimer:5400};
   G.OW.s.energy=energy??G.OW.s.maxEnergy;G.OW.s.inv=120;
+  seedSystemFleets(px,py);
   G.st='overworld';
 }
 function owKillShip(){
@@ -28,8 +64,9 @@ function doRebuildFinalize(){
   const bp=owPos(BASE);G.ENC=null;G.site=null;G.bounty=0;
   if(!G.OW){initOW(activeChassisObj().maxEnergy);return;}
   G.OW.s=mkShip(bp.x,bp.y);G.OW.s.inv=180;
-  G.OW.en=[owEnemyPos(0,bp.x,bp.y),owEnemyPos(1,bp.x,bp.y),owEnemyPos(2,bp.x,bp.y),owEnemyPos(3,bp.x,bp.y)];
-  G.OW.wanderTimer=2700;G.OW.swarmTimer=1800;
+  G.OW.en=[];G.OW.fleets=[];
+  G.OW.slipgateSpawnTimer=1800;G.OW.convoySpawnTimer=5400;
+  seedSystemFleets(bp.x,bp.y);
   G.st='overworld';saveGame();tone(660,.2,'sine',.08);
 }
 function jumpToSeed(newSeed,sourceSeed){
@@ -155,6 +192,40 @@ function startHBaseEnc(){
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
+function owStartFleetEnc(fi){
+  const ow=G.OW,f=ow.fleets[fi];
+  const ens=[],total=f.comp.reduce((s,g)=>s+g.cnt,0);
+  let ei=0;
+  for(const sp of f.comp){
+    const gec=OET[sp.t].enc,initCd=Math.round(WEAPONS[gec.fire.wpn].cd*60);
+    for(let i=0;i<sp.cnt;i++){
+      const x=total===1?EW-160:EW-200+Math.cos((ei/total)*Math.PI*2)*60;
+      const y=total===1?EH/2+(Math.random()*80-40):EH/2+Math.sin((ei/total)*Math.PI*2)*60;
+      ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));
+      ei++;
+    }
+  }
+  const rng=mkRNG(seedChild(G.seed,300+fi));
+  const rocks=[],tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
+  let rockCount=0;for(let i=0;i<8;i++)if(rng.fl(0,1)<.25)rockCount++;
+  const spawnX=EW*.08,minSpawnDist=120;
+  for(let i=0;i<rockCount;i++){
+    let rx,ry,att=0;
+    do{rx=rng.fl(60,EW-60);ry=rng.fl(60,EH-60);att++;}
+    while(Math.hypot(rx-spawnX,ry-EH/2)<minSpawnDist&&att<30);
+    const tier=rng.int(0,2),td=tierDefs[tier];
+    rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:td.r[0]+rng.fl(0,td.r[1]),hp:td.hp,maxHp:td.hp,tier});
+  }
+  const encShip=mkShip(spawnX,EH/2);encShip.energy=ow.s.energy;encShip.inv=90;
+  encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
+  // Use the first comp type as the representative for encounter color; fall back to index 4.
+  const repType=f.comp.length>0?f.comp[0].t:4;
+  G.ENC={owIdx:null,fleetIdx:fi,et:repType,label:f.id+' FLEET',
+    s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
+    ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2)}};
+  G.st='enc_in';
+  tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
+}
 function owEdgePos(t){
   const m=60,edge=Math.floor(Math.random()*4);
   let x,y;
@@ -173,8 +244,13 @@ function owHBaseSwarmPos(){
 }
 function updOW(){
   G.owFr++;if(G.slipMsg>0)G.slipMsg--;const ow=G.OW;updPts(ow.pts);
-  if(--ow.wanderTimer<=0){ow.wanderTimer=2700;ow.en.push(owEdgePos(Math.random()<.5?0:2));}
-  if(!G.hbCleared&&--ow.swarmTimer<=0){ow.swarmTimer=1800;ow.en.push(owHBaseSwarmPos());}
+  {const HF=fleetDef('HUNTER'),PF=fleetDef('PATROL');
+  if(--ow.slipgateSpawnTimer<=0){ow.slipgateSpawnTimer=1800;
+    if(ow.fleets.filter(f=>f.alive&&f.id==='HUNTER').length<HF.maxOnOW){const sgp=owPos(SLIPGATE);ow.fleets.push(mkFleet('HUNTER',sgp.x,sgp.y));}
+    if(Math.random()<.4&&ow.fleets.filter(f=>f.alive&&f.id==='PATROL').length<PF.maxOnOW){const sgp=owPos(SLIPGATE);ow.fleets.push(mkFleet('PATROL',sgp.x,sgp.y));}}}
+  if(!G.hbCleared&&--ow.convoySpawnTimer<=0){ow.convoySpawnTimer=5400;
+    const CF=fleetDef('CONVOY');
+    if(ow.fleets.filter(f=>f.alive&&f.id==='CONVOY').length<CF.maxOnOW){const sgp=owPos(SLIPGATE);ow.fleets.push(mkFleet('CONVOY',sgp.x,sgp.y));}}
   for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,OW_W);f.y=wrap(f.y+f.vy,OW_H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
   const s=ow.s;if(!s.alive)return;
   applyRotation(s, iRot(), s.energy<=0);
@@ -229,6 +305,72 @@ function updOW(){
       else{owStartEnc(i);return;}
     }
   }
+  for(let fi=0;fi<ow.fleets.length;fi++){
+    const f=ow.fleets[fi];if(!f.alive)continue;
+    if(updFleet(f,fi,s))return;
+  }
+}
+function updFleet(f,fi,s){
+  const F=fleetDef(f.id);
+  if(f.id==='ARMADA'&&G.hbCleared){f.alive=false;return false;}
+  const dx=s.x-f.x,dy=s.y-f.y,dist=Math.hypot(dx,dy)||1;
+  if(F.aggroR>0&&s.inv<=0){
+    if(f.state==='idle'&&dist<F.aggroR)f.state='aggro';
+    else if(f.state==='aggro'&&dist>F.aggroR*1.5){
+      f.state='idle';
+      if(F.behavior==='triangle'){
+        const route=[SLIPGATE,BASE,HBASE];let bd=Infinity;
+        route.forEach((b,i)=>{const bp=owPos(b),d=Math.hypot(f.x-bp.x,f.y-bp.y);if(d<bd){bd=d;f.routeIdx=i;}});
+      }
+    }
+  }
+  if(f.state==='aggro'){
+    const ta=Math.atan2(dx,-dy);
+    f.a+=angDiff(f.a,ta)*.07;
+    f.vx+=Math.sin(f.a)*F.owSpd*.05;f.vy-=Math.cos(f.a)*F.owSpd*.05;
+  } else if(F.behavior==='orbit_system'){
+    if(!f.sysOrbit){const sd=Math.hypot(f.x-OW_W/2,f.y-OW_H/2)||500;f.sysOrbit={r:Math.max(300,Math.min(800,sd)),a:Math.atan2(f.y-OW_H/2,f.x-OW_W/2),aSpd:.0007};}
+    f.sysOrbit.a+=f.sysOrbit.aSpd;
+    const tx=OW_W/2+Math.cos(f.sysOrbit.a)*f.sysOrbit.r,ty=OW_H/2+Math.sin(f.sysOrbit.a)*f.sysOrbit.r;
+    const tdx=tx-f.x,tdy=ty-f.y,td=Math.hypot(tdx,tdy)||1,ta=Math.atan2(tdx,-tdy);
+    f.a+=angDiff(f.a,ta)*.04;const spd=Math.min(F.owSpd*.08,td*.02);
+    f.vx+=(tdx/td)*spd;f.vy+=(tdy/td)*spd;
+  } else if(F.behavior==='orbit_post'&&f.postBody){
+    f.postOrbit.a+=f.postOrbit.aSpd;
+    const bp=owPos(f.postBody);
+    const tx=bp.x+Math.cos(f.postOrbit.a)*f.postOrbit.r,ty=bp.y+Math.sin(f.postOrbit.a)*f.postOrbit.r;
+    const tdx=tx-f.x,tdy=ty-f.y,td=Math.hypot(tdx,tdy)||1,ta=Math.atan2(tdx,-tdy);
+    f.a+=angDiff(f.a,ta)*.05;const spd=Math.min(F.owSpd*.07,td*.025);
+    f.vx+=(tdx/td)*spd;f.vy+=(tdy/td)*spd;
+  } else if(F.behavior==='triangle'){
+    const route=[SLIPGATE,BASE,HBASE];
+    const bp=owPos(route[f.routeIdx]);
+    const tdx=bp.x-f.x,tdy=bp.y-f.y,td=Math.hypot(tdx,tdy)||1;
+    if(td<60)f.routeIdx=(f.routeIdx+1)%3;
+    const ta=Math.atan2(tdx,-tdy);
+    f.a+=angDiff(f.a,ta)*.05;f.vx+=Math.sin(f.a)*F.owSpd*.04;f.vy-=Math.cos(f.a)*F.owSpd*.04;
+  } else if(F.behavior==='route'){
+    const route=[SLIPGATE,HBASE];
+    const bp=owPos(route[f.routeIdx]);
+    const tdx=bp.x-f.x,tdy=bp.y-f.y,td=Math.hypot(tdx,tdy)||1;
+    if(td<60)f.routeIdx=(f.routeIdx+1)%2;
+    const ta=Math.atan2(tdx,-tdy);
+    f.a+=angDiff(f.a,ta)*.04;f.vx+=Math.sin(f.a)*F.owSpd*.04;f.vy-=Math.cos(f.a)*F.owSpd*.04;
+  }
+  f.vx*=.97;f.vy*=.97;
+  const fs=Math.hypot(f.vx,f.vy);if(fs>F.owSpd){f.vx=f.vx/fs*F.owSpd;f.vy=f.vy/fs*F.owSpd;}
+  f.x=Math.max(40,Math.min(OW_W-40,f.x+f.vx));f.y=Math.max(40,Math.min(OW_H-40,f.y+f.vy));
+  if(f.flash>0)f.flash--;
+  if(F.spawnsHunters&&--f.spawnTimer<=0){
+    f.spawnTimer=F.spawnsHunters.everyFrames;
+    const HF=fleetDef('HUNTER');
+    if(G.OW.fleets.filter(ff=>ff.alive&&ff.id==='HUNTER').length<HF.maxOnOW)G.OW.fleets.push(mkFleet('HUNTER',f.x,f.y));
+  }
+  if(s.inv<=0&&dist<F.trigR){
+    if(s.shld){f.vx-=(dx/dist)*3;f.vy-=(dy/dist)*3;f.flash=12;}
+    else{owStartFleetEnc(fi);return true;}
+  }
+  return false;
 }
 
 function drBase(near){
@@ -259,6 +401,29 @@ function drSlipgate(near){
   cx.fillText('SLIPGATE',x,y-28-8);
   if(near){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.fillText(active?'[ FIRE TO JUMP ]':'[ FIRE TO ENTER ]',x,y+28+16);}
   cx.restore();
+}
+function drFleet(f){
+  const F=fleetDef(f.id),pu=.5+.5*Math.sin(G.fr*.07+f.x*.001);
+  const cols={HUNTER:'#ff6655',SWARM:'#00ddff',PATROL:'#ffaa44',CONVOY:'#ddccaa',ARMADA:'#ff3322'};
+  const col=cols[f.id]||'#fff';
+  cx.save();cx.translate(f.x,f.y);
+  if(f.flash>0)cx.globalAlpha=f.flash%4<2?1:.3;
+  cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=8+pu*8;cx.lineWidth=1.5;
+  if(f.id==='HUNTER'){
+    for(let i=0;i<3;i++){const a=i*Math.PI*2/3-Math.PI/2;cx.beginPath();cx.arc(Math.cos(a)*7,Math.sin(a)*7,4,0,Math.PI*2);cx.stroke();}
+  } else if(f.id==='SWARM'){
+    for(let i=0;i<5;i++){const a=i*Math.PI*2/5+G.owFr*.025;cx.beginPath();cx.arc(Math.cos(a)*9,Math.sin(a)*9,3,0,Math.PI*2);cx.stroke();}
+  } else if(f.id==='PATROL'){
+    cx.beginPath();cx.moveTo(0,-10);cx.lineTo(-9,6);cx.lineTo(9,6);cx.closePath();cx.stroke();
+    cx.beginPath();cx.moveTo(0,-6);cx.lineTo(-5,3);cx.lineTo(5,3);cx.closePath();cx.stroke();
+  } else if(f.id==='CONVOY'){
+    cx.strokeRect(-12,-6,24,12);
+    for(let i=-1;i<=1;i+=2){cx.beginPath();cx.arc(i*18,0,5,0,Math.PI*2);cx.stroke();}
+  } else if(f.id==='ARMADA'){
+    cx.beginPath();cx.moveTo(0,-14);cx.lineTo(14,0);cx.lineTo(0,14);cx.lineTo(-14,0);cx.closePath();cx.stroke();
+    for(let i=0;i<4;i++){const a=i*Math.PI/2+Math.PI/4;cx.beginPath();cx.arc(Math.cos(a)*20,Math.sin(a)*20,4,0,Math.PI*2);cx.stroke();}
+  }
+  cx.globalAlpha=1;cx.restore();
 }
 function drawSlipgateMenu(){
   drawOW();
@@ -398,6 +563,7 @@ function drawOW(){
   if(G.hbCleared){cx.save();cx.strokeStyle='#334';cx.lineWidth=1;cx.setLineDash([3,5]);cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;i?cx.lineTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW):cx.moveTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW);}cx.closePath();cx.stroke();cx.fillStyle='#446';cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText('CLEARED',hbp.x,hbp.y+3);cx.setLineDash([]);cx.restore();}
   else{const pu=.5+.5*Math.sin(G.fr*.07);cx.save();cx.strokeStyle='#e05109';cx.shadowColor='#e05109';cx.shadowBlur=6+pu*8;cx.lineWidth=1.5;cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;i?cx.lineTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW):cx.moveTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW);}cx.closePath();cx.stroke();cx.shadowBlur=0;cx.fillStyle='#e05109';cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText('HOSTILE BASE',hbp.x,hbp.y-HEX_R_OW-8);if(ow.nearHBase){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.fillText('[ FIRE TO ENTER ]',hbp.x,hbp.y+HEX_R_OW+16);}cx.restore();}}
   for(const e of ow.en)if(e.alive)OET[e.t].drawOW(e);
+  for(const f of ow.fleets)if(f.alive)drFleet(f);
   for(const f of ow.fu)drEnergy(f.x,f.y,'#0f8');
   drPts(ow.pts);
   drBase(ow.nearBase);
