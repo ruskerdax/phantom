@@ -18,6 +18,7 @@ const CHASSIS = [
     slots: [{type:'kinetic'},{type:'beam'}],
     licensePrice: 0,
     buildPrice: 0,
+    buyable: true,
   },
   {
     id: 'sparrow',
@@ -36,6 +37,7 @@ const CHASSIS = [
     slots: [{type:'kinetic'}],
     licensePrice: 4000,
     buildPrice: 600,
+    buyable: true,
   },
   {
     id: 'ironclad',
@@ -54,6 +56,7 @@ const CHASSIS = [
     slots: [{type:'kinetic'},{type:'kinetic'}],
     licensePrice: 6000,
     buildPrice: 900,
+    buyable: true,
   },
   {
     id: 'viper',
@@ -72,6 +75,7 @@ const CHASSIS = [
     slots: [{type:'kinetic'},{type:'beam'}],
     licensePrice: 5500,
     buildPrice: 750,
+    buyable: true,
   },
 ];
 
@@ -84,6 +88,7 @@ const AUX_ITEMS = [
     energyDrain: 0.15,
     licensePrice: 0,
     buildPrice: 0,
+    buyable: true,
   },
   {
     id: 'shield_heavy',
@@ -93,5 +98,6 @@ const AUX_ITEMS = [
     energyDrain: 0.25,
     licensePrice: 3500,
     buildPrice: 500,
+    buyable: true,
   },
 ];

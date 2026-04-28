@@ -2,9 +2,9 @@
 
 // ===================== BASE / SHOP =====================
 function shopItemsForTab(tab){
-  if(tab===1)return CHASSIS;
+  if(tab===1)return CHASSIS.filter(c=>c.buyable);
   if(tab===2)return WEAPONS.filter(w=>w.buyable);
-  if(tab===3)return AUX_ITEMS;
+  if(tab===3)return AUX_ITEMS.filter(a=>a.buyable);
   return [];
 }
 function itemLicensePrice(item){return item.licensePrice??0;}
