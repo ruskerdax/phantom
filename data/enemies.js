@@ -4,16 +4,16 @@
 // New behaviors honor `ec.turn` (rotation rate) when provided; legacy entries fall back to hard-coded constants.
 const ENEMY_TYPES = {
   interceptor: {
-    update(e, ec, s) {
-      const dx=s.x-e.x,dy=s.y-e.y,ta=Math.atan2(dx,-dy);
+    update(e, ec, s, ew, eh) {
+      const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),ta=Math.atan2(dx,-dy);
       e.a+=angDiff(e.a,ta)*(ec.turn??.08);
       e.vx+=Math.sin(e.a)*ec.spd*.07;
       e.vy-=Math.cos(e.a)*ec.spd*.07;
     }
   },
   swarmer: {
-    update(e, ec, s) {
-      const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
+    update(e, ec, s, ew, eh) {
+      const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
       const orb=ta+Math.PI/2;
       e.a+=angDiff(e.a,ta)*(ec.turn??.09);
       e.vx+=(dx/dist)*ec.spd*.05+Math.cos(orb)*ec.spd*.04;
@@ -21,8 +21,8 @@ const ENEMY_TYPES = {
     }
   },
   capital: {
-    update(e, ec, s) {
-      const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
+    update(e, ec, s, ew, eh) {
+      const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
       e.a+=angDiff(e.a,ta)*(ec.turn??.04);
       if(dist>140)e.vx+=Math.sin(e.a)*ec.spd*.06;
       else if(dist<80){e.vx-=(dx/dist)*.04;e.vy-=(dy/dist)*.04;}
@@ -30,8 +30,8 @@ const ENEMY_TYPES = {
     }
   },
   destroyer: {
-    update(e, ec, s) {
-      const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
+    update(e, ec, s, ew, eh) {
+      const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
       e.a+=angDiff(e.a,ta)*(ec.turn??.05);
       if(dist>120){e.vx+=Math.sin(e.a)*ec.spd*.06;e.vy-=Math.cos(e.a)*ec.spd*.06;}
       else if(dist<80){e.vx-=(dx/dist)*ec.spd*.04;e.vy-=(dy/dist)*ec.spd*.04;}
@@ -39,16 +39,16 @@ const ENEMY_TYPES = {
     }
   },
   cruiser: {
-    update(e, ec, s) {
-      const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
+    update(e, ec, s, ew, eh) {
+      const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
       e.a+=angDiff(e.a,ta)*(ec.turn??.04);
       if(dist<260){e.vx-=(dx/dist)*ec.spd*.05;e.vy-=(dy/dist)*ec.spd*.05;}
       else if(dist>320){e.vx+=Math.sin(e.a)*ec.spd*.04;e.vy-=Math.cos(e.a)*ec.spd*.04;}
     }
   },
   interceptorShip: {
-    update(e, ec, s) {
-      const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
+    update(e, ec, s, ew, eh) {
+      const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
       const orb=ta+Math.PI/2;
       e.a+=angDiff(e.a,ta)*(ec.turn??.09);
       if(dist>140){e.vx+=(dx/dist)*ec.spd*.07;e.vy+=(dy/dist)*ec.spd*.07;}
@@ -56,8 +56,8 @@ const ENEMY_TYPES = {
     }
   },
   fighter: {
-    update(e, ec, s) {
-      const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
+    update(e, ec, s, ew, eh) {
+      const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
       // pass: 0 = approach, 1 = blowing past, 2 = turning around
       if(e.pass==null)e.pass=0;
       if(e.pass===0&&dist<60)e.pass=1;
@@ -69,9 +69,9 @@ const ENEMY_TYPES = {
     }
   },
   drone: {
-    update(e, ec, s) {
+    update(e, ec, s, ew, eh) {
       const jitter=Math.sin(G.fr*.13+e.spin*8)*.55;
-      const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy)+jitter;
+      const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy)+jitter;
       const orb=ta+Math.PI/2;
       e.a+=angDiff(e.a,ta)*(ec.turn??.12);
       e.vx+=(dx/dist)*ec.spd*.06+Math.cos(orb)*ec.spd*.04;
@@ -79,16 +79,16 @@ const ENEMY_TYPES = {
     }
   },
   carrier: {
-    update(e, ec, s) {
-      const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
+    update(e, ec, s, ew, eh) {
+      const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
       e.a+=angDiff(e.a,ta)*(ec.turn??.03);
       if(dist<240){e.vx-=(dx/dist)*ec.spd*.04;e.vy-=(dy/dist)*ec.spd*.04;}
       else if(dist>340){e.vx+=Math.sin(e.a)*ec.spd*.03;e.vy-=Math.cos(e.a)*ec.spd*.03;}
     }
   },
   battleship: {
-    update(e, ec, s) {
-      const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
+    update(e, ec, s, ew, eh) {
+      const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
       e.a+=angDiff(e.a,ta)*(ec.turn??.03);
       if(dist<280){e.vx-=(dx/dist)*ec.spd*.03;e.vy-=(dy/dist)*ec.spd*.03;}
       else if(dist>360){e.vx+=Math.sin(e.a)*ec.spd*.025;e.vy-=Math.cos(e.a)*ec.spd*.025;}
@@ -402,12 +402,12 @@ function mkEncEnemy(type, x, y, timer) {
 function enemyUpdate(e, s, enc, ew, eh) {
   const ecDef=OET[e.t],ec=ecDef.enc;
   e.spin+=ecDef.spinRate;
-  ENEMY_TYPES[ecDef.aiType].update(e, ec, s);
+  ENEMY_TYPES[ecDef.aiType].update(e, ec, s, ew, eh);
   e.vx*=.975;e.vy*=.975;const es=Math.hypot(e.vx,e.vy);if(es>ec.spd){e.vx=e.vx/es*ec.spd;e.vy=e.vy/es*ec.spd;}
   e.x=wrap(e.x+e.vx,ew);e.y=wrap(e.y+e.vy,eh);
   for(const rk of enc.rocks){const rd=Math.hypot(e.x-rk.x,e.y-rk.y);if(rd<rk.r+16){e.vx+=(e.x-rk.x)/rd*.3;e.vy+=(e.y-rk.y)/rd*.3;}}
   for(const oe of enc.en){if(oe===e||!oe.alive)continue;const od=Math.hypot(e.x-oe.x,e.y-oe.y)||1;const minD=ec.r+OET[oe.t].enc.r;if(od<minD){const nx=(e.x-oe.x)/od,ny=(e.y-oe.y)/od;const push=(minD-od)/minD*.5;e.vx+=nx*push;e.vy+=ny*push;}}
-  const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
+  const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
   const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn];
   if(ewp.wpnType==='beam gun'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
     const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;
@@ -454,7 +454,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
       tone(550+e.t*80,.04,'square',.03);
     }
   }
-  if(Math.hypot(e.x-s.x,e.y-s.y)<ec.r+9){
+  if(dist<ec.r+9){
     e.vx-=(dx/dist)*2;e.vy-=(dy/dist)*2;
   }
   return false;
