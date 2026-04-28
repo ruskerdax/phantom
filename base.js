@@ -3,7 +3,7 @@
 // ===================== BASE / SHOP =====================
 function shopItemsForTab(tab){
   if(tab===1)return CHASSIS;
-  if(tab===2)return WEAPONS;
+  if(tab===2)return WEAPONS.filter(w=>w.buyable);
   if(tab===3)return AUX_ITEMS;
   return [];
 }
