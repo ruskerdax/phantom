@@ -446,7 +446,7 @@ const FLEETS = [
       { t:4, cnt:1, chance:.33 }
     ]},
     glyph:'hunter' },
-  { id:'SWARM',   aggroR:120,  trigR:22, owSpd:1.0, maxOnOW:6,
+  { id:'SWARM',   aggroR:250,  trigR:22, owSpd:1.0, maxOnOW:6,
     behavior:'orbit_post',
     composition:{ rolls:[{ t:8, min:4, max:6 }] },
     glyph:'swarm' },

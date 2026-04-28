@@ -339,6 +339,21 @@ function updOW(){
     const f=ow.fleets[fi];if(!f.alive)continue;
     if(updFleet(f,fi,s))return;
   }
+  for(let i=0;i<ow.fleets.length;i++){
+    const a=ow.fleets[i];if(!a.alive)continue;
+    const FA=fleetDef(a.id);
+    for(let j=i+1;j<ow.fleets.length;j++){
+      const b=ow.fleets[j];if(!b.alive)continue;
+      const FB=fleetDef(b.id);
+      const dx=b.x-a.x,dy=b.y-a.y,dist=Math.hypot(dx,dy)||1;
+      const minDist=FA.trigR*.5+FB.trigR*.5;
+      if(dist<minDist){
+        const nx=dx/dist,ny=dy/dist,push=(minDist-dist)*.3;
+        a.vx-=nx*push;a.vy-=ny*push;
+        b.vx+=nx*push;b.vy+=ny*push;
+      }
+    }
+  }
 }
 function updFleet(f,fi,s){
   const F=fleetDef(f.id);
