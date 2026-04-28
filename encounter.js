@@ -40,6 +40,101 @@ function splitRock(enc,ri){
   }
   if(Math.random()<.05){const a=Math.random()*Math.PI*2;enc.fu.push({x:rk.x,y:rk.y,vx:Math.cos(a)*1.0,vy:Math.sin(a)*1.0,timer:380});}
 }
+// Detonate a missile at its current position: applies expDmg to entities within expR + visual/audio.
+// Caller is responsible for splicing the missile from its array. Player missile (isEnemy=false) damages
+// rocks/enemies/turrets/softpts. Enemy missile (isEnemy=true) damages rocks + the player ship.
+function encExplodeMissile(enc, m, isEnemy){
+  const r=m.expR, d=m.expDmg;
+  for(let ri=enc.rocks.length-1;ri>=0;ri--){
+    const rk=enc.rocks[ri];
+    if(Math.hypot(m.x-rk.x,m.y-rk.y)<r+rk.r){rk.hp-=d;boomAt(enc.pts,rk.x,rk.y,'#778',3);if(rk.hp<=0)splitRock(enc,ri);}
+  }
+  if(!isEnemy){
+    for(const e of enc.en){if(!e.alive)continue;
+      if(Math.hypot(m.x-e.x,m.y-e.y)<r+OET[e.t].enc.r){
+        e.hp-=d;boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col,5);
+        if(e.hp<=0){e.alive=false;addStake(OET[e.t].sc);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col,14);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col2,8);tone(200,.3,'sawtooth',.1);if(OET[e.t].energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}
+      }
+    }
+    if(enc.isHBase){
+      for(const t of enc.hbase.turrets){if(!t.alive)continue;
+        if(Math.hypot(m.x-t.x,m.y-t.y)<r+10){t.alive=false;addStake(250);boomAt(enc.pts,t.x,t.y,'#f44',10);boomAt(enc.pts,t.x,t.y,'#ff8800',6);tone(300,.2,'sawtooth',.1);}
+      }
+      for(const sp of enc.hbase.softpts){if(!sp.alive)continue;
+        if(Math.hypot(m.x-sp.x,m.y-sp.y)<r+12){sp.alive=false;boomAt(enc.pts,sp.x,sp.y,'#ff8800',10);tone(350,.15,'square',.08);}
+      }
+    }
+  } else {
+    const ss=enc.s;if(ss.alive&&Math.hypot(m.x-ss.x,m.y-ss.y)<r+9){
+      if(!ss.shld&&!G.invincible){ss.hp=Math.max(0,ss.hp-d);tone(380,.08,'square',.08);}
+    }
+  }
+  boomAt(enc.pts,m.x,m.y,'#ff8800',24);
+  boomAt(enc.pts,m.x,m.y,'#ffd',12);
+  tone(120,.25,'sawtooth',.10);
+}
+
+// Update one missile array (player or enemy). Returns true if the player ship was killed.
+function updEncMissiles(enc, mis, isEnemy, ew, eh){
+  const s=enc.s;
+  for(let i=mis.length-1;i>=0;i--){
+    const m=mis[i];
+    if(m.spd<m.maxSpd) m.spd=Math.min(m.maxSpd, m.spd+m.accel);
+    // Future: heat-seeking turn applied to m.a here when m.seek is true.
+    m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
+    m.x=wrap(m.x+m.vx,ew);m.y=wrap(m.y+m.vy,eh);
+    m.l--;
+    if(--m.trailTimer<=0){
+      m.trailTimer=2;
+      const tx=m.x-Math.sin(m.a)*5, ty=m.y+Math.cos(m.a)*5;
+      enc.pts.push({x:tx,y:ty,vx:-Math.sin(m.a)*0.4+(Math.random()-.5)*.4,vy:Math.cos(m.a)*0.4+(Math.random()-.5)*.4,l:10+Math.random()*8,ml:18,c:'#fa0'});
+    }
+    let det=false;
+    if(m.l<=0) det=true;
+    if(!det){
+      for(let ri=enc.rocks.length-1;ri>=0;ri--){
+        const rk=enc.rocks[ri];
+        if(Math.hypot(m.x-rk.x,m.y-rk.y)<rk.r){
+          rk.hp-=m.dmg;boomAt(enc.pts,m.x,m.y,'#778',4);
+          if(rk.hp<=0)splitRock(enc,ri);
+          det=true;break;
+        }
+      }
+    }
+    if(!det){
+      if(!isEnemy){
+        for(const e of enc.en){if(!e.alive)continue;
+          if(Math.hypot(m.x-e.x,m.y-e.y)<OET[e.t].enc.r){
+            e.hp-=m.dmg;boomAt(enc.pts,m.x,m.y,OET[e.t].enc.col,5);
+            if(e.hp<=0){e.alive=false;addStake(OET[e.t].sc);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col,14);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col2,8);tone(200,.3,'sawtooth',.1);if(OET[e.t].energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}
+            det=true;break;
+          }
+        }
+      } else if(s.alive&&Math.hypot(m.x-s.x,m.y-s.y)<12){
+        if(!s.shld&&!G.invincible){s.hp=Math.max(0,s.hp-m.dmg);tone(380,.08,'square',.08);}
+        det=true;
+      }
+    }
+    if(!det&&enc.isHBase){
+      if(pip(m.x,m.y,enc.hbase.hexPoly)) det=true;
+      if(!det&&!isEnemy){
+        for(const t of enc.hbase.turrets){if(!t.alive)continue;
+          if(Math.hypot(m.x-t.x,m.y-t.y)<10){t.alive=false;addStake(250);boomAt(enc.pts,t.x,t.y,'#f44',10);boomAt(enc.pts,t.x,t.y,'#ff8800',6);tone(300,.2,'sawtooth',.1);det=true;break;}
+        }
+        if(!det) for(const sp of enc.hbase.softpts){if(!sp.alive)continue;
+          if(Math.hypot(m.x-sp.x,m.y-sp.y)<12){sp.alive=false;boomAt(enc.pts,sp.x,sp.y,'#ff8800',10);tone(350,.15,'square',.08);det=true;break;}
+        }
+      }
+    }
+    if(det){
+      encExplodeMissile(enc,m,isEnemy);
+      mis.splice(i,1);
+      if(s.hp<=0){encKillShip();return true;}
+    }
+  }
+  return false;
+}
+
 function updEnc(){
   const enc=G.ENC;if(enc.introTimer>0){enc.introTimer--;return;}
   updPts(enc.pts);for(let i=enc.lsb.length-1;i>=0;i--){if(--enc.lsb[i].l<=0)enc.lsb.splice(i,1);}
@@ -75,11 +170,13 @@ function updEnc(){
   if(enc.isHBase){const{hexPoly,hx,hy}=enc.hbase;let hbHit=pip(s.x,s.y,hexPoly);if(!hbHit){for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;if(dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1])<7){hbHit=true;break;}}}if(hbHit){let best=Infinity,nx=0,ny=0;for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;const dist=dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1]);if(dist<best){best=dist;const dx=hexPoly[j][0]-hexPoly[i][0],dy=hexPoly[j][1]-hexPoly[i][1],len=Math.hypot(dx,dy)||1;nx=-dy/len;ny=dx/len;if(nx*(s.x-hx)+ny*(s.y-hy)<0){nx=-nx;ny=-ny;}}}const spd=Math.hypot(s.vx,s.vy);const dot=s.vx*nx+s.vy*ny;if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}s.vx*=.55;s.vy*=.55;s.va*=.55;s.x+=nx*10;s.y+=ny*10;const dmg=Math.round((spd/5.5)*5);if(!s.shld&&s.inv<=0&&dmg>0){s.hp=Math.max(0,s.hp-dmg);s.inv=40;tone(180,.15,'sawtooth',.12);}if(s.hp<=0){encKillShip();return;}}}
   const encWalls=enc.isHBase?enc.hbase.hexPoly.map((p,i,hp)=>{const j=(i+1)%hp.length;return[p[0],p[1],hp[j][0],hp[j][1]];}):[];
   {const wp=wpSlot(0);if(wp){const wt=WEAPON_TYPES[wp.wpnType];
-  if(s.pulsesLeft>0&&wt.tick){const tgts=[];enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));enc.en.forEach((e,i)=>{if(e.alive)tgts.push({x:e.x,y:e.y,r:OET[e.t].enc.r,kind:'enemy',idx:i});});if(enc.isHBase){enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push({x:t.x,y:t.y,r:10,kind:'turret',idx:i});});enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});}const res=wt.tick(wp,s,0,tgts,enc.lsb,encWalls);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='rock'){const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);if(rk.hp<=0)splitRock(enc,tg.idx);}else if(tg.kind==='enemy'){const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,OET[e.t].enc.col,3);if(e.hp<=0){e.alive=false;addStake(OET[e.t].sc);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col,14);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col2,8);tone(200,.3,'sawtooth',.1);if(OET[e.t].energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}}else if(tg.kind==='turret'){const t=enc.hbase.turrets[tg.idx];t.alive=false;addStake(250);boomAt(enc.pts,t.x,t.y,'#f44',10);boomAt(enc.pts,t.x,t.y,'#ff8800',6);tone(300,.2,'sawtooth',.1);}else if(tg.kind==='softpt'){enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);}}}
-  if(iFir()&&!s.shld&&!s.scd&&!s.pulsesLeft) tryFire(wp,wt,s,0,enc.bul);}}
+  if(s.pulsesLeft>0&&wt.tick){const tgts=[];enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));enc.en.forEach((e,i)=>{if(e.alive)tgts.push({x:e.x,y:e.y,r:OET[e.t].enc.r,kind:'enemy',idx:i});});enc.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));if(enc.isHBase){enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push({x:t.x,y:t.y,r:10,kind:'turret',idx:i});});enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});}const res=wt.tick(wp,s,0,tgts,enc.lsb,encWalls);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='rock'){const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);if(rk.hp<=0)splitRock(enc,tg.idx);}else if(tg.kind==='enemy'){const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,OET[e.t].enc.col,3);if(e.hp<=0){e.alive=false;addStake(OET[e.t].sc);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col,14);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col2,8);tone(200,.3,'sawtooth',.1);if(OET[e.t].energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}}else if(tg.kind==='missile'){const m=enc.emi[tg.idx];m.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(tg.idx,1);if(s.hp<=0){encKillShip();return;}}}else if(tg.kind==='turret'){const t=enc.hbase.turrets[tg.idx];t.alive=false;addStake(250);boomAt(enc.pts,t.x,t.y,'#f44',10);boomAt(enc.pts,t.x,t.y,'#ff8800',6);tone(300,.2,'sawtooth',.1);}else if(tg.kind==='softpt'){enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);}}}
+  if(s.misLeft>0&&wt.tick&&wp.wpnType==='missile launcher') wt.tick(wp,s,0,enc.mis);
+  if(iFir()&&!s.shld&&!s.scd&&!s.pulsesLeft&&!s.misLeft) tryFire(wp,wt,s,0,enc.bul);}}
   {const wp=wpSlot(1);if(wp){const wt=WEAPON_TYPES[wp.wpnType];
-  if(s.pulsesLeft2>0&&wt.tick){const tgts=[];enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));enc.en.forEach((e,i)=>{if(e.alive)tgts.push({x:e.x,y:e.y,r:OET[e.t].enc.r,kind:'enemy',idx:i});});if(enc.isHBase){enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push({x:t.x,y:t.y,r:10,kind:'turret',idx:i});});enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});}const res=wt.tick(wp,s,1,tgts,enc.lsb,encWalls);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='rock'){const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);if(rk.hp<=0)splitRock(enc,tg.idx);}else if(tg.kind==='enemy'){const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,OET[e.t].enc.col,3);if(e.hp<=0){e.alive=false;addStake(OET[e.t].sc);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col,14);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col2,8);tone(200,.3,'sawtooth',.1);if(OET[e.t].energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}}else if(tg.kind==='turret'){const t=enc.hbase.turrets[tg.idx];t.alive=false;addStake(250);boomAt(enc.pts,t.x,t.y,'#f44',10);boomAt(enc.pts,t.x,t.y,'#ff8800',6);tone(300,.2,'sawtooth',.1);}else if(tg.kind==='softpt'){enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);}}}
-  if(iFireSec()&&!s.shld&&!s.scd2&&!s.pulsesLeft2) tryFire(wp,wt,s,1,enc.bul);}}
+  if(s.pulsesLeft2>0&&wt.tick){const tgts=[];enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));enc.en.forEach((e,i)=>{if(e.alive)tgts.push({x:e.x,y:e.y,r:OET[e.t].enc.r,kind:'enemy',idx:i});});enc.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));if(enc.isHBase){enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push({x:t.x,y:t.y,r:10,kind:'turret',idx:i});});enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});}const res=wt.tick(wp,s,1,tgts,enc.lsb,encWalls);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='rock'){const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);if(rk.hp<=0)splitRock(enc,tg.idx);}else if(tg.kind==='enemy'){const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,OET[e.t].enc.col,3);if(e.hp<=0){e.alive=false;addStake(OET[e.t].sc);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col,14);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col2,8);tone(200,.3,'sawtooth',.1);if(OET[e.t].energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}}else if(tg.kind==='missile'){const m=enc.emi[tg.idx];m.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(tg.idx,1);if(s.hp<=0){encKillShip();return;}}}else if(tg.kind==='turret'){const t=enc.hbase.turrets[tg.idx];t.alive=false;addStake(250);boomAt(enc.pts,t.x,t.y,'#f44',10);boomAt(enc.pts,t.x,t.y,'#ff8800',6);tone(300,.2,'sawtooth',.1);}else if(tg.kind==='softpt'){enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);}}}
+  if(s.misLeft2>0&&wt.tick&&wp.wpnType==='missile launcher') wt.tick(wp,s,1,enc.mis);
+  if(iFireSec()&&!s.shld&&!s.scd2&&!s.pulsesLeft2&&!s.misLeft2) tryFire(wp,wt,s,1,enc.bul);}}
   for(let i=enc.bul.length-1;i>=0;i--){
     const b=enc.bul[i];b.x=wrap(b.x+b.vx,ew);b.y=wrap(b.y+b.vy,eh);b.l-=Math.hypot(b.vx,b.vy);if(b.l<=0){enc.bul.splice(i,1);continue;}
     let hit=false;
@@ -93,6 +190,8 @@ function updEnc(){
     }
     if(hit){enc.bul.splice(i,1);continue;}
     for(const e of enc.en){if(!e.alive)continue;if(Math.hypot(b.x-e.x,b.y-e.y)<OET[e.t].enc.r){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,OET[e.t].enc.col,5);if(e.hp<=0){e.alive=false;addStake(OET[e.t].sc);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col,14);boomAt(enc.pts,e.x,e.y,OET[e.t].enc.col2,8);tone(200,.3,'sawtooth',.1);if(OET[e.t].energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}hit=true;break;}}
+    if(hit){enc.bul.splice(i,1);continue;}
+    for(let mi=enc.emi.length-1;mi>=0;mi--){const m=enc.emi[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(mi,1);if(s.hp<=0){encKillShip();return;}}hit=true;break;}}
     if(hit){enc.bul.splice(i,1);continue;}
     if(!hit&&enc.isHBase){
       if(pip(b.x,b.y,enc.hbase.hexPoly)){boomAt(enc.pts,b.x,b.y,'#cc2200',4);enc.bul.splice(i,1);continue;}
@@ -110,12 +209,16 @@ function updEnc(){
   for(let i=enc.ebu.length-1;i>=0;i--){
     const b=enc.ebu[i];b.x=wrap(b.x+b.vx,ew);b.y=wrap(b.y+b.vy,eh);b.l-=Math.hypot(b.vx,b.vy);if(b.l<=0){enc.ebu.splice(i,1);continue;}
     let rm=false;for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(Math.hypot(b.x-rk.x,b.y-rk.y)<rk.r){rk.hp--;boomAt(enc.pts,b.x,b.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);rm=true;break;}}if(rm){enc.ebu.splice(i,1);continue;}
+    for(let mi=enc.mis.length-1;mi>=0;mi--){const m=enc.mis[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,false);enc.mis.splice(mi,1);if(s.hp<=0){encKillShip();return;}}rm=true;break;}}
+    if(rm){enc.ebu.splice(i,1);continue;}
     if(enc.isHBase&&pip(b.x,b.y,enc.hbase.hexPoly)){enc.ebu.splice(i,1);continue;}
     if(Math.hypot(b.x-s.x,b.y-s.y)<12){
       enc.ebu.splice(i,1);
       if(!s.shld&&!G.invincible){s.hp=Math.max(0,s.hp-b.dmg);tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return;}}
     }
   }
+  if(updEncMissiles(enc,enc.mis,false,ew,eh)) return;
+  if(updEncMissiles(enc,enc.emi,true ,ew,eh)) return;
 }
 
 function drawEnc(){
@@ -152,6 +255,8 @@ function drawEnc(){
   for(const f of enc.fu)drEnergy(f.x,f.y,'#0f8');
   for(const b of enc.bul)drBullet(b.x,b.y,'#fff');
   for(const b of enc.ebu)drBullet(b.x,b.y,b.col);
+  for(const m of enc.mis)drMissile(m.x,m.y,m.a,m.type);
+  for(const m of enc.emi)drMissile(m.x,m.y,m.a,m.type);
   for(const lb of enc.lsb){const a=lb.l/8,bw=lb.w||2;cx.save();cx.globalAlpha=a;cx.strokeStyle=lb.col;cx.shadowColor=lb.col;cx.shadowBlur=10;cx.lineWidth=bw;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.globalAlpha=a*.6;cx.strokeStyle='#fff';cx.lineWidth=Math.max(1,bw/2);cx.shadowBlur=0;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.restore();}
   drPts(enc.pts);
   if(enc.s.alive)drShip(enc.s.x,enc.s.y,enc.s.a,enc.s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),enc.s.energy,enc.s.inv,G.fr);

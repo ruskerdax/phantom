@@ -395,7 +395,7 @@ const TURRET = {
 
 function mkEncEnemy(type, x, y, timer) {
   const ec=OET[type].enc;
-  return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, timer, alive:true, t:type, spin:0, pulsesLeft:0, pulseTimer:0};
+  return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, timer, alive:true, t:type, spin:0, pulsesLeft:0, pulseTimer:0, misLeft:0, misTimer:0};
 }
 
 // Returns true if the player ship was killed (caller should return from updEnc).
@@ -411,14 +411,42 @@ function enemyUpdate(e, s, enc, ew, eh) {
   const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn];
   if(ewp.wpnType==='beam gun'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
     const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;
-    const res=castLaser(ox,oy,e.a,ewp.range,[{x:s.x,y:s.y,r:12}]);
+    const tgts=[{x:s.x,y:s.y,r:12,kind:'ship'}];
+    for(let mi=0;mi<enc.mis.length;mi++)tgts.push({x:enc.mis[mi].x,y:enc.mis[mi].y,r:5,kind:'missile',idx:mi});
+    const res=castLaser(ox,oy,e.a,ewp.range,tgts);
     enc.lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ec.col});
     tone(550+e.t*80,.08,'sine',.04);
-    if(res.hitIdx>=0&&!s.shld&&!G.invincible){s.hp=Math.max(0,s.hp-ewp.dmg);tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return true;}}
+    if(res.hitIdx>=0){
+      const tg=tgts[res.hitIdx];
+      if(tg.kind==='ship'){
+        if(!s.shld&&!G.invincible){s.hp=Math.max(0,s.hp-ewp.dmg);tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return true;}}
+      } else if(tg.kind==='missile'){
+        const m=enc.mis[tg.idx];m.hp-=ewp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);
+        if(m.hp<=0){encExplodeMissile(enc,m,false);enc.mis.splice(tg.idx,1);if(s.hp<=0){encKillShip();return true;}}
+      }
+    }
     e.pulsesLeft--;
     if(e.pulsesLeft>0)e.pulseTimer=ewp.pulseCd;else e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
   } else if(e.pulsesLeft===0&&--e.timer<=0){
     if(ewp.wpnType==='beam gun'){e.pulsesLeft=ewp.pulses;e.pulseTimer=1;}
+    else if(ewp.wpnType==='missile launcher'){
+      e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
+      const cnt=fw.count||1;
+      const bas=Array.from({length:cnt},(_,k)=>ta+(k-(cnt-1)/2)*(fw.spread||0));
+      const md=MISSILE_TYPES[ewp.missileType]||MISSILE_TYPES['standard'];
+      for(const ba of bas){
+        enc.emi.push({
+          x:e.x+Math.sin(ba)*fw.offset, y:e.y-Math.cos(ba)*fw.offset, a:ba,
+          vx:Math.sin(ba)*ewp.spd, vy:-Math.cos(ba)*ewp.spd,
+          spd:ewp.spd, maxSpd:ewp.maxSpd, accel:ewp.accel,
+          hp:ewp.hp, maxHp:ewp.hp, l:ewp.life,
+          dmg:ewp.dmg, expDmg:ewp.expDmg, expR:ewp.expR,
+          type:ewp.missileType||'standard', col:md.col,
+          seek:!!ewp.seek, trailTimer:0,
+        });
+      }
+      tone(360,.10,'square',.06);
+    }
     else{
       e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
       const bas=fw.mode==='spin'?Array.from({length:fw.count},(_,k)=>e.spin+k*Math.PI*2/fw.count):Array.from({length:fw.count},(_,k)=>ta+(k-(fw.count-1)/2)*fw.spread);

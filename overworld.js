@@ -166,7 +166,7 @@ function owStartEnc(idx,contactA,playerA){
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
   const label=ec.groups?et.name+' ENCOUNTER':(ec.cnt>1?'SWARM ATTACK':et.name+' ENCOUNTER');
   G.ENC={owIdx:idx,et:e.t,label,
-    s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
+    s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2))}};
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
@@ -195,7 +195,7 @@ function startAstEnc(){
   const encShip=mkShip(spawnX,spawnY);encShip.energy=ow.s.energy;encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   G.ENC={owIdx:null,isAst:true,et:0,label:'ASTEROID FIELD',
-    s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],lsb:[],introTimer:ens.length?70:0,cleared:!ens.length,
+    s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:ens.length?70:0,cleared:!ens.length,
     ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2)}};
   G.st=ens.length?'enc_in':'encounter';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
@@ -216,7 +216,7 @@ function startHBaseEnc(){
   const encShip=mkShip(ew*.08,eh/2);encShip.energy=ow.s.energy;encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   G.ENC={owIdx:null,isHBase:true,et:0,label:'HOSTILE BASE',
-    s:encShip,en:[],rocks:[],bul:[],ebu:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
+    s:encShip,en:[],rocks:[],bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew,eh,hbase:{HEX_R,hx,hy,softpts,turrets,hexPoly},
     cam:{x:Math.max(0,hx-W/2),y:Math.max(0,hy-H/2)}};
   G.st='enc_in';
@@ -251,7 +251,7 @@ function owStartFleetEnc(fi,contactA,playerA){
   // Use the first comp type as the representative for encounter color; fall back to index 4.
   const repType=f.comp.length>0?f.comp[0].t:4;
   G.ENC={owIdx:null,fleetIdx:fi,et:repType,label:f.id+' FLEET',
-    s:encShip,en:ens,rocks,bul:[],ebu:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
+    s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2))}};
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);

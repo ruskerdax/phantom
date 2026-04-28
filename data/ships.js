@@ -53,7 +53,7 @@ const CHASSIS = [
       rotAccel: 0.0025,
       rotMax:   0.065,
     },
-    slots: [{type:'kinetic'},{type:'kinetic'}],
+    slots: [{type:'kinetic'},{type:'missile'}],
     licensePrice: 6000,
     buildPrice: 900,
     buyable: true,

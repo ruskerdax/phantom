@@ -9,7 +9,7 @@ function activeAuxObj(){return AUX_ITEMS.find(a=>a.id===G.loadout.aux)||null;}
 function wpSlot(n){const id=G.loadout.weapons[n];return id?WEAPONS.find(w=>w.id===id)||null:null;}
 function isEquipped(id){return G.loadout.chassis===id||G.loadout.aux===id||G.loadout.weapons.includes(id);}
 function hasLicense(id){return G.licenses.includes(id);}
-function slotMatchesWeapon(slot,wp){return wp.wpnType===slot.type+' gun';}
+function slotMatchesWeapon(slot,wp){return wp.wpnType.startsWith(slot.type+' ');}
 function compatibleSlots(wp){return activeChassisObj().slots.map((sl,i)=>({sl,i})).filter(({sl})=>slotMatchesWeapon(sl,wp));}
 const ENERGY_PICKUP=38;
 function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
@@ -17,7 +17,7 @@ function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENER
 // drPts() fades each particle using its remaining lifetime ratio (p.l / p.ml) as the alpha value.
 function boomAt(pts,x,y,c,n=14){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=.7+Math.random()*3;pts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:22+Math.random()*28,ml:50,c});}}
 function updPts(pts,gy=0){for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=gy;p.l--;if(p.l<=0)pts.splice(i,1);}}
-function mkShip(x,y){const ch=activeChassisObj();return{x,y,vx:0,vy:0,va:0,a:0,energy:ch.maxEnergy,maxEnergy:ch.maxEnergy,alive:true,inv:120,scd:0,scd2:0,shld:false,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0};}
+function mkShip(x,y){const ch=activeChassisObj();return{x,y,vx:0,vy:0,va:0,a:0,energy:ch.maxEnergy,maxEnergy:ch.maxEnergy,alive:true,inv:120,scd:0,scd2:0,shld:false,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};}
 // Ray-cast laser: marches a ray from (ox,oy) in direction a, finding the nearest target or wall segment.
 // Returns endpoint (x2,y2) and hitIdx: a target array index (>=0) or -1 if a wall stopped the ray first.
 function castLaser(ox,oy,a,range,targets,walls=[]){const rdx=Math.sin(a),rdy=-Math.cos(a),ex=ox+rdx*range,ey=oy+rdy*range;let bestT=range,hitIdx=-1;for(let i=0;i<targets.length;i++){const tg=targets[i];if(dseg(tg.x,tg.y,ox,oy,ex,ey)<tg.r){const t=(tg.x-ox)*rdx+(tg.y-oy)*rdy;if(t>0&&t<bestT){bestT=t;hitIdx=i;}}}for(const[x1,y1,x2,y2]of walls){const dx=x2-x1,dy=y2-y1,det=dx*rdy-dy*rdx;if(Math.abs(det)<1e-9)continue;const t=(dx*(y1-oy)-dy*(x1-ox))/det,u=(rdx*(y1-oy)-rdy*(x1-ox))/det;if(t>0&&t<bestT&&u>=0&&u<=1){bestT=t;hitIdx=-1;}}return{x2:ox+rdx*bestT,y2:oy+rdy*bestT,hitIdx};}

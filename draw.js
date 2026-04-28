@@ -78,4 +78,24 @@ function drHUD(energy,maxEnergy=100,hp=15,maxHp=15){
   cx.restore();
 }
 function drBullet(x,y,col='#fff'){cx.save();cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=6;cx.beginPath();cx.arc(x,y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
+function drMissile(x,y,a,type='standard'){
+  const md=MISSILE_TYPES[type]||MISSILE_TYPES['standard'];
+  cx.save();cx.translate(x,y);cx.rotate(a);
+  // exhaust glow at tail
+  cx.fillStyle='#ff8';cx.shadowColor='#fa0';cx.shadowBlur=8;
+  cx.beginPath();cx.arc(0,md.length*0.5+1.5+Math.random()*0.6,1.6,0,Math.PI*2);cx.fill();
+  // body
+  cx.fillStyle=md.col;cx.shadowColor=md.col;cx.shadowBlur=4;
+  cx.fillRect(-md.width*0.5,-md.length*0.5,md.width,md.length);
+  // nose triangle
+  cx.beginPath();
+  cx.moveTo(0,-md.length*0.5-md.width);
+  cx.lineTo(-md.width*0.5,-md.length*0.5);
+  cx.lineTo( md.width*0.5,-md.length*0.5);
+  cx.closePath();cx.fill();
+  // fin
+  cx.shadowBlur=0;cx.fillStyle=md.fin||'#888';
+  cx.fillRect(-md.width*0.9,md.length*0.3,md.width*1.8,1.2);
+  cx.restore();
+}
 function scanlines(){cx.save();cx.globalAlpha=.035;cx.fillStyle='#000';for(let y=0;y<H;y+=2)cx.fillRect(0,y,W,1);cx.restore();}

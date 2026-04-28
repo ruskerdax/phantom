@@ -1,5 +1,31 @@
 'use strict';
 
+// Missile visual type registry. Each weapon with wpnType:'missile launcher' references one
+// of these by string id via missileType. Future heat-seeker / cluster variants add entries here.
+const MISSILE_TYPES = {
+  'standard': { col:'#ff8800', fin:'#888', length:8, width:3 },
+};
+
+// Build a missile object from a weapon config + ship pose. Fires from the ship's nose,
+// inheriting a fraction of ship velocity. The owner ship's heading sets the missile's
+// initial heading; speed starts at wp.spd and ramps to wp.maxSpd via wp.accel each frame.
+function spawnMissile(wp, s, mis) {
+  const md = MISSILE_TYPES[wp.missileType] || MISSILE_TYPES['standard'];
+  const ox = s.x + Math.sin(s.a)*13, oy = s.y - Math.cos(s.a)*13;
+  mis.push({
+    x:ox, y:oy, a:s.a,
+    vx: Math.sin(s.a)*wp.spd + s.vx*.3,
+    vy:-Math.cos(s.a)*wp.spd + s.vy*.3,
+    spd:wp.spd, maxSpd:wp.maxSpd, accel:wp.accel,
+    hp:wp.hp, maxHp:wp.hp,
+    l:wp.life,
+    dmg:wp.dmg, expDmg:wp.expDmg, expR:wp.expR,
+    type:wp.missileType||'standard', col:md.col,
+    seek:!!wp.seek, trailTimer:0,
+  });
+  tone(360,.10,'square',.06);
+}
+
 // Weapon type behavior — firing mechanics for player weapons
 const WEAPON_TYPES = {
   'kinetic gun': {
@@ -30,6 +56,20 @@ const WEAPON_TYPES = {
       if(s[plK]>0)s[ptK]=wp.pulseCd;else s[cdK]=Math.round(wp.cd*60);
       return res;
     }
+  },
+  'missile launcher': {
+    fire(wp, s, slot) {
+      // Same pattern as beam gun: fire() only arms the volley; tick() spawns each missile.
+      if(slot===0){s.misLeft=wp.salvo;s.misTimer=1;}
+      else{s.misLeft2=wp.salvo;s.misTimer2=1;}
+    },
+    tick(wp, s, slot, mis) {
+      const[mlK,mtK,cdK]=slot===0?['misLeft','misTimer','scd']:['misLeft2','misTimer2','scd2'];
+      if(--s[mtK]>0)return;
+      spawnMissile(wp,s,mis);
+      s[mlK]--;
+      if(s[mlK]>0)s[mtK]=wp.salvoCd;else s[cdK]=Math.round(wp.cd*60);
+    }
   }
 };
 
@@ -40,6 +80,7 @@ const WEAPONS = [
   {id:'pulse laser', name:'PULSE LASER', wpnType:'beam gun',    dmg:1, cd:2.0, range:267, pulses:5, pulseCd:5, energyCost:1, buyable:true},
   {id: 'mining laser', name:'MINING LASER', wpnType:'beam gun', dmg:1, cd:2.0, range:150, pulses:1, pulsesCd:5, energyCost:1, buyable:true},
   {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'beam gun',    dmg:8, cd:4.0, range:400, pulses:1, pulseCd:20, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#8f0', beamSound:[120,.35,'sawtooth',.09], chargeTone:[1200,1800,'sine',.05], buyable:true},
+  {id:'rocket pod', name:'ROCKET POD', wpnType:'missile launcher', missileType:'standard', dmg:6, expDmg:8, expR:55, cd:3.0, spd:1.8, maxSpd:9, accel:0.18, life:140, hp:2, salvo:1, salvoCd:6, buyable:true},
 ];
 
 const WEAPON_MAP = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
