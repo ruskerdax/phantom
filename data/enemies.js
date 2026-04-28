@@ -296,8 +296,8 @@ const OET = [
     name:'DRONE', aiType:'drone',
     col:'#88ffaa', col2:'#22aa55',
     owSpd:1.0, trigR:50, sc:60, energy:false, spinRate:.1,
-    enc:{cnt:1, hp:2, spd:1.7, turn:.12, r:7, col:'#88ffaa', col2:'#22aa55',
-      fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:8}},
+    enc:{cnt:1, hp:1, spd:1.7, turn:.12, r:7, col:'#88ffaa', col2:'#22aa55',
+      fire:{wpn:'mining laser', mode:'aim', count:1, spread:0, offset:8}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
