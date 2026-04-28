@@ -134,7 +134,7 @@ function owStartEnc(idx,contactA,playerA){
     let ei=0;
     const placed=[];
     for(const sp of spawns){
-      const gec=OET[sp.t].enc,initCd=Math.round(WEAPONS[gec.fire.wpn].cd*60);
+      const gec=OET[sp.t].enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
       for(let i=0;i<sp.cnt;i++){
         const{x,y}=encClusterPos(EW,EH,placed,140,contactA,ei,total);
         ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));
@@ -142,7 +142,7 @@ function owStartEnc(idx,contactA,playerA){
       }
     }
   } else {
-    const initCd=Math.round(WEAPONS[ec.fire.wpn].cd*60);
+    const initCd=Math.round(WEAPON_MAP[ec.fire.wpn].cd*60);
     const placed=[];
     const total=ec.cnt;
     for(let i=0;i<total;i++){
@@ -185,7 +185,7 @@ function startAstEnc(){
     rocks.push({x:rx,y:ry,vx:(Math.random()-.5)*1.1,vy:(Math.random()-.5)*1.1,r:td.r[0]+Math.random()*td.r[1],hp:td.hp,maxHp:td.hp,tier});
   }
   const ens=[];
-  const saucerEc=OET[0].enc,initCd=Math.round(WEAPONS[saucerEc.fire.wpn].cd*60);
+  const saucerEc=OET[0].enc,initCd=Math.round(WEAPON_MAP[saucerEc.fire.wpn].cd*60);
   for(let i=0;i<3;i++){
     if(Math.random()<.35){
       const a=(i/3)*Math.PI*2;
@@ -207,7 +207,7 @@ function startHBaseEnc(){
     const a=i*Math.PI/3+Math.PI/6,d=HEX_R*Math.sqrt(3)/2;
     return{x:hx+Math.cos(a)*d,y:hy+Math.sin(a)*d,hp:1,alive:hbs?hbs.softpts[i]:true};
   });
-  const initCd=Math.round(WEAPONS[0].cd*60);
+  const initCd=Math.round(WEAPON_MAP['mass driver'].cd*60);
   const turrets=Array.from({length:6},(_,i)=>{
     const a=i*Math.PI/3;
     return{x:hx+Math.cos(a)*HEX_R,y:hy+Math.sin(a)*HEX_R,a:a,timer:initCd+i*22,alive:hbs?hbs.turrets[i]:true};
@@ -228,7 +228,7 @@ function owStartFleetEnc(fi,contactA,playerA){
   let ei=0;
   const placed=[],spawnX=EW/2,spawnY=EH/2;
   for(const sp of f.comp){
-    const gec=OET[sp.t].enc,initCd=Math.round(WEAPONS[gec.fire.wpn].cd*60);
+    const gec=OET[sp.t].enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
     for(let i=0;i<sp.cnt;i++){
       const{x,y}=encClusterPos(EW,EH,placed,140,contactA,ei,total);
       ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));

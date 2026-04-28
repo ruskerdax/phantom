@@ -106,7 +106,7 @@ const OET = [
     col:'#ff4444', col2:'#ff9900',
     owSpd:1.4, trigR:58, sc:150, energy:false, spinRate:.05,
     enc:{cnt:1, hp:6, spd:2.2, r:13, col:'#ff4444', col2:'#ff9900',
-      fire:{wpn:1, mode:'aim', count:1, spread:0, offset:14},
+      fire:{wpn:'railgun', mode:'aim', count:1, spread:0, offset:14},
       groups:[{t:0,cnt:1},{t:0,cnt:2,chance:.33},{t:1,cnt:3,chance:.33}]},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
@@ -131,7 +131,7 @@ const OET = [
     col:'#00ddff', col2:'#cc00ff',
     owSpd:.95, trigR:54, sc:80, energy:false, spinRate:.07,
     enc:{cnt:5, hp:3, spd:2.8, r:9, col:'#00ddff', col2:'#cc00ff',
-      fire:{wpn:0, mode:'spin', count:3, offset:10}},
+      fire:{wpn:'mass driver', mode:'spin', count:3, offset:10}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -153,7 +153,7 @@ const OET = [
     col:'#ffee00', col2:'#ff6600',
     owSpd:.55, trigR:68, sc:350, energy:true, spinRate:0,
     enc:{cnt:1, hp:18, spd:.75, r:20, col:'#ffee00', col2:'#ff6600',
-      fire:{wpn:0, mode:'aim', count:3, spread:.2, offset:22}},
+      fire:{wpn:'mass driver', mode:'aim', count:3, spread:.2, offset:22}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -183,7 +183,7 @@ const OET = [
     col:'#39ff14', col2:'#aaff00',
     owSpd:1.4, trigR:58, sc:200, energy:false, spinRate:.05,
     enc:{cnt:1, hp:6, spd:2.2, r:13, col:'#39ff14', col2:'#aaff00',
-      fire:{wpn:2, offset:14},
+      fire:{wpn:'pulse laser', offset:14},
       groups:[{t:3,cnt:1},{t:3,cnt:2,chance:.33},{t:1,cnt:3,chance:.33}]},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
@@ -209,7 +209,7 @@ const OET = [
     col:'#ffaa33', col2:'#ff7700',
     owSpd:.9, trigR:62, sc:300, energy:true, spinRate:0,
     enc:{cnt:1, hp:14, spd:1.7, turn:.05, r:13, col:'#ffaa33', col2:'#ff7700',
-      fire:{wpn:0, mode:'aim', count:2, spread:.18, offset:16}},
+      fire:{wpn:'mass driver', mode:'aim', count:2, spread:.18, offset:16}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -231,7 +231,7 @@ const OET = [
     col:'#aaccff', col2:'#5588dd',
     owSpd:.7, trigR:62, sc:280, energy:true, spinRate:0,
     enc:{cnt:1, hp:12, spd:1.2, turn:.04, r:13, col:'#aaccff', col2:'#5588dd',
-      fire:{wpn:1, mode:'aim', count:1, spread:0, offset:16}},
+      fire:{wpn:'railgun', mode:'aim', count:1, spread:0, offset:16}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -253,7 +253,7 @@ const OET = [
     col:'#ff66cc', col2:'#aa3399',
     owSpd:1.5, trigR:54, sc:160, energy:false, spinRate:.05,
     enc:{cnt:1, hp:5, spd:1.7, turn:.09, r:9, col:'#ff66cc', col2:'#aa3399',
-      fire:{wpn:0, mode:'aim', count:1, spread:0, offset:10}},
+      fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -275,7 +275,7 @@ const OET = [
     col:'#ffdd33', col2:'#ff8800',
     owSpd:2.0, trigR:54, sc:170, energy:false, spinRate:.05,
     enc:{cnt:1, hp:5, spd:2.2, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
-      fire:{wpn:0, mode:'aim', count:1, spread:0, offset:10}},
+      fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -297,7 +297,7 @@ const OET = [
     col:'#88ffaa', col2:'#22aa55',
     owSpd:1.0, trigR:50, sc:60, energy:false, spinRate:.1,
     enc:{cnt:1, hp:2, spd:1.7, turn:.12, r:7, col:'#88ffaa', col2:'#22aa55',
-      fire:{wpn:0, mode:'aim', count:1, spread:0, offset:8}},
+      fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:8}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -319,7 +319,7 @@ const OET = [
     col:'#ddccaa', col2:'#998866',
     owSpd:.5, trigR:80, sc:600, energy:true, spinRate:0,
     enc:{cnt:1, hp:48, spd:1.2, turn:.03, r:24, col:'#ddccaa', col2:'#998866',
-      fire:{wpn:1, mode:'aim', count:1, spread:0, offset:28}},
+      fire:{wpn:'railgun', mode:'aim', count:1, spread:0, offset:28}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -346,7 +346,7 @@ const OET = [
     col:'#ff5544', col2:'#aa1100',
     owSpd:.35, trigR:80, sc:1000, energy:true, spinRate:0,
     enc:{cnt:1, hp:80, spd:.8, turn:.03, r:26, col:'#ff5544', col2:'#aa1100',
-      fire:{wpn:3, mode:'aim', count:1, spread:0, offset:30}},
+      fire:{wpn:'particle accelerator', mode:'aim', count:1, spread:0, offset:30}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -377,7 +377,7 @@ const TURRET = {
   update(t, ebu, s) {
     t.a += angDiff(t.a, Math.atan2(s.x-t.x, -(s.y-t.y))) * .04;
     if(--t.timer <= 0) {
-      const ewp=WEAPONS[0];
+      const ewp=WEAPON_MAP['mass driver'];
       t.timer = 100 + Math.floor(Math.random()*40-20);
       const ba=t.a;
       ebu.push({x:t.x+Math.sin(ba)*15, y:t.y-Math.cos(ba)*15, vx:Math.sin(ba)*ewp.spd, vy:-Math.cos(ba)*ewp.spd, l:ewp.life*ewp.spd, dmg:ewp.dmg, col:this.col});
@@ -408,7 +408,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
   for(const rk of enc.rocks){const rd=Math.hypot(e.x-rk.x,e.y-rk.y);if(rd<rk.r+16){e.vx+=(e.x-rk.x)/rd*.3;e.vy+=(e.y-rk.y)/rd*.3;}}
   for(const oe of enc.en){if(oe===e||!oe.alive)continue;const od=Math.hypot(e.x-oe.x,e.y-oe.y)||1;const minD=ec.r+OET[oe.t].enc.r;if(od<minD){const nx=(e.x-oe.x)/od,ny=(e.y-oe.y)/od;const push=(minD-od)/minD*.5;e.vx+=nx*push;e.vy+=ny*push;}}
   const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
-  const fw=ec.fire,ewp=WEAPONS[fw.wpn];
+  const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn];
   if(ewp.wpnType==='beam gun'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
     const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;
     const res=castLaser(ox,oy,e.a,ewp.range,[{x:s.x,y:s.y,r:12}]);

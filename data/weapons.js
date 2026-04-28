@@ -41,6 +41,8 @@ const WEAPONS = [
   {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'beam gun',    dmg:8, cd:4.0, range:400, pulses:1, pulseCd:20, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#8f0', beamSound:[120,.35,'sawtooth',.09], chargeTone:[1200,1800,'sine',.05]},
 ];
 
+const WEAPON_MAP = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
+
 // Fire a weapon, deducting energyCost if defined and the ship tracks energy.
 // Returns false if the ship lacks energy, true otherwise.
 // Enemies (no s.energy) ignore energyCost and always fire.
