@@ -438,7 +438,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
 // Behaviors: 'orbit_system' (Hunters drift around the star), 'orbit_post' (anchor to a body), 'triangle' (3-body loop),
 // 'route' (2-body shuttle), 'idle' (stationary).
 const FLEETS = [
-  { id:'HUNTER',  aggroR:1333, trigR:24, owSpd:1.4, maxOnOW:3,
+  { id:'HUNTER',  aggroR:600, trigR:24, owSpd:3.0, maxOnOW:3,
     behavior:'orbit_system',
     composition:{ rolls:[
       { t:6, min:1, max:3 },
@@ -446,11 +446,11 @@ const FLEETS = [
       { t:4, cnt:1, chance:.33 }
     ]},
     glyph:'hunter' },
-  { id:'SWARM',   aggroR:250,  trigR:22, owSpd:1.0, maxOnOW:6,
+  { id:'SWARM',   aggroR:180,  trigR:22, owSpd:2.5, maxOnOW:6,
     behavior:'orbit_post',
     composition:{ rolls:[{ t:8, min:4, max:6 }] },
     glyph:'swarm' },
-  { id:'PATROL',  aggroR:666,  trigR:24, owSpd:.9,  maxOnOW:2,
+  { id:'PATROL',  aggroR:360,  trigR:24, owSpd:3.0,  maxOnOW:2,
     behavior:'triangle',
     composition:{ rolls:[
       { t:4, cnt:1 },
@@ -461,7 +461,7 @@ const FLEETS = [
       { t:8, min:0, max:2 }
     ]},
     glyph:'patrol' },
-  { id:'CONVOY',  aggroR:0,    trigR:26, owSpd:.7,  maxOnOW:2,
+  { id:'CONVOY',  aggroR:0,    trigR:26, owSpd:2.0,  maxOnOW:2,
     behavior:'route',
     spawnsHunters:{ everyFrames:2400 },
     composition:{ rolls:[
@@ -473,7 +473,7 @@ const FLEETS = [
       { t:8, min:0, max:2 }
     ]},
     glyph:'convoy' },
-  { id:'ARMADA',  aggroR:512,  trigR:28, owSpd:.5,  maxOnOW:1,
+  { id:'ARMADA',  aggroR:512,  trigR:28, owSpd:1.5,  maxOnOW:1,
     behavior:'orbit_post',
     composition:{ rolls:[
       { t:10, cnt:1, chance:.6 },
