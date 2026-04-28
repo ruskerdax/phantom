@@ -17,7 +17,7 @@ function encSpawnPos(ew,eh,placed,minPlayer,minPeer,sx,sy){
   placed.push({x,y});return{x,y};
 }
 // Place an enemy along an arc near the arena border, centered on contactA.
-// Distributes idx-of-total along an ~80deg arc, jittered slightly, then runs
+// Distributes idx-of-total along a ~30deg arc, jittered slightly, then runs
 // a short repulsion pass against already-placed peers.
 function encClusterPos(ew,eh,placed,minPeer,contactA,idx,total){
   const cx=ew/2,cy=eh/2;
@@ -58,13 +58,13 @@ function seedSystemFleets(px,py){
   // 1 Swarm per uncleared cave level
   for(let i=0;i<PP.length;i++){
     if(G.cleared[i])continue;
-    const bp=owPos(PP[i]),a=Math.random()*Math.PI*2,r=80+Math.random()*60;
-    ow.fleets.push(mkFleet('SWARM',bp.x+Math.cos(a)*r,bp.y+Math.sin(a)*r,{postBody:PP[i],orbitR:r,aSpd:.0008}));
+    const bp=owPos(PP[i]),a=Math.random()*Math.PI*2,r=40+Math.random()*30;
+    ow.fleets.push(mkFleet('SWARM',bp.x+Math.cos(a)*r,bp.y+Math.sin(a)*r,{postBody:PP[i],orbitR:r,aSpd:.008}));
   }
   // 1 Swarm per asteroid field
   for(let ai=0;ai<AB.length;ai++){
-    const ap=owPos(AB[ai]),a=Math.random()*Math.PI*2,r=100+Math.random()*60;
-    ow.fleets.push(mkFleet('SWARM',ap.x+Math.cos(a)*r,ap.y+Math.sin(a)*r,{postBody:AB[ai],orbitR:r,aSpd:.0007}));
+    const ap=owPos(AB[ai]),a=Math.random()*Math.PI*2,r=50+Math.random()*30;
+    ow.fleets.push(mkFleet('SWARM',ap.x+Math.cos(a)*r,ap.y+Math.sin(a)*r,{postBody:AB[ai],orbitR:r,aSpd:.007}));
   }
   // Armada at HBASE
   if(!G.hbCleared){
@@ -344,9 +344,10 @@ function updFleet(f,fi,s){
   const F=fleetDef(f.id);
   if(f.id==='ARMADA'&&G.hbCleared){f.alive=false;return false;}
   const dx=s.x-f.x,dy=s.y-f.y,dist=Math.hypot(dx,dy)||1;
+  const aggroD=(f.postBody&&F.behavior==='orbit_post')?Math.hypot(s.x-owPos(f.postBody).x,s.y-owPos(f.postBody).y):dist;
   if(F.aggroR>0&&s.inv<=0){
-    if(f.state==='idle'&&dist<F.aggroR)f.state='aggro';
-    else if(f.state==='aggro'&&dist>F.aggroR*1.5){
+    if(f.state==='idle'&&aggroD<F.aggroR)f.state='aggro';
+    else if(f.state==='aggro'&&aggroD>F.aggroR*1.5){
       f.state='idle';
       if(F.behavior==='triangle'){
         const route=[SLIPGATE,BASE,HBASE];let bd=Infinity;
@@ -368,10 +369,22 @@ function updFleet(f,fi,s){
   } else if(F.behavior==='orbit_post'&&f.postBody){
     f.postOrbit.a+=f.postOrbit.aSpd;
     const bp=owPos(f.postBody);
-    const tx=bp.x+Math.cos(f.postOrbit.a)*f.postOrbit.r,ty=bp.y+Math.sin(f.postOrbit.a)*f.postOrbit.r;
-    const tdx=tx-f.x,tdy=ty-f.y,td=Math.hypot(tdx,tdy)||1,ta=Math.atan2(tdx,-tdy);
-    f.a+=angDiff(f.a,ta)*.05;const spd=Math.min(F.owSpd*.07,td*.025);
-    f.vx+=(tdx/td)*spd;f.vy+=(tdy/td)*spd;
+    const tx=bp.x+Math.cos(f.postOrbit.a)*f.postOrbit.r;
+    const ty=bp.y+Math.sin(f.postOrbit.a)*f.postOrbit.r;
+    const tdx=tx-f.x,tdy=ty-f.y,td=Math.hypot(tdx,tdy)||1;
+    if(td<30){
+      // On the orbit ring: snap to the moving target so idle orbit is always visible
+      // regardless of how the steering accel cap compares to ring tangential speed.
+      f.x=tx;f.y=ty;
+      f.a+=angDiff(f.a,Math.atan2(-Math.sin(f.postOrbit.a),-Math.cos(f.postOrbit.a)))*.1;
+      f.vx=0;f.vy=0;
+    } else {
+      // Off the ring (just disengaged from aggro): steer back under thrust, no teleport.
+      const ta=Math.atan2(tdx,-tdy);
+      f.a+=angDiff(f.a,ta)*.07;
+      const spd=Math.min(F.owSpd*.08,td*.04);
+      f.vx+=(tdx/td)*spd;f.vy+=(tdy/td)*spd;
+    }
   } else if(F.behavior==='triangle'){
     const route=[SLIPGATE,BASE,HBASE];
     const bp=owPos(route[f.routeIdx]);
