@@ -38,8 +38,6 @@ function basePanel(){
 function drawBaseHeader(px,py,pw){
   drawMenuPanel(px,py,pw,360,{fill:'rgba(0,12,8,.95)',stroke:'#aaccff',glow:'#aaccff'});
   drawMenuTitle('FRIENDLY BASE',W/2,py+24,'#aaccff','bold 18px monospace',10);
-  cx.fillStyle='#aaffcc';cx.font='11px monospace';cx.textAlign='right';
-  cx.fillText('CREDITS  '+G.credits,px+pw-12,py+24);
   drawMenuTabs(baseTabs(),G.baseTab,px,py+32,pw);
   cx.shadowBlur=0;drawMenuDivider(px,py,pw,57);
 }

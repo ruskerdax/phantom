@@ -129,8 +129,8 @@ function drawCheatSub(){
 }
 
 function drawPause(){
-  if(G.showShipConfig&&G.paused)return drawShipConfig();
-  if(G.cheatSub&&G.paused)return drawCheatSub();
+  if(G.showShipConfig&&G.paused){drawShipConfig();drWalletStake();return;}
+  if(G.cheatSub&&G.paused){drawCheatSub();drWalletStake();return;}
   const PITEMS=pauseMenuItems();
   const ph=G.cheatMode?300:260,pw=300,px=W/2-pw/2,py=H/2-ph/2;
   cx.save();
@@ -149,13 +149,12 @@ function drawPause(){
     if(sel){cx.fillStyle=isCheat?'#ffee44':'#0f8';cx.shadowColor=isCheat?'#ff8':'#0f8';cx.shadowBlur=10;cx.fillText(UI_GLYPH.pointer+' '+PITEMS[i].label,W/2,iy);}
     else{cx.fillStyle=isCheat?'#665500':'#668';cx.shadowBlur=0;cx.fillText(PITEMS[i].label,W/2,iy);}
   }
-  cx.shadowBlur=0;cx.fillStyle='#aaffcc';cx.font='12px monospace';
-  cx.fillText('CREDITS  '+G.credits,W/2,py+ph-46);
-  cx.fillStyle='#334';cx.font='11px monospace';
+  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';
   cx.fillText(pausePrompt('TO RESUME'),W/2,py+ph-26);
   if(G.cheatMode){cx.fillStyle='#223';cx.font='10px monospace';
   cx.fillText('SEED  '+seedText(G.seed),W/2,py+ph-10);}
   cx.restore();
+  drWalletStake();
 }
 
 function showSeedInput(onConfirm){
