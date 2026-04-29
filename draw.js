@@ -4,8 +4,8 @@
 const STARS=(()=>{const a=[];for(let i=0;i<220;i++)a.push({x:Math.random()*W,y:Math.random()*H,r:.3+Math.random()*1.4,ph:Math.random()*Math.PI*2,ci:i%5});return a;})();
 const SCOLS=['#ffffff','#aaaaff','#ffeebb','#aaffee','#ffaaaa'];
 const RENDER_PROFILES={
-  full:{starCount:220,twinkleCount:36,dustCount:140,scanlines:true,scanlineAlpha:.035,particleAlphaStep:0},
-  reduced:{starCount:130,twinkleCount:12,dustCount:80,scanlines:true,scanlineAlpha:.022,particleAlphaStep:.12},
+  full:{starCount:220,twinkleCount:72,dustCount:140,scanlines:true,scanlineAlpha:.035,particleAlphaStep:0},
+  reduced:{starCount:130,twinkleCount:28,dustCount:80,scanlines:true,scanlineAlpha:.022,particleAlphaStep:.12},
   minimal:{starCount:70,twinkleCount:0,dustCount:40,scanlines:false,scanlineAlpha:0,particleAlphaStep:.18},
 };
 const STAR_LAYERS={},SCANLINE_LAYERS={};
@@ -18,7 +18,7 @@ function getStarLayer(){
   const c=mkLayer(),g=c.getContext('2d');
   for(let i=0;i<p.starCount&&i<STARS.length;i++){
     const s=STARS[i];
-    g.globalAlpha=.62;g.fillStyle=SCOLS[s.ci];
+    g.globalAlpha=i<p.twinkleCount?.24:.62;g.fillStyle=SCOLS[s.ci];
     g.beginPath();g.arc(s.x,s.y,s.r,0,Math.PI*2);g.fill();
   }
   g.globalAlpha=1;STAR_LAYERS[q]=c;return c;
@@ -94,9 +94,12 @@ function drStars(scroll=0){
   else{cx.drawImage(layer,dx,0);cx.drawImage(layer,dx-W,0);}
   for(let i=0;i<p.twinkleCount&&i<STARS.length;i++){
     const s=STARS[i],x=(s.x+scroll)%W;
-    cx.globalAlpha=.25+.35*Math.sin(s.ph+G.fr*.015);
+    const phase=s.ph+G.fr*(.018+s.ci*.002);
+    const tw=.5-.5*Math.cos(phase);
+    const eased=tw*tw*(3-2*tw);
+    cx.globalAlpha=.03+eased*.92;
     cx.fillStyle=SCOLS[s.ci];
-    cx.beginPath();cx.arc(x<0?x+W:x,s.y,s.r,0,Math.PI*2);cx.fill();
+    cx.beginPath();cx.arc(x<0?x+W:x,s.y,s.r+eased*.45,0,Math.PI*2);cx.fill();
   }
   cx.globalAlpha=1;
 }
