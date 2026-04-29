@@ -124,7 +124,7 @@ function drawCheatSub(){
     else{cx.fillStyle=isBack?'#668':'#665500';cx.shadowBlur=0;cx.fillText(CITEMS[i].label,W/2,iy);}
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';
-  cx.fillText('ESC TO GO BACK',W/2,py+ph-20);
+  cx.fillText(pausePrompt('TO GO BACK'),W/2,py+ph-20);
   cx.restore();
 }
 
@@ -152,7 +152,7 @@ function drawPause(){
   cx.shadowBlur=0;cx.fillStyle='#aaffcc';cx.font='12px monospace';
   cx.fillText('CREDITS  '+G.credits,W/2,py+ph-46);
   cx.fillStyle='#334';cx.font='11px monospace';
-  cx.fillText('ESC TO RESUME',W/2,py+ph-26);
+  cx.fillText(pausePrompt('TO RESUME'),W/2,py+ph-26);
   if(G.cheatMode){cx.fillStyle='#223';cx.font='10px monospace';
   cx.fillText('SEED  '+seedText(G.seed),W/2,py+ph-10);}
   cx.restore();
@@ -224,7 +224,7 @@ function drawOptions(){
     }
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
-  cx.fillText(UI_GLYPH.up+UI_GLYPH.down+' SELECT   '+UI_GLYPH.left+UI_GLYPH.right+' ADJUST / OPEN   ESC BACK',W/2,H-18);
+  cx.fillText(UI_GLYPH.up+UI_GLYPH.down+' SELECT   '+UI_GLYPH.left+UI_GLYPH.right+' ADJUST / OPEN   '+pausePrompt('BACK'),W/2,H-18);
   cx.restore();drGPI(8,H-8,'left');scanlines();
 }
 
@@ -306,7 +306,7 @@ function drawControls(){
   cx.fillText(rsel?UI_GLYPH.pointer+' RESET TO DEFAULTS':'RESET TO DEFAULTS',W/2,ry+rowH);
   cx.shadowBlur=0;
   cx.fillStyle='#334';cx.font='11px monospace';
-  cx.fillText(UI_GLYPH.up+UI_GLYPH.down+' SELECT ROW   '+UI_GLYPH.left+UI_GLYPH.right+' SWITCH COLUMN   ENTER REMAP   BKSP CLEAR   ESC BACK',W/2,H-18);
+  cx.fillText(UI_GLYPH.up+UI_GLYPH.down+' SELECT ROW   '+UI_GLYPH.left+UI_GLYPH.right+' SWITCH COLUMN   ENTER REMAP   DEL CLEAR   '+pausePrompt('BACK'),W/2,H-18);
   cx.restore();drGPI(8,H-8,'left');scanlines();
 }
 
@@ -405,6 +405,7 @@ function updCheatMenu(m){
   const items=cheatMenuItems();
   m=m||menuInput();
   G.cheatSubSel=moveSelection(G.cheatSubSel,items.length-1,m.up,m.down);
+  if(m.cancel){G.cheatSub=false;return;}
   if(!m.confirm)return;
   const id=items[G.cheatSubSel].id;
   if(id==='repair'){
@@ -429,8 +430,9 @@ function updCheatMenu(m){
 }
 function updPauseMenu(st){
   const m=menuInput();
-  if(G.showShipConfig&&m.confirm){G.showShipConfig=false;return;}
+  if(G.showShipConfig&&(m.confirm||m.cancel)){G.showShipConfig=false;return;}
   if(G.cheatSub){updCheatMenu(m);return;}
+  if(m.cancel){G.paused=false;return;}
   const items=pauseMenuItems();
   G.pauseSel=moveSelection(G.pauseSel,items.length-1,m.up,m.down);
   if(!m.confirm)return;

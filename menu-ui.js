@@ -52,6 +52,18 @@ function drawMenuTitle(text,x,y,col='#0f8',font='bold 22px monospace',blur=10){
 function drawMenuFooter(text,x,y,col='#334'){
   cx.fillStyle=col;cx.font='11px monospace';cx.textAlign='center';cx.shadowBlur=0;cx.fillText(text,x,y);
 }
+function inputPromptLabel(id){
+  const b=BND?.[id];
+  const labels=[];
+  if(b?.key!=null)labels.push(fmtKey(b.key));
+  if(GP?.connected&&b?.btn!=null)labels.push(fmtBtn(b.btn));
+  if(labels.length)return labels.join('/');
+  return (ACT_DEFS.find(a=>a.id===id)?.label||id).toUpperCase();
+}
+function pausePrompt(action){
+  const hardBack=typeof keyBoundToAction==='function'&&!keyBoundToAction('Backspace')?'/BACKSPACE':'';
+  return inputPromptLabel('pause')+hardBack+' '+action;
+}
 function drawMenuRow(label,x,y,sel,opts={}){
   const disabled=!!opts.disabled;
   const col=sel?(disabled?(opts.selDisabledCol||'#844'):(opts.selCol||'#0f8')):(disabled?(opts.disabledCol||'#445'):(opts.col||'#668'));

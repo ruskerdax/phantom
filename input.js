@@ -5,7 +5,7 @@ var K={},suppressFireUntilRelease=false;
 document.addEventListener('keydown',e=>{
   if(G&&G.seedInputOpen)return;
   if(!K[e.code])ia();K[e.code]=true;if(!e.repeat)K[e.code+'j']=true;
-  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','KeyW','KeyA','KeyS','KeyD','KeyJ','KeyI','KeyP'].includes(e.code))e.preventDefault();
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','Backspace','Delete','KeyW','KeyA','KeyS','KeyD','KeyJ','KeyI','KeyP'].includes(e.code))e.preventDefault();
   if(G&&G.optListen==='key'){
     const blocked=['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12','Tab','Escape'];
     if(e.code==='Escape'){G.optListen=null;}
@@ -22,7 +22,13 @@ function jp(c){const v=K[c+'j'];K[c+'j']=false;return!!v;}
 
 // ===================== MENU INPUT =====================
 function isRebinding(){ return G.optListen==='key' || G.optListen==='btn'; }
-function suppressMenuInput(frames=6){ G.menuSuppressUntil = G.fr + frames; }
+function clearJust(code){if(code)K[code+'j']=false;}
+function clearMenuJustPresses(){
+  ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','Enter','NumpadEnter','Backspace','Delete'].forEach(clearJust);
+  ACT_DEFS.forEach(a=>clearJust(BND[a.id]?.key));
+  GP.menuUp=GP.menuDown=GP.menuLeft=GP.menuRight=GP.thrustj=GP.startj=false;
+}
+function suppressMenuInput(frames=6){ G.menuSuppressUntil = G.fr + frames; clearMenuJustPresses(); }
 function menuInputSuppressed(){ return G.fr < (G.menuSuppressUntil||0); }
 function menuInput(opts){
   const o = opts || {};
@@ -39,8 +45,8 @@ function menuInput(opts){
     left:  !!(jp('ArrowLeft')  || kjust('rotLeft')  || GP.menuLeft),
     right: !!(jp('ArrowRight') || kjust('rotRight') || GP.menuRight),
     confirm: !!(enterConfirm || fireConfirm),
-    cancel:  !!iPause(),
-    clear:   !!jp('Backspace'),
+    cancel:  !!iBack(),
+    clear:   !!iClear(),
   };
 }
 
@@ -57,7 +63,7 @@ var ACT_DEFS=[
 var BND={};ACT_DEFS.forEach(a=>{BND[a.id]={key:a.defKey,btn:a.defBtn};});
 try{const s=localStorage.getItem('phantom_bnd');if(s){const p=JSON.parse(s);Object.keys(p).forEach(k=>{if(BND[k])BND[k]=p[k];});if(BND.pause&&BND.pause.key==='Escape')BND.pause.key='KeyP';}}catch(e){}
 function saveBND(){try{localStorage.setItem('phantom_bnd',JSON.stringify(BND));}catch(e){}}
-function fmtKey(c){return({ArrowLeft:'◄ LEFT',ArrowRight:'► RIGHT',ArrowUp:'▲ UP',ArrowDown:'▼ DOWN',Space:'SPACE',ShiftLeft:'L-SHIFT',ShiftRight:'R-SHIFT',Enter:'ENTER',Escape:'ESC',KeyW:'W',KeyA:'A',KeyS:'S',KeyD:'D',KeyP:'P',KeyQ:'Q',KeyE:'E',KeyR:'R',KeyF:'F',KeyJ:'J',KeyI:'I',KeyZ:'Z',KeyX:'X',KeyC:'C',ControlLeft:'L-CTRL',AltLeft:'L-ALT',Tab:'TAB'})[c]||c.replace('Key','').replace('Digit','');}
+function fmtKey(c){return({ArrowLeft:'◄ LEFT',ArrowRight:'► RIGHT',ArrowUp:'▲ UP',ArrowDown:'▼ DOWN',Space:'SPACE',ShiftLeft:'L-SHIFT',ShiftRight:'R-SHIFT',Enter:'ENTER',NumpadEnter:'NUM ENTER',Escape:'ESC',Backspace:'BACKSPACE',Delete:'DEL',KeyW:'W',KeyA:'A',KeyS:'S',KeyD:'D',KeyP:'P',KeyQ:'Q',KeyE:'E',KeyR:'R',KeyF:'F',KeyJ:'J',KeyI:'I',KeyZ:'Z',KeyX:'X',KeyC:'C',ControlLeft:'L-CTRL',AltLeft:'L-ALT',Tab:'TAB'})[c]||c.replace('Key','').replace('Digit','');}
 function fmtBtn(i){const n=['A','B','X','Y','LB','RB','LT','RT','SEL','START','L3','R3','↑','↓','◄','►'];return n[i]!==undefined?n[i]:'BTN'+i;}
 
 // Gamepad
@@ -111,6 +117,7 @@ function pollGP(){
 }
 function kdown(id){return!!K[BND[id].key];}
 function kjust(id){return jp(BND[id].key);}
+function keyBoundToAction(code){return ACT_DEFS.some(a=>BND[a.id]?.key===code);}
 function digitalRotInput(dir){
   if(dir===0){
     _rotDigitalDir=0;_rotDigitalFrames=0;_rotDigitalFrame=typeof G!=='undefined'?G.fr:-1;
@@ -147,3 +154,5 @@ function iFir(){
 function iFireSec(){return!!(kdown('fireSec')||GP.fireSec);}
 function iEnter(){return!!(jp('Enter')||jp('NumpadEnter')||GP.thrustj);}
 function iPause(){return!!(kjust('pause')||GP.startj);}
+function iBack(){return!!(iPause()||(!keyBoundToAction('Backspace')&&jp('Backspace')));}
+function iClear(){return!!(!keyBoundToAction('Delete')&&jp('Delete'));}

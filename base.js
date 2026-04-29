@@ -47,7 +47,7 @@ function drawBaseHeader(px,py,pw){
 function drawBaseServices(){
   const{pw,ph,px,py}=basePanel();
   const s=G.OW.s;
-  const repairCost=(s.maxHp-s.hp)*10,rechargeCost=Math.ceil((s.maxEnergy-s.energy)*1);
+  const repairCost=(s.maxHp-s.hp)*100,rechargeCost=Math.ceil((s.maxEnergy-s.energy)*10);
   const costs=[repairCost,rechargeCost],maxed=[s.hp>=s.maxHp,s.energy>=s.maxEnergy];
   const items=['REPAIR HULL','RECHARGE ENERGY'];
   cx.font='13px monospace';
@@ -65,7 +65,7 @@ function drawBaseServices(){
     }
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
-  drawMenuFooter('ESC TO LEAVE',W/2,py+348);
+  drawMenuFooter(UI_GLYPH.left+UI_GLYPH.right+' SWITCH TAB   ENTER SELECT   '+pausePrompt('TO LEAVE'),W/2,py+348);
 }
 
 function drawBaseShop(){
@@ -112,7 +112,7 @@ function drawBaseShop(){
     else if(!isEquipped(item.id))cx.fillText('BUILD COST: '+itemBuildPrice(item)+' CR',px+pw-12,dy+6);
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
-  drawMenuFooter(UI_GLYPH.left+UI_GLYPH.right+' SWITCH TAB   ENTER SELECT   ESC LEAVE',W/2,py+348);
+  drawMenuFooter(UI_GLYPH.left+UI_GLYPH.right+' SWITCH TAB   ENTER SELECT   '+pausePrompt('TO LEAVE'),W/2,py+348);
 }
 
 function drawShopAction(){
@@ -168,7 +168,7 @@ function drawEquipFlow(){
   cx.fillStyle='#aaccff';cx.font='bold 15px monospace';cx.textAlign='center';
   cx.fillText('CONFIGURE: '+ch.name,W/2,py+28);
   cx.fillStyle='#446';cx.font='11px monospace';
-  cx.fillText('BUILD COST: '+ch.buildPrice+' CR   '+UI_GLYPH.left+UI_GLYPH.right+' CYCLE   ENTER CONFIRM   ESC CANCEL',W/2,py+44);
+  cx.fillText('BUILD COST: '+ch.buildPrice+' CR   '+UI_GLYPH.left+UI_GLYPH.right+' CYCLE   ENTER CONFIRM   '+pausePrompt('TO CANCEL'),W/2,py+44);
   cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+54);cx.lineTo(px+pw-10,py+54);cx.stroke();
   // weapon slots
   const rows=[];
@@ -280,7 +280,7 @@ function execShopAction(opt){
 }
 
 function updBase(){
-  const m=menuInput({fireConfirms:false});
+  const m=menuInput();
   const up=m.up,dn=m.down,lt=m.left,rt=m.right,ok=m.confirm,bk=m.cancel;
   if(G.equipFlow){updEquipFlow(up,dn,lt,rt,ok,bk);return;}
   if(G.shopActionId!==null){

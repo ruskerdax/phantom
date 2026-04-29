@@ -122,7 +122,7 @@ function drawRebuildConfig(rf){
 function updRebuild(){
   if(!G.rebuildFlow)G.rebuildFlow={phase:'chassis',sel:0};
   const rf=G.rebuildFlow;
-  const m=menuInput({fireConfirms:false});
+  const m=menuInput();
   const up=m.up,dn=m.down,lt=m.left,rt=m.right,ok=m.confirm,bk=m.cancel;
   if(rf.phase==='chassis'){
     const lch=licensedRebuildChassis(),items=rebuildChassisItems();

@@ -498,7 +498,7 @@ function drawSlipgateMenu(){
     cx.shadowBlur=12;cx.fillStyle=dimCol;cx.font='bold 22px monospace';cx.fillText('SLIPGATE',W/2,py+40);
     cx.shadowBlur=0;cx.fillStyle='#8877aa';cx.font='bold 15px monospace';
     cx.fillText('Clear all sectors to activate the slipgate.',W/2,py+112);
-    cx.fillStyle='#334';cx.font='11px monospace';cx.fillText('ESC TO LEAVE',W/2,py+ph-14);
+    cx.fillStyle='#334';cx.font='11px monospace';cx.fillText(pausePrompt('TO LEAVE'),W/2,py+ph-14);
   } else if(G.seed===TUTORIAL_SEED&&!G.tutorialDone){
     const sel=G.slipSel||0;
     const pw=400,ph=260,px=W/2-pw/2,py=H/2-ph/2;
@@ -516,7 +516,7 @@ function drawSlipgateMenu(){
       cx.font=s?'bold 14px monospace':'13px monospace';
       cx.fillText((s?'▶ ':' ')+o,W/2,py+158+i*30);
     });
-    cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.fillText('ESC TO LEAVE',W/2,py+ph-14);
+    cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.fillText(pausePrompt('TO LEAVE'),W/2,py+ph-14);
   } else {
     const nb=slipNeighborList(),N=nb.length;
     const rowH=30,ph=120+N*rowH,pw=400,px=W/2-pw/2,py=H/2-ph/2;
@@ -533,7 +533,7 @@ function drawSlipgateMenu(){
       cx.font=sel?'bold 13px monospace':'12px monospace';
       cx.fillText((sel?'▶ ':'  ')+hexStr+tag,W/2,py+80+i*rowH);
     }
-    cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.fillText('ESC TO LEAVE',W/2,py+ph-12);
+    cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.fillText(pausePrompt('TO LEAVE'),W/2,py+ph-12);
   }
   cx.restore();
 }
