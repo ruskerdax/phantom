@@ -126,6 +126,7 @@ function shieldLoadoutText(sh){
 const ENERGY_PICKUP=38;
 const THRUST_ENERGY_DRAIN={overworld:.035,encounter:.01,site:.012};
 const SHIELD_EMPTY_ENERGY_DRAIN=.5/60;
+const SHIELD_FLASH_FRAMES=10;
 const FALLBACK_SHIP_HIT_RADIUS=12;
 function chassisDefForShip(s){return CHASSIS.find(c=>c.id===s?.chassisId)||activeChassisObj();}
 function shipHitRadius(s){
@@ -152,6 +153,7 @@ function resetShipShield(s, def=activeShieldObj()){
   s.shieldRechargeTimer=0;
   s.shieldEnabled=true;
   s.shieldOffline=false;
+  s.shieldFlash=0;
 }
 function copyShieldState(from,to){
   if(!from||!to){return;}
@@ -161,6 +163,7 @@ function copyShieldState(from,to){
   to.shieldRechargeTimer=from.shieldRechargeTimer??0;
   to.shieldEnabled=from.shieldEnabled!==false;
   to.shieldOffline=!!from.shieldOffline;
+  to.shieldFlash=from.shieldFlash??0;
   refreshShieldOffline(to);
 }
 function refreshShieldOffline(s){
@@ -194,6 +197,7 @@ function drainShieldWithoutEnergy(s){
   return drain;
 }
 function tickShieldRecharge(s){
+  if(s?.shieldFlash>0)s.shieldFlash--;
   const def=shieldDefForShip(s);
   if(!def||s.shieldEnabled===false||!s.shieldId)return;
   refreshShieldOffline(s);
@@ -233,6 +237,7 @@ function applyShipShieldDamage(s,amount,opts={}){
     const shieldHp=s.shieldHp;
     shieldDamage=Math.min(shieldHp,dmg);
     s.shieldHp=Math.max(0,s.shieldHp-shieldDamage);
+    s.shieldFlash=SHIELD_FLASH_FRAMES;
     s.shieldRechargeTimer=def.rechargeDelay??300;
     passthroughDamage=dmg-shieldDamage;
     if(s.shieldHp<=0){s.shieldHp=0;s.shieldOffline=true;shieldBroken=shieldHp>0;}

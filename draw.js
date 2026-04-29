@@ -257,11 +257,14 @@ function drShip(x,y,a,ship,thr,energy,inv,fr){
   const shieldFrac=def&&ship?.shieldId&&shieldMax>0?Math.max(0,Math.min(1,(ship.shieldHp||0)/shieldMax)):1;
   const showShieldBar=def&&ship?.shieldId&&shieldFrac<1;
   cx.save();cx.translate(x,y);cx.rotate(a);
-  const shieldVisible=def&&ship?.shieldId&&ship.shieldEnabled!==false&&!ship.shieldOffline&&ship.shieldHp>0;
+  const shieldFlash=Math.max(0,Math.min(1,(ship?.shieldFlash||0)/SHIELD_FLASH_FRAMES));
+  const shieldActive=ship?.shieldId&&ship.shieldEnabled!==false&&!ship.shieldOffline&&ship.shieldHp>0;
+  const shieldVisible=def&&ship?.shieldId&&(shieldActive||shieldFlash>0);
   if(shieldVisible){
     const shieldR=shipShieldHitRadius(ship,def);
     const half=(def.coverageDeg*Math.PI/180)/2;
-    cx.strokeStyle='rgba(100,200,255,.8)';cx.shadowColor='#8cf';cx.shadowBlur=18;cx.lineWidth=2;cx.beginPath();
+    const flashEase=shieldFlash*shieldFlash;
+    cx.strokeStyle=`rgba(130,220,255,${.34+.56*flashEase})`;cx.shadowColor='#9df';cx.shadowBlur=7+18*flashEase;cx.lineWidth=1+2*flashEase;cx.beginPath();
     if((def.coverageDeg??360)>=359.9)cx.arc(0,0,shieldR,0,Math.PI*2);
     else cx.arc(0,0,shieldR,-Math.PI/2-half,-Math.PI/2+half);
     cx.stroke();
