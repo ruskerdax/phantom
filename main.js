@@ -23,7 +23,7 @@ function update(){
         G.slipSel=moveSelection(G.slipSel,1,m.up,m.down);
       } else {
         const nb=slipNeighborList();
-        G.slipSel=moveSelection(G.slipSel,nb.length-1,m.up,m.down);
+        G.slipSel=moveSelection(G.slipSel,nb.length,m.up,m.down);
       }
       if(m.confirm){
         ia();
@@ -33,6 +33,7 @@ function update(){
           jumpToSeed((Math.random()*0xFFFFFFFF)>>>0,TUTORIAL_SEED);
         } else {
           const nb=slipNeighborList();
+          if(G.slipSel===nb.length){returnToOverworld();return;}
           jumpToSeed(nb[G.slipSel],G.seed);
         }
         return;

@@ -134,7 +134,8 @@ function digitalRotInput(dir){
 }
 function iRot(){
   const digital=kdown('rotLeft')?-1:kdown('rotRight')?1:GP.rotDigital;
-  if(digital&&typeof G!=='undefined'&&G.st==='overworld'){
+  const instantDigital=typeof G!=='undefined'&&(G.st==='overworld'||G.st==='play'||G.st==='esc');
+  if(digital&&instantDigital){
     digitalRotInput(0);
     return digital;
   }

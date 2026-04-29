@@ -514,12 +514,12 @@ function drawSlipgateMenu(){
       const s=i===sel;
       cx.fillStyle=s?col:'#776688';cx.shadowColor=col;cx.shadowBlur=s?8:0;
       cx.font=s?'bold 14px monospace':'13px monospace';
-      cx.fillText((s?'▶ ':' ')+o,W/2,py+158+i*30);
+      cx.fillText((s?UI_GLYPH.pointer+' ':' ')+o,W/2,py+158+i*30);
     });
     cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.fillText(pausePrompt('TO LEAVE'),W/2,py+ph-14);
   } else {
     const nb=slipNeighborList(),N=nb.length;
-    const rowH=30,ph=120+N*rowH,pw=400,px=W/2-pw/2,py=H/2-ph/2;
+    const rowH=30,ph=120+(N+1)*rowH,pw=400,px=W/2-pw/2,py=H/2-ph/2;
     cx.fillStyle='rgba(4,0,12,.92)';cx.fillRect(px,py,pw,ph);
     cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=18;cx.lineWidth=1.5;cx.strokeRect(px,py,pw,ph);
     cx.shadowBlur=10;cx.fillStyle=col;cx.font='bold 20px monospace';cx.fillText('SLIPGATE',W/2,py+30);
@@ -531,7 +531,12 @@ function drawSlipgateMenu(){
       const tag=(n===G.prevSeed?'  ← BACK':'')+(G.visitedSeeds.includes(n)?'  ★':'');
       cx.fillStyle=sel?col:'#776688';cx.shadowColor=col;cx.shadowBlur=sel?8:0;
       cx.font=sel?'bold 13px monospace':'12px monospace';
-      cx.fillText((sel?'▶ ':'  ')+hexStr+tag,W/2,py+80+i*rowH);
+      cx.fillText((sel?UI_GLYPH.pointer+' ':'  ')+hexStr+tag,W/2,py+80+i*rowH);
+    }
+    {const sel=G.slipSel===N;
+      cx.fillStyle=sel?col:'#776688';cx.shadowColor=col;cx.shadowBlur=sel?8:0;
+      cx.font=sel?'bold 13px monospace':'12px monospace';
+      cx.fillText((sel?UI_GLYPH.pointer+' ':'  ')+'RETURN',W/2,py+80+N*rowH);
     }
     cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.fillText(pausePrompt('TO LEAVE'),W/2,py+ph-12);
   }
@@ -656,13 +661,14 @@ function drawOW(){
   drHUD(s.energy,s.maxEnergy,s.hp,s.maxHp);
   if(G.slipMsg>0){
     const alpha=Math.min(1,G.slipMsg/40);
+    const msgY=46;
     cx.save();cx.globalAlpha=alpha;
-    cx.fillStyle='rgba(4,0,12,.82)';cx.fillRect(W/2-200,H/2-32,400,52);
-    cx.strokeStyle='#cc99ff';cx.shadowColor='#cc99ff';cx.shadowBlur=14;cx.lineWidth=1;cx.strokeRect(W/2-200,H/2-32,400,52);
+    cx.fillStyle='rgba(4,0,12,.82)';cx.fillRect(W/2-200,msgY,400,52);
+    cx.strokeStyle='#cc99ff';cx.shadowColor='#cc99ff';cx.shadowBlur=14;cx.lineWidth=1;cx.strokeRect(W/2-200,msgY,400,52);
     cx.fillStyle='#cc99ff';cx.font='bold 14px monospace';cx.textAlign='center';cx.shadowBlur=10;
-    cx.fillText('SLIPGATE ACTIVATED',W/2,H/2-8);
+    cx.fillText('SLIPGATE ACTIVATED',W/2,msgY+24);
     cx.shadowBlur=0;cx.fillStyle='#9977bb';cx.font='11px monospace';
-    cx.fillText('The slipgate is now open. Find it at the outer rim.',W/2,H/2+14);
+    cx.fillText('The slipgate is now open. Find it at the outer rim.',W/2,msgY+46);
     cx.restore();
   }
 }
