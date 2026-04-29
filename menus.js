@@ -32,7 +32,6 @@ function drawScreen(title,sub,tc,prompt){
   cx.fillText('SEED  '+G.seed.toString(16).toUpperCase().padStart(8,'0'),W/2,H/2+95);
   cx.restore();drGPI();scanlines();
 }
-function licensedWeaponsForSlot(slotType){return WEAPONS.filter(w=>w.wpnType===slotType+' gun'&&hasLicense(w.id));}
 function rebuildTotalCost(chassisId,auxId){const ch=CHASSIS.find(c=>c.id===chassisId),ax=AUX_ITEMS.find(a=>a.id===auxId);return(ch?.buildPrice??0)+(ax?.buildPrice??0);}
 function drawRebuild(){
   if(!G.rebuildFlow)G.rebuildFlow={phase:'chassis',sel:0};
@@ -87,7 +86,7 @@ function drawRebuildConfig(rf){
   cx.strokeStyle='#3a1000';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+36);cx.lineTo(px+pw-10,py+36);cx.stroke();
   for(let i=0;i<ch.slots.length;i++){
     const sl=ch.slots[i],wpId=rf.slots[i],wp=wpId?WEAPONS.find(w=>w.id===wpId):null;
-    const isSel=rf.focus===i,iy=py+50+i*rh,opts=licensedWeaponsForSlot(sl.type);
+    const isSel=rf.focus===i,iy=py+50+i*rh,opts=licensedWeaponsForSlot(sl);
     cx.fillStyle=isSel?'#0f8':'#446';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='left';
     cx.fillText((isSel?'▶ ':'  ')+'SLOT '+(i+1)+' ['+sl.type.toUpperCase()+']',px+14,iy);
     cx.fillStyle=isSel?'#0f8':(wp?'#668':'#444');cx.textAlign='right';
@@ -133,7 +132,7 @@ function updRebuild(){
       const slots=ch.slots.map((sl,i)=>{
         const curWp=G.loadout.weapons[i];
         if(curWp&&hasLicense(curWp)){const wp=WEAPONS.find(w=>w.id===curWp);if(wp&&slotMatchesWeapon(sl,wp))return curWp;}
-        return licensedWeaponsForSlot(sl.type)[0]?.id??null;
+        return licensedWeaponsForSlot(sl)[0]?.id??null;
       });
       rf.phase='config';rf.chassisId=ch.id;rf.slots=slots;rf.auxId=auxId;rf.focus=0;rf.warnShown=false;
     }
@@ -143,7 +142,7 @@ function updRebuild(){
     if(dn)rf.focus=Math.min(nRows-1,rf.focus+1);
     const focus=rf.focus;
     if(focus<ch.slots.length){
-      const sl=ch.slots[focus],opts=[null,...licensedWeaponsForSlot(sl.type)];
+      const sl=ch.slots[focus],opts=[null,...licensedWeaponsForSlot(sl)];
       const curIdx=Math.max(0,opts.findIndex(w=>(w?.id??null)===rf.slots[focus]));
       if(lt)rf.slots[focus]=opts[((curIdx-1)+opts.length)%opts.length]?.id??null;
       if(rt)rf.slots[focus]=opts[(curIdx+1)%opts.length]?.id??null;

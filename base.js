@@ -195,10 +195,12 @@ function drawEquipFlow(){
     cx.shadowBlur=0;cx.textAlign='right';
     if(row.kind==='weapon'){
       const wid=ef.slots[row.idx],wp=wid?WEAPONS.find(w=>w.id===wid):null;
-      cx.fillStyle=wp?'#aaffcc':'#446';cx.fillText(wp?wp.id.toUpperCase():'(empty)',px+pw-20,ry);
+      const opts=licensedWeaponsForSlot(ch.slots[row.idx]),label=wp?wp.id.toUpperCase():'(empty)';
+      cx.fillStyle=wp?'#aaffcc':'#446';cx.fillText((opts.length?'â—„ ':' ')+label+(opts.length?' â–º':' '),px+pw-20,ry);
     }else if(row.kind==='aux'){
       const ax=ef.auxId?AUX_ITEMS.find(a=>a.id===ef.auxId):null;
-      cx.fillStyle=ax?'#aaffcc':'#446';cx.fillText(ax?ax.name:'(empty)',px+pw-20,ry);
+      const opts=AUX_ITEMS.filter(a=>hasLicense(a.id)),label=ax?ax.name:'(empty)';
+      cx.fillStyle=ax?'#aaffcc':'#446';cx.fillText((opts.length?'â—„ ':' ')+label+(opts.length?' â–º':' '),px+pw-20,ry);
     }
   }
   if(ef.warnShown){cx.fillStyle='#f84';cx.font='11px monospace';cx.textAlign='center';cx.fillText('WARNING: no weapons equipped!',W/2,py+ph-18);}
@@ -214,8 +216,7 @@ function updEquipFlow(up,dn,lt,rt,ok,bk){
   if(row<ch.slots.length){
     // weapon slot — cycle compatible owned weapons + null
     if(lt||rt){
-      const slotType=ch.slots[row].type;
-      const valid=[null,...WEAPONS.filter(w=>w.wpnType===slotType+' gun'&&hasLicense(w.id)).map(w=>w.id)];
+      const valid=[null,...licensedWeaponIdsForSlot(ch.slots[row])];
       const cur=valid.indexOf(ef.slots[row]);
       ef.slots[row]=valid[((cur+(rt?1:-1))+valid.length)%valid.length];
     }

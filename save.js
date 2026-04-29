@@ -6,8 +6,8 @@ function defaultSave() {
   return {
     credits: 0,
     stake: 0,
-    licenses: ['kestrel', 'shield_std', 'mass driver', 'laser cannon'],
-    loadout: {chassis:'kestrel', weapons:['mass driver','laser cannon'], aux:'shield_std'},
+    licenses: ['kestrel', 'shield_std', 'mass driver', 'pulse laser'],
+    loadout: {chassis:'kestrel', weapons:['mass driver','pulse laser'], aux:'shield_std'},
     cleared: [false, false, false],
     hbCleared: false,
     hbState: null,
@@ -38,6 +38,9 @@ function loadSave() {
     if (!Array.isArray(d.loadout.weapons))   d.loadout.weapons = [...def.loadout.weapons];
     if (typeof d.loadout.aux !== 'string')   d.loadout.aux = def.loadout.aux;
     if (typeof d.loadout.chassis !== 'string') d.loadout.chassis = def.loadout.chassis;
+    d.licenses = d.licenses.map(id => id === 'laser cannon' ? 'pulse laser' : id);
+    d.loadout.weapons = d.loadout.weapons.map(id => id === 'laser cannon' ? 'pulse laser' : id);
+    d.licenses = [...new Set(d.licenses)];
     if (!Array.isArray(d.visitedSeeds))      d.visitedSeeds = [];
     if (typeof d.tutorialDone !== 'boolean') d.tutorialDone = false;
     if (!('prevSeed' in d))                  d.prevSeed = null;
