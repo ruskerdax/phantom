@@ -3,6 +3,51 @@
 // Master game state. G.st drives the state machine — update() and draw() both branch on it so only one
 // sub-system runs per frame. Active mode data lives in sub-objects: G.OW (overworld), G.ENC (encounter), G.site (site).
 var G={st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,site:null,paused:false,pauseSel:0,cheatSub:false,cheatSubSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',fps:60,frameMs:16.7,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,fullscreen:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',weapons:['mass driver','pulse laser'],aux:'shield_std'},visitedSeeds:[],tutorialDone:false,prevSeed:null,systemFlavor:null,menuSuppressUntil:0,systemStates:{},needsRebuild:false,lastLocation:null};
+function openTitleMenu(){
+  G.titleSel=0;
+  G.paused=false;
+  G.cheatSub=false;
+  G.showShipConfig=false;
+  G.st='title';
+}
+function openPauseMenu(){
+  G.paused=true;
+  G.pauseSel=0;
+  G.cheatSub=false;
+  G.cheatSubSel=0;
+  G.showShipConfig=false;
+}
+function openOptionsMenu(from){
+  G.optFrom=from;
+  G.optSel=0;
+  G.optListen=null;
+  delete G.clearDataSel;
+  G.st='options';
+}
+function openControlsMenu(){
+  G.ctrlSel=0;
+  G.optCol=0;
+  G.optListen=null;
+  G.st='controls';
+}
+function openBaseMenu(){
+  G.baseSel=0;
+  G.baseTab=0;
+  G.shopSel=0;
+  G.shopActionId=null;
+  G.shopActionSel=0;
+  G.equipFlow=null;
+  G.st='base';
+}
+function openSlipgateMenu(){
+  G.slipSel=0;
+  G.st='slipgate';
+}
+function openRebuildMenu(){
+  G.rebuildFlow=null;
+  G.paused=false;
+  G.st='rebuild';
+}
 function addStake(n){G.stake+=n;}
 function activeChassisObj(){return CHASSIS.find(c=>c.id===G.loadout.chassis)||CHASSIS[0];}
 function activeAuxObj(){return AUX_ITEMS.find(a=>a.id===G.loadout.aux)||null;}
@@ -33,9 +78,7 @@ function returnToOverworld(opts={}){
 function markNeedsRebuild(){G.needsRebuild=true;saveGame();}
 function enterRebuild(){
   G.needsRebuild=true;
-  G.rebuildFlow=null;
-  G.paused=false;
-  G.st='rebuild';
+  openRebuildMenu();
   saveGame();
 }
 function killShip(s,pts,deadState,orangeCount=16){
@@ -116,7 +159,7 @@ function startFromSave(){
   initOW(energy,sp.x,sp.y);
   if(sv?.currentHp!=null)G.OW.s.hp=Math.min(sv.currentHp,G.OW.s.maxHp);
   if(!G.visitedSeeds.includes(G.seed))G.visitedSeeds.push(G.seed);
-  if(G.needsRebuild){G.rebuildFlow=null;G.paused=false;G.ENC=null;G.site=null;G.st='rebuild';}
+  if(G.needsRebuild){G.ENC=null;G.site=null;openRebuildMenu();}
   saveGame();
 }
 

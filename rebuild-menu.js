@@ -130,7 +130,7 @@ function updRebuild(){
     if(ok){
       ia();
       const item=items[rf.sel];
-      if(item.id==='quit'){G.rebuildFlow=null;G.titleSel=0;G.paused=false;G.ENC=null;G.site=null;G.st='title';saveGame();return;}
+      if(item.id==='quit'){G.rebuildFlow=null;G.ENC=null;G.site=null;openTitleMenu();saveGame();return;}
       if(item.id==='charity'){applyCharityRebuild();return;}
       openRebuildConfig(item);
     }

@@ -12,7 +12,7 @@ function update(){
   if(st==='controls'){updControlsMenu();return;}
   if(st==='title'){updTitleMenu();return;}
   if(st==='rebuild'){updRebuild();return;}
-  if(st==='over'||st==='done'){if(iEnter()){ia();G.titleSel=0;if(st==='over'){G.st='title';}else{G.stake=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.st='title';}}return;}
+  if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='done'){G.stake=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};}openTitleMenu();}return;}
   if(st==='dead_ow'||st==='dead_enc'||st==='dead_site')return;
   if(st==='base'){updBase();return;}
   if(st==='slipgate'){
@@ -47,7 +47,7 @@ function update(){
       else if(G.showShipConfig){G.showShipConfig=false;}
       else{G.paused=false;suppressMenuInput();}
     }
-    else{G.paused=true;G.pauseSel=0;G.cheatSub=false;G.showShipConfig=false;suppressMenuInput();}
+    else{openPauseMenu();suppressMenuInput();}
     return;
   }
   if(G.paused){

@@ -225,7 +225,7 @@ function drawOptions(){
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
   cx.fillText(UI_GLYPH.up+UI_GLYPH.down+' SELECT   '+UI_GLYPH.left+UI_GLYPH.right+' ADJUST / OPEN   ESC BACK',W/2,H-18);
-  cx.restore();drGPI();scanlines();
+  cx.restore();drGPI(8,H-8,'left');scanlines();
 }
 
 function drawClearDataDialog(){
@@ -307,13 +307,12 @@ function drawControls(){
   cx.shadowBlur=0;
   cx.fillStyle='#334';cx.font='11px monospace';
   cx.fillText(UI_GLYPH.up+UI_GLYPH.down+' SELECT ROW   '+UI_GLYPH.left+UI_GLYPH.right+' SWITCH COLUMN   ENTER REMAP   BKSP CLEAR   ESC BACK',W/2,H-18);
-  cx.restore();drGPI();scanlines();
+  cx.restore();drGPI(8,H-8,'left');scanlines();
 }
 
 function returnFromOptions(){
-  G.st=G.optFrom;
-  if(G.optFrom==='title')G.titleSel=0;
-  else{G.pauseSel=0;G.paused=true;}
+  if(G.optFrom==='title')openTitleMenu();
+  else{G.st=G.optFrom;openPauseMenu();}
 }
 function updTitleMenu(){
   const items=titleItems();
@@ -323,7 +322,7 @@ function updTitleMenu(){
   ia();
   const id=items[G.titleSel].id;
   if(id==='play')startFromSave();
-  else if(id==='options'){G.optFrom='title';G.optSel=0;G.st='options';}
+  else if(id==='options')openOptionsMenu('title');
 }
 function updClearDataDialog(){
   const m=menuInput({fireConfirms:false});
@@ -331,7 +330,7 @@ function updClearDataDialog(){
   if(m.right)G.clearDataSel=1;
   if(m.confirm){
     if(G.clearDataSel===1){
-      resetSave();G.titleSel=0;G.st='title';G.paused=false;tone(220,.3,'sawtooth',.1);
+      resetSave();openTitleMenu();tone(220,.3,'sawtooth',.1);
     }
     delete G.clearDataSel;
   }
@@ -344,7 +343,7 @@ function updOptionsMenu(){
   G.optSel=moveSelection(G.optSel,items.length-1,m.up,m.down);
   const item=items[G.optSel];
   if(item.id==='controls'){
-    if(m.confirm||m.right){G.ctrlSel=0;G.optCol=0;G.optListen=null;G.st='controls';return;}
+    if(m.confirm||m.right){openControlsMenu();return;}
   }else if(item.id==='sfx'){
     if(m.left){G.sfxVol=Math.max(0,G.sfxVol-1);tone(900,.04,'square',.05);saveSettings();}
     if(m.right){G.sfxVol=Math.min(10,G.sfxVol+1);tone(900,.04,'square',.05);saveSettings();}
@@ -388,7 +387,7 @@ function updControlsMenu(){
   const confirm=m.confirm&&!m.left&&!m.right;
   if(confirm){
     if(G.ctrlSel===ACT_DEFS.length){
-      G.st='options';G.optListen=null;
+      openOptionsMenu(G.optFrom);
     }else if(G.ctrlSel===ACT_DEFS.length+1){
       ACT_DEFS.forEach(a=>{BND[a.id]={key:a.defKey,btn:a.defBtn};});saveBND();
     }else{
@@ -400,7 +399,7 @@ function updControlsMenu(){
     if(G.optCol===0)b.key=null;else b.btn=null;
     saveBND();
   }
-  if(m.cancel){G.st='options';G.optListen=null;}
+  if(m.cancel)openOptionsMenu(G.optFrom);
 }
 function updCheatMenu(m){
   const items=cheatMenuItems();
@@ -438,7 +437,7 @@ function updPauseMenu(st){
   const id=items[G.pauseSel].id;
   if(id==='resume')G.paused=false;
   else if(id==='ship_config')G.showShipConfig=true;
-  else if(id==='options'){G.optFrom=st;G.optSel=0;G.paused=false;G.st='options';}
+  else if(id==='options'){G.paused=false;openOptionsMenu(st);}
   else if(id==='cheats'){G.cheatSub=true;G.cheatSubSel=0;}
-  else if(id==='quit'){saveGame();G.titleSel=0;G.paused=false;G.ENC=null;G.site=null;G.st='title';}
+  else if(id==='quit'){saveGame();G.ENC=null;G.site=null;openTitleMenu();}
 }
