@@ -538,6 +538,69 @@ function drawSlipgateMenu(){
   cx.restore();
 }
 
+function owOrbitBodies(){
+  return [['#aaccff',BASE.orbitR,BASE],...PP.map((b,i)=>[LV[i].pcol,b.orbitR,b]),...(G.hbCleared?[]:[['#ff4444',HBASE.orbitR,HBASE]]),['#aa99cc',SLIPGATE.orbitR,SLIPGATE]];
+}
+function owOrbitProfile(){
+  const q=renderQuality();
+  if(q==='minimal')return{orbitAlpha:.34,orbitBlur:0,arrows:0,arrowAlpha:0,arrowBlur:0,arrowWidth:0,arrowSize:0,asteroidAlpha:.32,asteroidStep:6,asteroidBlur:0};
+  if(q==='reduced')return{orbitAlpha:.48,orbitBlur:0,arrows:7,arrowAlpha:.42,arrowBlur:0,arrowWidth:2,arrowSize:8,asteroidAlpha:.42,asteroidStep:3,asteroidBlur:0};
+  return{orbitAlpha:.65,orbitBlur:5,arrows:20,arrowAlpha:.58,arrowBlur:5,arrowWidth:1.8,arrowSize:7.5,asteroidAlpha:.6,asteroidStep:1,asteroidBlur:2};
+}
+function drawOrbitChevron(x,y,a,dir,col,size,width){
+  const fx=-dir*Math.sin(a),fy=dir*Math.cos(a),px=-fy,py=fx;
+  const tipX=x+fx*size,tipY=y+fy*size;
+  const backX=x-fx*size*.55,backY=y-fy*size*.55;
+  cx.strokeStyle=col;cx.lineWidth=width;cx.lineCap='round';cx.lineJoin='round';
+  cx.beginPath();
+  cx.moveTo(backX+px*size*.55,backY+py*size*.55);
+  cx.lineTo(tipX,tipY);
+  cx.lineTo(backX-px*size*.55,backY-py*size*.55);
+  cx.stroke();
+}
+function drawOWOrbitGuides(){
+  const prof=owOrbitProfile(),arrowBodies=owOrbitBodies();
+  cx.save();cx.lineWidth=1;cx.globalAlpha=prof.orbitAlpha;cx.setLineDash([4,2]);
+  for(const[col,r]of arrowBodies){
+    cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=prof.orbitBlur;
+    cx.beginPath();cx.arc(OW_W/2,OW_H/2,r,0,Math.PI*2);cx.stroke();
+  }
+  cx.strokeStyle='#998877';cx.shadowColor='#998877';cx.shadowBlur=prof.orbitBlur;
+  cx.beginPath();cx.arc(OW_W/2,OW_H/2,AB[0].orbitR,0,Math.PI*2);cx.stroke();
+  cx.setLineDash([]);
+  if(prof.arrows>0){
+    const arrowSpd=0.00173,N=prof.arrows,arrowGap=renderQuality()==='full'?0.2:0.35;
+    for(const[col,r,b]of arrowBodies){
+      const bodyA=b.orbitA+G.owFr*b.orbitSpd;
+      cx.shadowColor=col;cx.shadowBlur=prof.arrowBlur;
+      for(let i=0;i<N;i++){
+        const phase=(G.fr*arrowSpd+i*Math.PI/N)%Math.PI;
+        if(phase<arrowGap)continue;
+        const fade=phase>Math.PI*.8?1-(phase-Math.PI*.8)/(Math.PI*.2):1;
+        cx.globalAlpha=prof.arrowAlpha*fade;
+        for(const dir of[1,-1]){
+          const a=bodyA+Math.PI+dir*phase;
+          drawOrbitChevron(OW_W/2+Math.cos(a)*r,OW_H/2+Math.sin(a)*r,a,dir,col,prof.arrowSize,prof.arrowWidth);
+        }
+      }
+    }
+  }
+  cx.globalAlpha=1;cx.shadowBlur=0;cx.restore();
+}
+function drawOWAsteroidBelt(){
+  const prof=owOrbitProfile();
+  cx.save();cx.globalAlpha=prof.asteroidAlpha;cx.strokeStyle='#776655';cx.lineWidth=0.8;cx.shadowColor='#554433';cx.shadowBlur=prof.asteroidBlur;
+  const abOrbitR=AB[0].orbitR,abSpd=AB[0].orbitSpd,step=prof.asteroidStep;
+  for(let pi=0;pi<AB_BELT.length;pi+=step){
+    const p=AB_BELT[pi],a=p.a+G.owFr*abSpd;
+    const bx=OW_W/2+Math.cos(a)*(abOrbitR+p.dr),by=OW_H/2+Math.sin(a)*(abOrbitR+p.dr);
+    cx.beginPath();
+    for(let i=0;i<p.sides;i++){const pa=(i/p.sides)*Math.PI*2+p.rot;i?cx.lineTo(bx+Math.cos(pa)*p.rv,by+Math.sin(pa)*p.rv):cx.moveTo(bx+Math.cos(pa)*p.rv,by+Math.sin(pa)*p.rv);}
+    cx.closePath();cx.stroke();
+  }
+  cx.restore();
+}
+
 function drawOW(){
   cx.fillStyle='#000008';cx.fillRect(0,0,W,H);drStars();
   const ow=G.OW,s=ow.s;
@@ -545,49 +608,8 @@ function drawOW(){
   const camX=cam.x,camY=cam.y;
   drDust(camX-(ow.pcx??camX),camY-(ow.pcy??camY));ow.pcx=camX;ow.pcy=camY;
   cx.save();applyWorldCamera(cam);
-  {cx.save();cx.lineWidth=1;cx.globalAlpha=.65;
-  const arrowBodies=[['#aaccff',BASE.orbitR,BASE],...PP.map((b,i)=>[LV[i].pcol,b.orbitR,b]),...(G.hbCleared?[]:[[`#ff4444`,HBASE.orbitR,HBASE]]),['#aa99cc',SLIPGATE.orbitR,SLIPGATE]];
-  cx.setLineDash([4,2]);
-  for(const[col,r]of arrowBodies){
-    cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=6;
-    cx.beginPath();cx.arc(OW_W/2,OW_H/2,r,0,Math.PI*2);cx.stroke();
-  }
-  cx.strokeStyle='#998877';cx.shadowColor='#998877';cx.shadowBlur=6;
-  cx.beginPath();cx.arc(OW_W/2,OW_H/2,AB[0].orbitR,0,Math.PI*2);cx.stroke();
-  cx.setLineDash([]);
-  const arrowSpd=0.00173,N=40,arrowGap=0.2;
-  cx.font='14px monospace';cx.textAlign='center';cx.textBaseline='alphabetic';
-  const _gm=cx.measureText('❯'),_gOff=(_gm.actualBoundingBoxAscent-_gm.actualBoundingBoxDescent)/2;
-  for(const[col,r,b]of arrowBodies){
-    const bodyA=b.orbitA+G.owFr*b.orbitSpd;
-    cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=8;
-    for(let i=0;i<N;i++){
-      const phase=(G.fr*arrowSpd+i*Math.PI/N)%Math.PI;
-      if(phase<arrowGap)continue;
-      const fade=phase>Math.PI*.8?1-(phase-Math.PI*.8)/(Math.PI*.2):1;
-      cx.globalAlpha=.49*fade;
-      for(const dir of[1,-1]){
-        const a=bodyA+Math.PI+dir*phase;
-        const ax=OW_W/2+Math.cos(a)*r,ay=OW_H/2+Math.sin(a)*r;
-        const rot=Math.atan2(dir*Math.cos(a),-dir*Math.sin(a));
-        cx.save();cx.translate(ax,ay);cx.rotate(rot);cx.scale(1,2/3);
-        cx.fillText('❯',0,_gOff);
-        cx.restore();
-      }
-    }
-    cx.globalAlpha=.49;
-  }
-  cx.restore();}
-  {cx.save();cx.globalAlpha=.6;cx.strokeStyle='#776655';cx.lineWidth=0.8;cx.shadowColor='#554433';cx.shadowBlur=2;
-  const abOrbitR=AB[0].orbitR,abSpd=AB[0].orbitSpd;
-  for(const p of AB_BELT){
-    const a=p.a+G.owFr*abSpd;
-    const bx=OW_W/2+Math.cos(a)*(abOrbitR+p.dr),by=OW_H/2+Math.sin(a)*(abOrbitR+p.dr);
-    cx.beginPath();
-    for(let i=0;i<p.sides;i++){const pa=(i/p.sides)*Math.PI*2+p.rot;i?cx.lineTo(bx+Math.cos(pa)*p.rv,by+Math.sin(pa)*p.rv):cx.moveTo(bx+Math.cos(pa)*p.rv,by+Math.sin(pa)*p.rv);}
-    cx.closePath();cx.stroke();
-  }
-  cx.restore();}
+  drawOWOrbitGuides();
+  drawOWAsteroidBelt();
   {const sx2=OW_W/2,sy2=OW_H/2,SR=40,pu=.5+.5*Math.sin(G.fr*.04);
   cx.save();cx.translate(sx2,sy2);
   // outer glow
