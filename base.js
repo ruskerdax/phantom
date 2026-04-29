@@ -1,10 +1,18 @@
 'use strict';
 
 // ===================== BASE / SHOP =====================
+function baseTabs(){return[
+  {id:'services',label:'SERVICES'},
+  {id:'chassis',label:'CHASSIS'},
+  {id:'weapons',label:'WEAPONS'},
+  {id:'aux',label:'AUX'},
+];}
+function baseTabId(tab=G.baseTab){return baseTabs()[tab]?.id||'services';}
 function shopItemsForTab(tab){
-  if(tab===1)return CHASSIS.filter(c=>c.buyable);
-  if(tab===2)return WEAPONS.filter(w=>w.buyable);
-  if(tab===3)return AUX_ITEMS.filter(a=>a.buyable);
+  const id=typeof tab==='string'?tab:baseTabId(tab);
+  if(id==='chassis')return CHASSIS.filter(c=>c.buyable);
+  if(id==='weapons')return WEAPONS.filter(w=>w.buyable);
+  if(id==='aux')return AUX_ITEMS.filter(a=>a.buyable);
   return [];
 }
 function itemLicensePrice(item){return item.licensePrice??0;}
@@ -28,27 +36,12 @@ function basePanel(){
   return{pw,ph,px,py};
 }
 function drawBaseHeader(px,py,pw){
-  cx.fillStyle='rgba(0,12,8,.95)';cx.fillRect(px,py,pw,360);
-  cx.strokeStyle='#aaccff';cx.shadowColor='#aaccff';cx.shadowBlur=16;cx.lineWidth=1.5;
-  cx.strokeRect(px,py,pw,360);cx.shadowBlur=0;
-  cx.fillStyle='#aaccff';cx.font='bold 18px monospace';cx.textAlign='center';cx.shadowColor='#aaccff';cx.shadowBlur=10;
-  cx.fillText('FRIENDLY BASE',W/2,py+24);cx.shadowBlur=0;
+  drawMenuPanel(px,py,pw,360,{fill:'rgba(0,12,8,.95)',stroke:'#aaccff',glow:'#aaccff'});
+  drawMenuTitle('FRIENDLY BASE',W/2,py+24,'#aaccff','bold 18px monospace',10);
   cx.fillStyle='#aaffcc';cx.font='11px monospace';cx.textAlign='right';
   cx.fillText('CREDITS  '+G.credits,px+pw-12,py+24);
-  // tabs
-  const tabs=['SERVICES','CHASSIS','WEAPONS','AUX'];
-  const tw=(pw-24)/4;
-  for(let i=0;i<4;i++){
-    const tx=px+12+i*tw,sel=i===G.baseTab;
-    cx.strokeStyle=sel?'#0f8':'#335';cx.shadowColor='#0f8';cx.shadowBlur=sel?8:0;cx.lineWidth=1;
-    cx.fillStyle=sel?'rgba(0,40,20,.9)':'rgba(0,15,8,.6)';
-    cx.fillRect(tx,py+32,tw-2,22);
-    cx.strokeRect(tx,py+32,tw-2,22);
-    cx.fillStyle=sel?'#0f8':'#558';cx.font=sel?'bold 11px monospace':'11px monospace';
-    cx.textAlign='center';cx.fillText(tabs[i],tx+tw/2-1,py+47);
-  }
-  cx.shadowBlur=0;
-  cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+8,py+57);cx.lineTo(px+pw-8,py+57);cx.stroke();
+  drawMenuTabs(baseTabs(),G.baseTab,px,py+32,pw);
+  cx.shadowBlur=0;drawMenuDivider(px,py,pw,57);
 }
 
 function drawBaseServices(){
@@ -63,7 +56,7 @@ function drawBaseServices(){
     const disabled=maxed[i]||G.credits<costs[i];
     cx.fillStyle=sel?'#0f8':disabled?'#445':'#668';
     cx.shadowColor='#0f8';cx.shadowBlur=sel?8:0;
-    cx.textAlign='left';cx.fillText((sel?'▶ ':'  ')+items[i],px+20,iy);
+    cx.textAlign='left';cx.fillText((sel?UI_GLYPH.pointer+' ':'  ')+items[i],px+20,iy);
     if(maxed[i]){cx.fillStyle='#446';cx.shadowBlur=0;cx.textAlign='right';cx.fillText('FULL',px+pw-20,iy);}
     else{
       const canAfford=G.credits>=costs[i];
@@ -72,7 +65,7 @@ function drawBaseServices(){
     }
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
-  cx.fillText('ESC TO LEAVE',W/2,py+348);
+  drawMenuFooter('ESC TO LEAVE',W/2,py+348);
 }
 
 function drawBaseShop(){
@@ -86,9 +79,9 @@ function drawBaseShop(){
     cx.textAlign='left';
     cx.fillStyle=isSel?'#0f8':owned?'#668':'#446';
     cx.shadowColor='#0f8';cx.shadowBlur=isSel?8:0;
-    cx.fillText((isSel?'▶ ':'  ')+item.name,px+20,iy);
+    cx.fillText((isSel?UI_GLYPH.pointer+' ':'  ')+item.name,px+20,iy);
     cx.shadowBlur=0;cx.textAlign='right';
-    if(eq){cx.fillStyle='#0a6';cx.fillText('★ EQUIPPED',px+pw-20,iy);}
+    if(eq){cx.fillStyle='#0a6';cx.fillText(UI_GLYPH.star+' EQUIPPED',px+pw-20,iy);}
     else if(owned){cx.fillStyle='#446';cx.fillText('LICENSED',px+pw-20,iy);}
     else{
       const lp=itemLicensePrice(item);
@@ -103,27 +96,28 @@ function drawBaseShop(){
     cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+8,dy-10);cx.lineTo(px+pw-8,dy-10);cx.stroke();
     cx.fillStyle='#669';cx.font='11px monospace';cx.textAlign='left';
     let detail='';
-    if(G.baseTab===1){
+    const tabId=baseTabId();
+    if(tabId==='chassis'){
       const ch=item;
       const t=ch.thrust;
       const revStr = t.rev>0 ? `  REV ${t.rev}` : '';
       detail=`HP ${ch.maxHp}  ENERGY ${ch.maxEnergy}  FWD ${t.fwd}${revStr}  ROT ${t.rotAccel}  SLOTS: `+ch.slots.map(s=>s.type.toUpperCase()).join(' + ');
     }
-    else if(G.baseTab===2){const wp=item;detail=`TYPE: ${wp.wpnType.toUpperCase()}  DMG ${wp.dmg}  CD ${wp.cd}s`+(wp.range?`  RANGE ${wp.range}`:'');}
-    else if(G.baseTab===3){const ax=item;detail=`${ax.desc}  DRAIN ${ax.energyDrain}/frame`;}
+    else if(tabId==='weapons'){const wp=item;detail=`TYPE: ${wp.wpnType.toUpperCase()}  DMG ${wp.dmg}  CD ${wp.cd}s`+(wp.range?`  RANGE ${wp.range}`:'');}
+    else if(tabId==='aux'){const ax=item;detail=`${ax.desc}  DRAIN ${ax.energyDrain}/frame`;}
     cx.fillText(detail,px+12,dy+6);
-    if(item.desc&&G.baseTab!==3){cx.fillStyle='#446';cx.font='10px monospace';cx.fillText(item.desc,px+12,dy+20);}
+    if(item.desc&&tabId!=='aux'){cx.fillStyle='#446';cx.font='10px monospace';cx.fillText(item.desc,px+12,dy+20);}
     cx.fillStyle='#446';cx.font='10px monospace';cx.textAlign='right';
     if(!hasLicense(item.id))cx.fillText('BUILD: '+itemBuildPrice(item)+' CR  (after license)',px+pw-12,dy+6);
     else if(!isEquipped(item.id))cx.fillText('BUILD COST: '+itemBuildPrice(item)+' CR',px+pw-12,dy+6);
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
-  cx.fillText('◄► SWITCH TAB   ENTER SELECT   ESC LEAVE',W/2,py+348);
+  drawMenuFooter(UI_GLYPH.left+UI_GLYPH.right+' SWITCH TAB   ENTER SELECT   ESC LEAVE',W/2,py+348);
 }
 
 function drawShopAction(){
   const{pw,ph,px,py}=basePanel();
-  if(G.baseTab===0)drawBaseServices();else drawBaseShop();
+  if(baseTabId()==='services')drawBaseServices();else drawBaseShop();
   // overlay
   const ow2=260,oh=200,ox=W/2-ow2/2,oy=H/2-oh/2;
   cx.fillStyle='rgba(0,8,4,.97)';cx.fillRect(ox,oy,ow2,oh);
@@ -135,11 +129,7 @@ function drawShopAction(){
   const opts=shopActionOpts(item);
   for(let i=0;i<opts.length;i++){
     const sel=i===G.shopActionSel,opt=opts[i];
-    const disabled=opt.disabled;
-    cx.fillStyle=sel?(disabled?'#844':'#0f8'):disabled?'#344':'#558';
-    cx.shadowColor='#0f8';cx.shadowBlur=sel&&!disabled?8:0;
-    cx.font='13px monospace';cx.textAlign='center';
-    cx.fillText((sel?'▶ ':'')+opt.label,W/2,oy+62+i*36);
+    drawMenuRow(opt.label,W/2,oy+62+i*36,sel,{disabled:opt.disabled,col:'#558',disabledCol:'#344'});
   }
   cx.shadowBlur=0;
 }
@@ -160,7 +150,7 @@ function shopActionOpts(item){
       if(WEAPONS.includes(item)){
         const cslots=compatibleSlots(item);
         if(cslots.length===1){opts.push({label:`EQUIP SLOT ${cslots[0].i+1}  ${bp===0?'FREE':bp+' CR'}`,act:'equip_weapon',slotIdx:cslots[0].i,disabled:G.credits<bp});}
-        else{for(const{i}of cslots)opts.push({label:`EQUIP → SLOT ${i+1}  ${bp===0?'FREE':bp+' CR'}`,act:'equip_weapon',slotIdx:i,disabled:G.credits<bp});}
+        else{for(const{i}of cslots)opts.push({label:`EQUIP ${UI_GLYPH.arrow} SLOT ${i+1}  ${bp===0?'FREE':bp+' CR'}`,act:'equip_weapon',slotIdx:i,disabled:G.credits<bp});}
       }else{opts.push({label:`EQUIP  ${bp===0?'FREE':bp+' CR'}`,act:'equip',disabled:G.credits<bp});}
     }else{opts.push({label:'NO COMPATIBLE SLOT',act:'none',disabled:true});}
   }else{opts.push({label:'ALREADY EQUIPPED',act:'none',disabled:true});}
@@ -178,29 +168,29 @@ function drawEquipFlow(){
   cx.fillStyle='#aaccff';cx.font='bold 15px monospace';cx.textAlign='center';
   cx.fillText('CONFIGURE: '+ch.name,W/2,py+28);
   cx.fillStyle='#446';cx.font='11px monospace';
-  cx.fillText('BUILD COST: '+ch.buildPrice+' CR   ◄► CYCLE   ENTER CONFIRM   ESC CANCEL',W/2,py+44);
+  cx.fillText('BUILD COST: '+ch.buildPrice+' CR   '+UI_GLYPH.left+UI_GLYPH.right+' CYCLE   ENTER CONFIRM   ESC CANCEL',W/2,py+44);
   cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+54);cx.lineTo(px+pw-10,py+54);cx.stroke();
   // weapon slots
   const rows=[];
   for(let i=0;i<ch.slots.length;i++)rows.push({label:`SLOT ${i+1} [${ch.slots[i].type.toUpperCase()}]`,kind:'weapon',idx:i});
   rows.push({label:'AUX SLOT',kind:'aux'});
-  rows.push({label:ef.warnShown?'CONFIRM (NO WEAPONS — ARE YOU SURE?)':'CONFIRM',kind:'confirm'});
+  rows.push({label:ef.warnShown?'CONFIRM (NO WEAPONS '+UI_GLYPH.dash+' ARE YOU SURE?)':'CONFIRM',kind:'confirm'});
   rows.push({label:'CANCEL',kind:'cancel'});
   for(let r=0;r<rows.length;r++){
     const row=rows[r],ry=py+74+r*40,sel=r===ef.focus;
     cx.textAlign='left';
     cx.fillStyle=sel?'#0f8':'#558';cx.shadowColor='#0f8';cx.shadowBlur=sel?8:0;
     cx.font='12px monospace';
-    cx.fillText((sel?'▶ ':'')+row.label,px+20,ry);
+    cx.fillText(selectedPrefix(sel)+row.label,px+20,ry);
     cx.shadowBlur=0;cx.textAlign='right';
     if(row.kind==='weapon'){
       const wid=ef.slots[row.idx],wp=wid?WEAPONS.find(w=>w.id===wid):null;
       const opts=licensedWeaponsForSlot(ch.slots[row.idx]),label=wp?wp.id.toUpperCase():'(empty)';
-      cx.fillStyle=wp?'#aaffcc':'#446';cx.fillText((opts.length?'â—„ ':' ')+label+(opts.length?' â–º':' '),px+pw-20,ry);
+      cx.fillStyle=wp?'#aaffcc':'#446';cx.fillText(arrowValue(label,opts.length>0),px+pw-20,ry);
     }else if(row.kind==='aux'){
       const ax=ef.auxId?AUX_ITEMS.find(a=>a.id===ef.auxId):null;
       const opts=AUX_ITEMS.filter(a=>hasLicense(a.id)),label=ax?ax.name:'(empty)';
-      cx.fillStyle=ax?'#aaffcc':'#446';cx.fillText((opts.length?'â—„ ':' ')+label+(opts.length?' â–º':' '),px+pw-20,ry);
+      cx.fillStyle=ax?'#aaffcc':'#446';cx.fillText(arrowValue(label,opts.length>0),px+pw-20,ry);
     }
   }
   if(ef.warnShown){cx.fillStyle='#f84';cx.font='11px monospace';cx.textAlign='center';cx.fillText('WARNING: no weapons equipped!',W/2,py+ph-18);}
@@ -214,7 +204,7 @@ function updEquipFlow(up,dn,lt,rt,ok,bk){
   if(dn)ef.focus=Math.min(nRows-1,ef.focus+1);
   const row=ef.focus;
   if(row<ch.slots.length){
-    // weapon slot — cycle compatible owned weapons + null
+    // weapon slot: cycle compatible owned weapons + null
     if(lt||rt){
       const valid=[null,...licensedWeaponIdsForSlot(ch.slots[row])];
       const cur=valid.indexOf(ef.slots[row]);
@@ -306,11 +296,9 @@ function updBase(){
     if(bk)G.shopActionId=null;
     return;
   }
-  if(lt){G.baseTab=Math.max(0,G.baseTab-1);G.shopSel=0;G.baseSel=0;}
-  if(rt){G.baseTab=Math.min(3,G.baseTab+1);G.shopSel=0;G.baseSel=0;}
-  if(G.baseTab===0){
-    if(up)G.baseSel=Math.max(0,G.baseSel-1);
-    if(dn)G.baseSel=Math.min(1,G.baseSel+1);
+  if(lt||rt){G.baseTab=clamp(G.baseTab+(rt?1:-1),0,baseTabs().length-1);G.shopSel=0;G.baseSel=0;}
+  if(baseTabId()==='services'){
+    G.baseSel=moveSelection(G.baseSel,1,up,dn);
     if(ok){
       const s=G.OW.s;
       if(G.baseSel===0){const cost=(s.maxHp-s.hp)*100;if(s.hp>=s.maxHp||G.credits<cost)tone(80,.1,'square',.06);else{G.credits-=cost;s.hp=s.maxHp;tone(660,.2,'sine',.08);saveGame();}}
@@ -318,8 +306,7 @@ function updBase(){
     }
   }else{
     const items=shopItemsForTab(G.baseTab);
-    if(up)G.shopSel=Math.max(0,G.shopSel-1);
-    if(dn)G.shopSel=Math.min(Math.max(0,items.length-1),G.shopSel+1);
+    G.shopSel=moveSelection(G.shopSel,Math.max(0,items.length-1),up,dn);
     if(ok&&items.length>0)openShopAction(items[G.shopSel]);
   }
   if(bk){returnToOverworld();saveGame();}
@@ -332,7 +319,7 @@ function drawBaseMenu(){
   cx.save();
   drawBaseHeader(px,py,pw);
   if(G.shopActionId!==null)drawShopAction();
-  else if(G.baseTab===0)drawBaseServices();
+  else if(baseTabId()==='services')drawBaseServices();
   else drawBaseShop();
   cx.restore();
 }
