@@ -116,10 +116,19 @@ function updEncMissiles(enc, mis, isEnemy, ew, eh){
             det=true;break;
           }
         }
-      } else if(s.alive&&encDist(enc,m.x,m.y,s.x,s.y)<12){
-        const hit=applyShipDamage(s,m.dmg,{source:encPointNear(enc,m.x,m.y,s.x,s.y),kind:'missile',weapon:m});
-        shipDamageTone(hit);
-        det=true;
+      } else if(s.alive){
+        const src=encPointNear(enc,m.x,m.y,s.x,s.y),hitOpts={source:src,kind:'missile',weapon:m};
+        if(encDist(enc,m.x,m.y,s.x,s.y)<SHIELD_HIT_R&&shipShieldCanTakeHit(s,hitOpts)){
+          const shieldHit=applyShipShieldDamage(s,m.dmg,hitOpts);
+          m.dmg=shieldHit.passthroughDamage;
+          shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
+          if(shieldHit.blocked||m.dmg<=0)det=true;
+        }
+        if(!det&&encDist(enc,m.x,m.y,s.x,s.y)<SHIP_HIT_R){
+          const hit=applyShipDamage(s,m.dmg,hitOpts);
+          shipDamageTone(hit);
+          det=true;
+        }
       }
     }
     if(!det&&enc.isHBase){
@@ -221,9 +230,16 @@ function updEnc(){
     for(let mi=enc.mis.length-1;mi>=0;mi--){const m=enc.mis[mi];if(encDist(enc,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,false);enc.mis.splice(mi,1);if(s.hp<=0){encKillShip();return;}}rm=true;break;}}
     if(rm){enc.ebu.splice(i,1);continue;}
     if(enc.isHBase&&pip(b.x,b.y,enc.hbase.hexPoly)){enc.ebu.splice(i,1);continue;}
-    if(encDist(enc,b.x,b.y,s.x,s.y)<12){
+    const bSrc=encPointNear(enc,b.x,b.y,s.x,s.y),bHitOpts={source:bSrc,kind:'projectile',weapon:b};
+    if(encDist(enc,b.x,b.y,s.x,s.y)<SHIELD_HIT_R&&shipShieldCanTakeHit(s,bHitOpts)){
+      const shieldHit=applyShipShieldDamage(s,b.dmg,bHitOpts);
+      b.dmg=shieldHit.passthroughDamage;
+      shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
+      if(shieldHit.blocked||b.dmg<=0){enc.ebu.splice(i,1);continue;}
+    }
+    if(encDist(enc,b.x,b.y,s.x,s.y)<SHIP_HIT_R){
       enc.ebu.splice(i,1);
-      const hit=applyShipDamage(s,b.dmg,{source:encPointNear(enc,b.x,b.y,s.x,s.y),kind:'projectile',weapon:b});
+      const hit=applyShipDamage(s,b.dmg,bHitOpts);
       shipDamageTone(hit);
       if(s.hp<=0){encKillShip();return;}
     }

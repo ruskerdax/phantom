@@ -19,16 +19,28 @@ function enemyUpdate(e, s, enc, ew, eh) {
   const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn];
   if(ewp.wpnType==='beam gun'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
     const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;
-    const tgts=[{x:s.x,y:s.y,r:12,kind:'ship'}];
+    const src=tor?toroidalPointNear(ox,oy,s.x,s.y,ew,eh):{x:ox,y:oy};
+    const beamHit={source:src,kind:'beam',weapon:ewp};
+    const tgts=[];
+    if(shipShieldCanTakeHit(s,beamHit))tgts.push({x:s.x,y:s.y,r:SHIELD_HIT_R,kind:'shield'});
+    tgts.push({x:s.x,y:s.y,r:SHIP_HIT_R,kind:'ship'});
     for(let mi=0;mi<enc.mis.length;mi++)tgts.push({x:enc.mis[mi].x,y:enc.mis[mi].y,r:5,kind:'missile',idx:mi});
     const res=castLaserForSpace(ox,oy,e.a,ewp.range,tgts,[],tor?{toroidal:true,worldW:ew,worldH:eh}:null);
     enc.lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ec.col});
     tone(550+e.t*80,.08,'sine',.04);
     if(res.hitIdx>=0){
       const tg=tgts[res.hitIdx];
-      if(tg.kind==='ship'){
-        const src=tor?toroidalPointNear(ox,oy,s.x,s.y,ew,eh):{x:ox,y:oy};
-        const hit=applyShipDamage(s,ewp.dmg,{source:src,kind:'beam',weapon:ewp});
+      if(tg.kind==='shield'){
+        const hit=applyShipShieldDamage(s,ewp.dmg,beamHit);
+        const ex=src.x+Math.sin(e.a)*ewp.range,ey=src.y-Math.cos(e.a)*ewp.range;
+        if(hit.passthroughDamage>0&&dseg(s.x,s.y,src.x,src.y,ex,ey)<SHIP_HIT_R){
+          hit.hullDamage=hit.passthroughDamage;
+          s.hp=Math.max(0,s.hp-hit.hullDamage);
+        }else hit.hullDamage=0;
+        shipDamageTone(hit);
+        if(s.hp<=0){encKillShip();return true;}
+      } else if(tg.kind==='ship'){
+        const hit=applyShipDamage(s,ewp.dmg,beamHit);
         shipDamageTone(hit);
         if(s.hp<=0){encKillShip();return true;}
       } else if(tg.kind==='missile'){

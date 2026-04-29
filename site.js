@@ -98,10 +98,19 @@ function updSiteMissiles(site, mis, isEnemy){
             det=true;
           }
         }
-      } else if(s.alive&&Math.hypot(m.x-s.x,m.y-s.y)<12){
-        const hit=applyShipDamage(s,m.dmg,{source:{x:m.x,y:m.y},kind:'missile',weapon:m});
-        shipDamageTone(hit);
-        det=true;
+      } else if(s.alive){
+        const hitOpts={source:{x:m.x,y:m.y},kind:'missile',weapon:m};
+        if(Math.hypot(m.x-s.x,m.y-s.y)<SHIELD_HIT_R&&shipShieldCanTakeHit(s,hitOpts)){
+          const shieldHit=applyShipShieldDamage(s,m.dmg,hitOpts);
+          m.dmg=shieldHit.passthroughDamage;
+          shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
+          if(shieldHit.blocked||m.dmg<=0)det=true;
+        }
+        if(!det&&Math.hypot(m.x-s.x,m.y-s.y)<SHIP_HIT_R){
+          const hit=applyShipDamage(s,m.dmg,hitOpts);
+          shipDamageTone(hit);
+          det=true;
+        }
       }
     }
     if(det){
@@ -214,9 +223,16 @@ function updSite(){
     let rm=false;
     for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){siteExplodeMissile(site,m,false);site.mis.splice(mi,1);if(s.hp<=0){siteKillShip();return;}}rm=true;break;}}
     if(rm){site.ebu.splice(i,1);continue;}
-    if(Math.hypot(b.x-s.x,b.y-s.y)<12){
+    const bHitOpts={source:{x:b.x,y:b.y},kind:'projectile',weapon:b};
+    if(Math.hypot(b.x-s.x,b.y-s.y)<SHIELD_HIT_R&&shipShieldCanTakeHit(s,bHitOpts)){
+      const shieldHit=applyShipShieldDamage(s,b.dmg,bHitOpts);
+      b.dmg=shieldHit.passthroughDamage;
+      shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
+      if(shieldHit.blocked||b.dmg<=0){site.ebu.splice(i,1);continue;}
+    }
+    if(Math.hypot(b.x-s.x,b.y-s.y)<SHIP_HIT_R){
       site.ebu.splice(i,1);
-      const hit=applyShipDamage(s,b.dmg,{source:{x:b.x,y:b.y},kind:'projectile',weapon:b});
+      const hit=applyShipDamage(s,b.dmg,bHitOpts);
       shipDamageTone(hit);
       if(s.hp<=0){siteKillShip();return;}
     }

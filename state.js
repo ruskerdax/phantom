@@ -125,6 +125,8 @@ function shieldLoadoutText(sh){
 }
 const ENERGY_PICKUP=38;
 const THRUST_ENERGY_DRAIN={overworld:.035,encounter:.01,site:.012};
+const SHIP_HIT_R=12;
+const SHIELD_HIT_R=17;
 function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
 function drainEnergy(s,amount){if(s.energy>0)s.energy=Math.max(0,s.energy-amount);}
 // Particle system: boomAt() spawns n particles in random directions; updPts() advances and culls them each frame.
@@ -199,20 +201,33 @@ function shieldAllowsDamage(def,opts){
   const kinds=def.blocksKinds;
   return !Array.isArray(kinds)||kinds.includes(opts?.kind);
 }
+function shipShieldCanTakeHit(s,opts={}){
+  const def=shieldDefForShip(s);
+  return !!(def&&s?.shieldId&&s.shieldEnabled!==false&&!s.shieldOffline&&s.shieldHp>0&&shieldAllowsDamage(def,opts)&&shieldCoversSource(s,opts.source,def));
+}
+function applyShipShieldDamage(s,amount,opts={}){
+  const dmg=Math.max(0,amount||0);
+  if(!s||dmg<=0)return{shieldDamage:0,passthroughDamage:0,blocked:false,shieldBroken:false};
+  if(G.invincible)return{shieldDamage:0,passthroughDamage:0,blocked:true,shieldBroken:false};
+  let passthroughDamage=dmg,shieldDamage=0,shieldBroken=false;
+  const def=shieldDefForShip(s);
+  if(shipShieldCanTakeHit(s,opts)){
+    const shieldHp=s.shieldHp;
+    shieldDamage=Math.min(shieldHp,dmg);
+    s.shieldHp=Math.max(0,s.shieldHp-shieldDamage);
+    s.shieldRechargeTimer=def.rechargeDelay??300;
+    passthroughDamage=dmg-shieldDamage;
+    if(s.shieldHp<=0){s.shieldHp=0;s.shieldOffline=true;shieldBroken=shieldHp>0;}
+  }
+  return{shieldDamage,passthroughDamage,blocked:shieldDamage>0&&passthroughDamage<=0,shieldBroken};
+}
 function applyShipDamage(s,amount,opts={}){
   const dmg=Math.max(0,amount||0);
   if(!s||dmg<=0||G.invincible)return{shieldDamage:0,hullDamage:0,blocked:false};
-  let hullDamage=dmg,shieldDamage=0;
-  const def=shieldDefForShip(s);
-  if(def&&s.shieldId&&s.shieldEnabled!==false&&!s.shieldOffline&&s.shieldHp>0&&shieldAllowsDamage(def,opts)&&shieldCoversSource(s,opts.source,def)){
-    shieldDamage=Math.min(s.shieldHp,dmg);
-    s.shieldHp=Math.max(0,s.shieldHp-shieldDamage);
-    s.shieldRechargeTimer=def.rechargeDelay??300;
-    hullDamage=dmg-shieldDamage;
-    if(s.shieldHp<=0){s.shieldHp=0;s.shieldOffline=true;}
-  }
+  const shieldHit=applyShipShieldDamage(s,dmg,opts);
+  const hullDamage=shieldHit.passthroughDamage;
   if(hullDamage>0)s.hp=Math.max(0,s.hp-hullDamage);
-  return{shieldDamage,hullDamage,blocked:shieldDamage>0&&hullDamage<=0};
+  return{shieldDamage:shieldHit.shieldDamage,hullDamage,blocked:shieldHit.blocked,shieldBroken:shieldHit.shieldBroken};
 }
 function shipDamageTone(hit,hullFreq=380,hullDur=.08,hullType='square',hullVol=.08){
   if(hit?.shieldDamage>0)tone(760,.05,'sine',.05);
