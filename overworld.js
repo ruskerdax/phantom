@@ -163,6 +163,7 @@ function owStartEnc(idx,contactA,playerA){
   }
   const encShip=mkShip(spawnX,spawnY);encShip.energy=ow.s.energy;encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
+  copyShieldState(ow.s,encShip);
   const label=ec.groups?et.name+' ENCOUNTER':(ec.cnt>1?'SWARM ATTACK':et.name+' ENCOUNTER');
   G.ENC={owIdx:idx,et:e.t,label,
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
@@ -193,6 +194,7 @@ function startAstEnc(){
   }
   const encShip=mkShip(spawnX,spawnY);encShip.energy=ow.s.energy;encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
+  copyShieldState(ow.s,encShip);
   G.ENC={owIdx:null,isAst:true,et:0,label:'ASTEROID FIELD',
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:ens.length?70:0,cleared:!ens.length,
     ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2),z:1}};
@@ -216,6 +218,7 @@ function startHBaseEnc(){
   const hexPoly=Array.from({length:6},(_,i)=>{const a=i*Math.PI/3;return[hx+Math.cos(a)*HEX_R,hy+Math.sin(a)*HEX_R];});
   const encShip=mkShip(ew*.08,eh/2);encShip.energy=ow.s.energy;encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
+  copyShieldState(ow.s,encShip);
   G.ENC={owIdx:null,isHBase:true,et:0,label:'HOSTILE BASE',
     s:encShip,en:[],rocks:[],bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew,eh,hbase:{HEX_R,hx,hy,softpts,turrets,hexPoly},
@@ -251,6 +254,7 @@ function owStartFleetEnc(fi,contactA,playerA){
   }
   const encShip=mkShip(spawnX,spawnY);encShip.energy=ow.s.energy;encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
+  copyShieldState(ow.s,encShip);
   // Use the first comp type as the representative for encounter color; fall back to index 4.
   const repType=f.comp.length>0?f.comp[0].t:4;
   G.ENC={owIdx:null,fleetIdx:fi,et:repType,label:f.id+' FLEET',
@@ -287,7 +291,7 @@ function updOW(){
   for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,OW_W);f.y=wrap(f.y+f.vy,OW_H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
   const s=ow.s;if(!s.alive)return;
   applyRotation(s, iRot(), s.energy<=0);
-  s.shld=false;
+  if(iShieldToggle())toggleShipShield(s);
   // sin(angle) = X component, -cos(angle) = Y component: canvas Y increases downward, so "forward" is -cos.
   if(iThr()){
     applyLinearThrust(s, 1, s.energy<=0);
@@ -334,8 +338,7 @@ function updOW(){
     e.x=wrap(e.x+e.vx,OW_W);e.y=wrap(e.y+e.vy,OW_H);
     if(e.flash>0)e.flash--;
     if(s.inv<=0&&dist<et.trigR){
-      if(s.shld){e.vx-=(dx/dist)*3;e.vy-=(dy/dist)*3;e.flash=12;}
-      else{const cdx=e.x-s.x,cdy=e.y-s.y;const contactA=Math.atan2(cdx,-cdy);owStartEnc(i,contactA,s.a);return;}
+      const cdx=e.x-s.x,cdy=e.y-s.y;const contactA=Math.atan2(cdx,-cdy);owStartEnc(i,contactA,s.a);return;
     }
   }
   for(let fi=0;fi<ow.fleets.length;fi++){
@@ -428,8 +431,7 @@ function updFleet(f,fi,s){
     if(G.OW.fleets.filter(ff=>ff.alive&&ff.id==='HUNTER').length<HF.maxOnOW)G.OW.fleets.push(mkFleet('HUNTER',f.x,f.y));
   }
   if(s.inv<=0&&dist<F.trigR){
-    if(s.shld){f.vx-=(dx/dist)*3;f.vy-=(dy/dist)*3;f.flash=12;}
-    else{const cdx=f.x-s.x,cdy=f.y-s.y;const contactA=Math.atan2(cdx,-cdy);owStartFleetEnc(fi,contactA,s.a);return true;}
+    const cdx=f.x-s.x,cdy=f.y-s.y;const contactA=Math.atan2(cdx,-cdy);owStartFleetEnc(fi,contactA,s.a);return true;
   }
   return false;
 }
@@ -672,7 +674,7 @@ function drawOW(){
   drPts(ow.pts);
   drBase(ow.nearBase);
   drSlipgate(ow.nearSlipgate);
-  if(s.alive)drShip(s.x,s.y,s.a,s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),s.energy,s.inv,G.fr);
+  if(s.alive)drShip(s.x,s.y,s.a,s,(K['ArrowUp']||K['KeyW']||GP.thrust),s.energy,s.inv,G.fr);
   cx.restore();
   if(G.st==='overworld'&&s.alive){
     drawOffscreenIndicators(collectOffscreenIndicators({
@@ -680,7 +682,7 @@ function drawOW(){
       targets:owIndicatorTargets(ow)
     }));
   }
-  drHUD(s.energy,s.maxEnergy,s.hp,s.maxHp);
+  drHUD(s.energy,s.maxEnergy,s.hp,s.maxHp,s);
   if(G.slipMsg>0){
     const alpha=Math.min(1,G.slipMsg/40);
     const msgY=46;

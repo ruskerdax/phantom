@@ -71,7 +71,7 @@ function pauseItems(){return pauseMenuItems().map(i=>i.label);}
 function cheatItems(){return cheatMenuItems().map(i=>i.label);}
 
 function drawShipConfig(){
-  const ch=activeChassisObj(),ax=activeAuxObj();
+  const ch=activeChassisObj(),sh=activeShieldObj();
   const pw=420,ph=280,px=W/2-pw/2,py=H/2-ph/2;
   cx.save();
   cx.fillStyle='rgba(0,0,0,.85)';cx.fillRect(0,0,W,H);
@@ -82,7 +82,7 @@ function drawShipConfig(){
   cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+38);cx.lineTo(px+pw-10,py+38);cx.stroke();
   const rows=[
     ['CHASSIS',ch.name+`  HP ${ch.maxHp}  NRG ${ch.maxEnergy}  FWD ${ch.thrust.fwd}`+(ch.thrust.rev>0?` REV ${ch.thrust.rev}`:'')],
-    ['AUX',ax?ax.name:'(empty)'],
+    ['SHIELD',sh?sh.name:'(empty)'],
   ];
   activeChassisObj().slots.forEach((sl,i)=>{
     const wp=wpSlot(i);
@@ -409,7 +409,9 @@ function updCheatMenu(m){
   const id=items[G.cheatSubSel].id;
   if(id==='repair'){
     G.OW.s.hp=G.OW.s.maxHp;G.OW.s.energy=G.OW.s.maxEnergy;
-    if(G.ENC){G.ENC.s.hp=G.ENC.s.maxHp;G.ENC.s.energy=G.ENC.s.maxEnergy;}
+    resetShipShield(G.OW.s);
+    if(G.ENC){G.ENC.s.hp=G.ENC.s.maxHp;G.ENC.s.energy=G.ENC.s.maxEnergy;resetShipShield(G.ENC.s);}
+    if(G.site){G.site.s.hp=G.site.s.maxHp;G.site.s.energy=G.site.s.maxEnergy;resetShipShield(G.site.s);}
     tone(660,.2,'sine',.08);G.paused=false;G.cheatSub=false;
   }else if(id==='teleport_slipgate'){
     const sgp=owPos(SLIPGATE);G.OW.s.x=sgp.x;G.OW.s.y=sgp.y;G.ENC=null;G.site=null;returnToOverworld();G.paused=false;G.cheatSub=false;

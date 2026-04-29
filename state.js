@@ -2,7 +2,7 @@
 
 // Master game state. G.st drives the state machine — update() and draw() both branch on it so only one
 // sub-system runs per frame. Active mode data lives in sub-objects: G.OW (overworld), G.ENC (encounter), G.site (site).
-var G={st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,site:null,paused:false,pauseSel:0,cheatSub:false,cheatSubSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',fps:60,frameMs:16.7,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,fullscreen:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',weapons:['mass driver','pulse laser'],aux:'shield_std'},visitedSeeds:[],tutorialDone:false,prevSeed:null,systemFlavor:null,menuSuppressUntil:0,systemStates:{},needsRebuild:false,lastLocation:null};
+var G={st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,site:null,paused:false,pauseSel:0,cheatSub:false,cheatSubSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',fps:60,frameMs:16.7,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,fullscreen:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',weapons:['mass driver','pulse laser'],aux:null,shield:'shield_std'},visitedSeeds:[],tutorialDone:false,prevSeed:null,systemFlavor:null,menuSuppressUntil:0,systemStates:{},needsRebuild:false,lastLocation:null};
 function openTitleMenu(){
   G.titleSel=0;
   G.paused=false;
@@ -51,8 +51,9 @@ function openRebuildMenu(){
 function addStake(n){G.stake+=n;}
 function activeChassisObj(){return CHASSIS.find(c=>c.id===G.loadout.chassis)||CHASSIS[0];}
 function activeAuxObj(){return AUX_ITEMS.find(a=>a.id===G.loadout.aux)||null;}
+function activeShieldObj(){return SHIELDS.find(s=>s.id===G.loadout.shield)||null;}
 function wpSlot(n){const id=G.loadout.weapons[n];return id?WEAPONS.find(w=>w.id===id)||null:null;}
-function isEquipped(id){return G.loadout.chassis===id||G.loadout.aux===id||G.loadout.weapons.includes(id);}
+function isEquipped(id){return G.loadout.chassis===id||G.loadout.aux===id||G.loadout.shield===id||G.loadout.weapons.includes(id);}
 function hasLicense(id){return G.licenses.includes(id);}
 function slotMatchesWeapon(slot,wp){return wp.wpnType.startsWith(slot.type+' ');}
 function licensedWeaponsForSlot(slot){return WEAPONS.filter(w=>slotMatchesWeapon(slot,w)&&hasLicense(w.id));}
@@ -66,10 +67,102 @@ function drainEnergy(s,amount){if(s.energy>0)s.energy=Math.max(0,s.energy-amount
 // drPts() fades each particle using its remaining lifetime ratio (p.l / p.ml) as the alpha value.
 function boomAt(pts,x,y,c,n=14){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=.7+Math.random()*3;pts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:22+Math.random()*28,ml:50,c});}}
 function updPts(pts,gy=0){for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=gy;p.l--;if(p.l<=0)pts.splice(i,1);}}
-function mkShip(x,y){const ch=activeChassisObj();return{x,y,vx:0,vy:0,va:0,a:0,energy:ch.maxEnergy,maxEnergy:ch.maxEnergy,alive:true,inv:120,scd:0,scd2:0,shld:false,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};}
+function shieldDefForShip(s){return SHIELDS.find(sh=>sh.id===s?.shieldId)||activeShieldObj();}
+function resetShipShield(s, def=activeShieldObj()){
+  if(!s)return;
+  s.shieldId=def?.id??null;
+  s.shieldMaxHp=def?.hp??0;
+  s.shieldHp=s.shieldMaxHp;
+  s.shieldRechargeTimer=0;
+  s.shieldEnabled=true;
+  s.shieldOffline=false;
+}
+function copyShieldState(from,to){
+  if(!from||!to){return;}
+  to.shieldId=('shieldId' in from)?from.shieldId:(activeShieldObj()?.id??null);
+  to.shieldMaxHp=from.shieldMaxHp??shieldDefForShip(from)?.hp??0;
+  to.shieldHp=Math.max(0,Math.min(to.shieldMaxHp,from.shieldHp??to.shieldMaxHp));
+  to.shieldRechargeTimer=from.shieldRechargeTimer??0;
+  to.shieldEnabled=from.shieldEnabled!==false;
+  to.shieldOffline=!!from.shieldOffline;
+  refreshShieldOffline(to);
+}
+function refreshShieldOffline(s){
+  const def=shieldDefForShip(s);
+  if(!def||!s.shieldId){s.shieldOffline=false;return;}
+  s.shieldMaxHp=def.hp;
+  s.shieldHp=Math.max(0,Math.min(s.shieldMaxHp,s.shieldHp??s.shieldMaxHp));
+  if(s.shieldHp<=0)s.shieldOffline=true;
+  const threshold=s.shieldMaxHp*(def.reactivateAt??0.5);
+  if(s.shieldOffline&&s.shieldHp>=threshold)s.shieldOffline=false;
+}
+function rechargeShieldFromEnergy(s,force=false){
+  const def=shieldDefForShip(s);
+  if(!def||s.shieldEnabled===false||!s.shieldId)return 0;
+  refreshShieldOffline(s);
+  if(s.shieldHp>=s.shieldMaxHp||s.energy<=0)return 0;
+  const want=force?s.shieldMaxHp-s.shieldHp:Math.min(def.rechargeRate??0,s.shieldMaxHp-s.shieldHp);
+  const cost=Math.max(0.0001,def.energyPerHp??5);
+  const add=Math.max(0,Math.min(want,s.energy/cost));
+  if(add<=0)return 0;
+  s.shieldHp=Math.min(s.shieldMaxHp,s.shieldHp+add);
+  s.energy=Math.max(0,s.energy-add*cost);
+  refreshShieldOffline(s);
+  return add;
+}
+function tickShieldRecharge(s){
+  const def=shieldDefForShip(s);
+  if(!def||s.shieldEnabled===false||!s.shieldId)return;
+  refreshShieldOffline(s);
+  if(s.shieldHp>=s.shieldMaxHp)return;
+  if(s.shieldRechargeTimer>0){s.shieldRechargeTimer--;return;}
+  rechargeShieldFromEnergy(s,false);
+}
+function toggleShipShield(s){
+  if(!s||!s.shieldId)return;
+  s.shieldEnabled=s.shieldEnabled===false;
+  tone(s.shieldEnabled?900:300,.08,'square',.05);
+}
+function shieldCoversSource(s,source,def){
+  if(!def||!source)return true;
+  if((def.coverageDeg??360)>=359.9)return true;
+  const dx=source.x-s.x,dy=source.y-s.y;
+  if(!Number.isFinite(dx)||!Number.isFinite(dy)||(dx===0&&dy===0))return true;
+  const sourceA=Math.atan2(dx,-dy);
+  return Math.abs(angDiff(s.a,sourceA))<=(def.coverageDeg*Math.PI/180)/2;
+}
+function shieldAllowsDamage(def,opts){
+  const kinds=def.blocksKinds;
+  return !Array.isArray(kinds)||kinds.includes(opts?.kind);
+}
+function applyShipDamage(s,amount,opts={}){
+  const dmg=Math.max(0,amount||0);
+  if(!s||dmg<=0||G.invincible)return{shieldDamage:0,hullDamage:0,blocked:false};
+  let hullDamage=dmg,shieldDamage=0;
+  const def=shieldDefForShip(s);
+  if(def&&s.shieldId&&s.shieldEnabled!==false&&!s.shieldOffline&&s.shieldHp>0&&shieldAllowsDamage(def,opts)&&shieldCoversSource(s,opts.source,def)){
+    shieldDamage=Math.min(s.shieldHp,dmg);
+    s.shieldHp=Math.max(0,s.shieldHp-shieldDamage);
+    s.shieldRechargeTimer=def.rechargeDelay??300;
+    hullDamage=dmg-shieldDamage;
+    if(s.shieldHp<=0){s.shieldHp=0;s.shieldOffline=true;}
+  }
+  if(hullDamage>0)s.hp=Math.max(0,s.hp-hullDamage);
+  return{shieldDamage,hullDamage,blocked:shieldDamage>0&&hullDamage<=0};
+}
+function shipDamageTone(hit,hullFreq=380,hullDur=.08,hullType='square',hullVol=.08){
+  if(hit?.shieldDamage>0)tone(760,.05,'sine',.05);
+  if(hit?.hullDamage>0)tone(hullFreq,hullDur,hullType,hullVol);
+}
+function mkShip(x,y){
+  const ch=activeChassisObj(),sh=activeShieldObj();
+  const s={x,y,vx:0,vy:0,va:0,a:0,energy:ch.maxEnergy,maxEnergy:ch.maxEnergy,alive:true,inv:120,scd:0,scd2:0,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};
+  resetShipShield(s,sh);
+  return s;
+}
 function stopShipMotion(s){
   if(!s)return;
-  s.vx=0;s.vy=0;s.va=0;s.shld=false;
+  s.vx=0;s.vy=0;s.va=0;
 }
 function returnToOverworld(opts={}){
   if(!opts.keepVelocity)stopShipMotion(G.OW?.s);
@@ -126,7 +219,7 @@ function startFromSave(){
   const sv=loadSave(),def=defaultSave();
   const hadCustomSeed=G.customSeed!==null;
   G.licenses=sv?[...(sv.licenses??def.licenses)]:[...def.licenses];
-  G.loadout=sv?{chassis:sv.loadout?.chassis??def.loadout.chassis,weapons:[...(sv.loadout?.weapons??def.loadout.weapons)],aux:sv.loadout?.aux??def.loadout.aux}:{...def.loadout,weapons:[...def.loadout.weapons]};
+  G.loadout=sv?{chassis:sv.loadout?.chassis??def.loadout.chassis,weapons:[...(sv.loadout?.weapons??def.loadout.weapons)],aux:sv.loadout?.aux??def.loadout.aux,shield:sv.loadout&&('shield' in sv.loadout)?sv.loadout.shield:def.loadout.shield}:{...def.loadout,weapons:[...def.loadout.weapons]};
   G.visitedSeeds=sv?[...(sv.visitedSeeds??[])]:[];
   G.credits=sv?.credits??0;
   G.stake=0;
@@ -158,6 +251,10 @@ function startFromSave(){
   else recordLastLocation(fallbackKind);
   initOW(energy,sp.x,sp.y);
   if(sv?.currentHp!=null)G.OW.s.hp=Math.min(sv.currentHp,G.OW.s.maxHp);
+  if(sv?.currentShieldHp!=null)G.OW.s.shieldHp=Math.max(0,Math.min(G.OW.s.shieldMaxHp,sv.currentShieldHp));
+  if(typeof sv?.currentShieldEnabled==='boolean')G.OW.s.shieldEnabled=sv.currentShieldEnabled;
+  if(typeof sv?.currentShieldOffline==='boolean')G.OW.s.shieldOffline=sv.currentShieldOffline;
+  refreshShieldOffline(G.OW.s);
   if(!G.visitedSeeds.includes(G.seed))G.visitedSeeds.push(G.seed);
   if(G.needsRebuild){G.ENC=null;G.site=null;openRebuildMenu();}
   saveGame();

@@ -1,14 +1,14 @@
 'use strict';
 
-function rebuildTotalCost(chassisId,auxId){
-  const ch=CHASSIS.find(c=>c.id===chassisId),ax=AUX_ITEMS.find(a=>a.id===auxId);
-  return(ch?.buildPrice??0)+(ax?.buildPrice??0);
+function rebuildTotalCost(chassisId,shieldId){
+  const ch=CHASSIS.find(c=>c.id===chassisId),sh=SHIELDS.find(s=>s.id===shieldId);
+  return(ch?.buildPrice??0)+(sh?.buildPrice??0);
 }
 function licensedRebuildChassis(){return CHASSIS.filter(c=>hasLicense(c.id));}
 function rebuildChassisItems(){return[...licensedRebuildChassis(),{id:'charity'},{id:'quit'}];}
-function currentAuxForRebuild(){
-  if(hasLicense(G.loadout.aux))return G.loadout.aux;
-  return AUX_ITEMS.find(a=>hasLicense(a.id))?.id??null;
+function currentShieldForRebuild(){
+  if(hasLicense(G.loadout.shield))return G.loadout.shield;
+  return SHIELDS.find(s=>hasLicense(s.id))?.id??null;
 }
 function rebuildSlotsForChassis(ch){
   return ch.slots.map((sl,i)=>{
@@ -24,7 +24,7 @@ function openRebuildConfig(ch){
   G.rebuildFlow.phase='config';
   G.rebuildFlow.chassisId=ch.id;
   G.rebuildFlow.slots=rebuildSlotsForChassis(ch);
-  G.rebuildFlow.auxId=currentAuxForRebuild();
+  G.rebuildFlow.shieldId=currentShieldForRebuild();
   G.rebuildFlow.focus=0;
   G.rebuildFlow.warnShown=false;
 }
@@ -36,14 +36,14 @@ function applyCharityRebuild(){
   G.rebuildFlow=null;doRebuildFinalize();
 }
 function finalizeRebuild(rf,ch){
-  const totalCost=rebuildTotalCost(rf.chassisId,rf.auxId);
+  const totalCost=rebuildTotalCost(rf.chassisId,rf.shieldId);
   if(G.credits<totalCost){tone(80,.1,'square',.06);return false;}
   G.credits-=totalCost;
   G.loadout.chassis=rf.chassisId;
   G.loadout.weapons=[...rf.slots];
   while(G.loadout.weapons.length<ch.slots.length)G.loadout.weapons.push(null);
   G.loadout.weapons=G.loadout.weapons.slice(0,ch.slots.length);
-  G.loadout.aux=rf.auxId;
+  G.loadout.shield=rf.shieldId;
   G.rebuildFlow=null;doRebuildFinalize();
   return true;
 }
@@ -102,14 +102,14 @@ function drawRebuildConfig(rf){
     cx.fillStyle=isSel?'#0f8':(wp?'#668':'#444');cx.textAlign='right';
     cx.fillText(arrowValue(wp?wp.id.toUpperCase():'(empty)',opts.length>0),px+pw-14,iy);
   }
-  const auxRow=ch.slots.length,iy_aux=py+50+auxRow*rh,isSelAux=rf.focus===auxRow;
-  const ax=rf.auxId?AUX_ITEMS.find(a=>a.id===rf.auxId):null,auxOpts=AUX_ITEMS.filter(a=>hasLicense(a.id));
-  cx.fillStyle=isSelAux?'#0f8':'#446';cx.font=(isSelAux?'bold ':'')+'13px monospace';cx.textAlign='left';
-  cx.fillText((isSelAux?UI_GLYPH.pointer+' ':'  ')+'AUX',px+14,iy_aux);
-  cx.fillStyle=isSelAux?'#0f8':(ax?'#668':'#444');cx.textAlign='right';
-  cx.fillText(arrowValue(ax?ax.name:'(none)',auxOpts.length>1),px+pw-14,iy_aux);
+  const shieldRow=ch.slots.length,iy_shield=py+50+shieldRow*rh,isSelShield=rf.focus===shieldRow;
+  const sh=rf.shieldId?SHIELDS.find(s=>s.id===rf.shieldId):null,shieldOpts=SHIELDS.filter(s=>hasLicense(s.id));
+  cx.fillStyle=isSelShield?'#0f8':'#446';cx.font=(isSelShield?'bold ':'')+'13px monospace';cx.textAlign='left';
+  cx.fillText((isSelShield?UI_GLYPH.pointer+' ':'  ')+'SHIELD',px+14,iy_shield);
+  cx.fillStyle=isSelShield?'#0f8':(sh?'#668':'#444');cx.textAlign='right';
+  cx.fillText(arrowValue(sh?sh.name:'(none)',shieldOpts.length>1),px+pw-14,iy_shield);
   const confirmRow=ch.slots.length+1,iy_conf=py+50+confirmRow*rh,isSelConf=rf.focus===confirmRow;
-  const totalCost=rebuildTotalCost(rf.chassisId,rf.auxId),canAfford=G.credits>=totalCost;
+  const totalCost=rebuildTotalCost(rf.chassisId,rf.shieldId),canAfford=G.credits>=totalCost;
   cx.fillStyle=isSelConf?(canAfford?'#0f8':'#f84'):'#446';cx.font=(isSelConf?'bold ':'')+'13px monospace';cx.textAlign='center';
   cx.fillText((isSelConf?UI_GLYPH.pointer+' ':'  ')+'REBUILD  '+(totalCost===0?'FREE':totalCost+' CR')+(canAfford?'':'  '+UI_GLYPH.dash+' INSUFFICIENT'),W/2,iy_conf);
   const backRow=ch.slots.length+2,iy_back=py+50+backRow*rh,isSelBack=rf.focus===backRow;
@@ -144,9 +144,9 @@ function updRebuild(){
       if(lt)rf.slots[focus]=cycleValue(opts,rf.slots[focus],-1);
       if(rt)rf.slots[focus]=cycleValue(opts,rf.slots[focus],1);
     }else if(focus===ch.slots.length){
-      const opts=[null,...AUX_ITEMS.filter(a=>hasLicense(a.id)).map(a=>a.id)];
-      if(lt)rf.auxId=cycleValue(opts,rf.auxId,-1);
-      if(rt)rf.auxId=cycleValue(opts,rf.auxId,1);
+      const opts=[null,...SHIELDS.filter(s=>hasLicense(s.id)).map(s=>s.id)];
+      if(lt)rf.shieldId=cycleValue(opts,rf.shieldId,-1);
+      if(rt)rf.shieldId=cycleValue(opts,rf.shieldId,1);
     }else if(focus===ch.slots.length+1){
       if(ok){
         ia();

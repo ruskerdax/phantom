@@ -9,7 +9,7 @@ function defaultSave() {
     credits: 0,
     stake: 0,
     licenses: ['kestrel', 'shield_std', 'mass driver', 'pulse laser'],
-    loadout: {chassis:'kestrel', weapons:['mass driver','pulse laser'], aux:'shield_std'},
+    loadout: {chassis:'kestrel', weapons:['mass driver','pulse laser'], aux:null, shield:'shield_std'},
     cleared: [false, false, false],
     hbCleared: false,
     hbState: null,
@@ -24,6 +24,9 @@ function defaultSave() {
     lastLocation: null,
     currentHp: null,
     currentEnergy: null,
+    currentShieldHp: null,
+    currentShieldEnabled: true,
+    currentShieldOffline: false,
     settingsVersion: SETTINGS_VERSION,
     sfxVol: DEFAULT_VOLUME,
     musVol: DEFAULT_VOLUME,
@@ -47,6 +50,10 @@ function normalizeLastLocation(loc) {
   return {seed, kind: loc.kind, index};
 }
 
+function isShieldId(id) {
+  return typeof id === 'string' && SHIELDS.some(s => s.id === id);
+}
+
 function loadSave() {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
@@ -56,7 +63,10 @@ function loadSave() {
     if (!Array.isArray(d.licenses))          d.licenses = def.licenses;
     if (!d.loadout || typeof d.loadout !== 'object') d.loadout = {...def.loadout, weapons:[...def.loadout.weapons]};
     if (!Array.isArray(d.loadout.weapons))   d.loadout.weapons = [...def.loadout.weapons];
-    if (typeof d.loadout.aux !== 'string')   d.loadout.aux = def.loadout.aux;
+    if (!('shield' in d.loadout))            d.loadout.shield = isShieldId(d.loadout.aux) ? d.loadout.aux : def.loadout.shield;
+    else if (d.loadout.shield !== null && !isShieldId(d.loadout.shield)) d.loadout.shield = def.loadout.shield;
+    if (isShieldId(d.loadout.aux))           d.loadout.aux = null;
+    if (d.loadout.aux !== null && !AUX_ITEMS.some(a => a.id === d.loadout.aux)) d.loadout.aux = def.loadout.aux;
     if (typeof d.loadout.chassis !== 'string') d.loadout.chassis = def.loadout.chassis;
     d.licenses = d.licenses.map(id => id === 'laser cannon' ? 'pulse laser' : id);
     d.loadout.weapons = d.loadout.weapons.map(id => id === 'laser cannon' ? 'pulse laser' : id);
@@ -98,7 +108,7 @@ function buildSaveData() {
     credits: G.credits,
     stake: G.stake,
     licenses: [...G.licenses],
-    loadout: {chassis:G.loadout.chassis, weapons:[...G.loadout.weapons], aux:G.loadout.aux},
+    loadout: {chassis:G.loadout.chassis, weapons:[...G.loadout.weapons], aux:G.loadout.aux??null, shield:G.loadout.shield},
     cleared: [...G.cleared],
     hbCleared: G.hbCleared,
     hbState: G.hbState,
@@ -113,6 +123,9 @@ function buildSaveData() {
     lastLocation: normalizeLastLocation(G.lastLocation),
     currentHp: (s?.alive && s.hp > 0) ? s.hp : null,
     currentEnergy: (s?.alive && s.hp > 0) ? s.energy : null,
+    currentShieldHp: (s?.alive && s.hp > 0 && s.shieldId) ? s.shieldHp : null,
+    currentShieldEnabled: s?.shieldEnabled !== false,
+    currentShieldOffline: !!s?.shieldOffline,
     settingsVersion: SETTINGS_VERSION,
     sfxVol: G.sfxVol,
     musVol: G.musVol,

@@ -217,13 +217,21 @@ function drPts(pts){
 // Ship is a triangle in local space (tip at y=-10, pointing up), then translate() moves the canvas origin to
 // the ship's world position and rotate() spins the local axes to face angle a. Invincibility blinks by
 // skipping alternate 2-frame windows (fr%4 >= 2).
-function drShip(x,y,a,shld,thr,energy,inv,fr){
+function drShip(x,y,a,ship,thr,energy,inv,fr){
   if(inv>0&&fr%4>=2)return;
   cx.save();cx.translate(x,y);cx.rotate(a);
-  if(shld){cx.strokeStyle='rgba(100,200,255,.8)';cx.shadowColor='#8cf';cx.shadowBlur=18;cx.lineWidth=2;cx.beginPath();cx.arc(0,0,17,0,Math.PI*2);cx.stroke();}
+  const def=shieldDefForShip(ship);
+  const shieldVisible=def&&ship?.shieldId&&ship.shieldEnabled!==false&&!ship.shieldOffline&&ship.shieldHp>0;
+  if(shieldVisible){
+    const half=(def.coverageDeg*Math.PI/180)/2;
+    cx.strokeStyle='rgba(100,200,255,.8)';cx.shadowColor='#8cf';cx.shadowBlur=18;cx.lineWidth=2;cx.beginPath();
+    if((def.coverageDeg??360)>=359.9)cx.arc(0,0,17,0,Math.PI*2);
+    else cx.arc(0,0,17,-Math.PI/2-half,-Math.PI/2+half);
+    cx.stroke();
+  }
   cx.strokeStyle='#fff';cx.shadowColor='#fff';cx.shadowBlur=8;cx.lineWidth=1.5;
   cx.beginPath();cx.moveTo(0,-10);cx.lineTo(-7,8);cx.lineTo(0,4);cx.lineTo(7,8);cx.closePath();cx.stroke();
-  if(thr&&energy>0&&!shld){cx.strokeStyle='#fb0';cx.shadowColor='#fb0';cx.shadowBlur=12;cx.beginPath();cx.moveTo(-3,7);cx.lineTo(0,13+Math.random()*6);cx.lineTo(3,7);cx.stroke();}
+  if(thr&&energy>0){cx.strokeStyle='#fb0';cx.shadowColor='#fb0';cx.shadowBlur=12;cx.beginPath();cx.moveTo(-3,7);cx.lineTo(0,13+Math.random()*6);cx.lineTo(3,7);cx.stroke();}
   else if(thr&&energy<=0){cx.strokeStyle='#f22';cx.shadowColor='#f22';cx.shadowBlur=6;cx.beginPath();cx.moveTo(-1.5,7);cx.lineTo(0,9+Math.random()*2);cx.lineTo(1.5,7);cx.stroke();}
   cx.restore();
 }
@@ -256,7 +264,7 @@ function drWalletStake(x=8,y=18){
   cx.fillText('STAKE '+G.stake,x,y+16);
   cx.restore();
 }
-function drHUD(energy,maxEnergy=100,hp=15,maxHp=15){
+function drHUD(energy,maxEnergy=100,hp=15,maxHp=15,ship=null){
   drWalletStake();
   cx.save();cx.font='13px monospace';cx.fillStyle='#aaffcc';cx.shadowBlur=0;
   cx.textAlign='center';cx.fillText('',W/2,18);
@@ -268,6 +276,15 @@ function drHUD(energy,maxEnergy=100,hp=15,maxHp=15){
   cx.fillStyle='#aaffcc';cx.fillText('ENERGY',W-88,32);
   cx.strokeRect(W-82,21,70,11);
   cx.fillStyle=energy>maxEnergy*.2?'#0f8':'#f40';cx.fillRect(W-81,22,energy/maxEnergy*68,9);
+  const sh=ship?shieldDefForShip(ship):null;
+  if(sh&&ship.shieldId){
+    const sf=Math.max(0,Math.min(1,(ship.shieldHp||0)/(ship.shieldMaxHp||sh.hp||1)));
+    const label=ship.shieldEnabled===false?'SHIELD OFF':ship.shieldOffline?'SHIELD DOWN':'SHIELD';
+    cx.fillStyle=ship.shieldEnabled===false?'#668':'#aaffcc';cx.fillText(label,W-88,47);
+    cx.strokeStyle=ship.shieldEnabled===false?'#668':'#aaffcc';cx.strokeRect(W-82,36,70,11);
+    cx.fillStyle=ship.shieldEnabled===false?'#555':ship.shieldOffline?'#f84':'#6cf';
+    cx.fillRect(W-81,37,sf*68,9);
+  }
   cx.restore();
 }
 function drBullet(x,y,col='#fff'){cx.save();cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=6;cx.beginPath();cx.arc(x,y,2.5,0,Math.PI*2);cx.fill();cx.restore();}

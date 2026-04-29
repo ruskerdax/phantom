@@ -79,25 +79,4 @@ const CHASSIS = [
   },
 ];
 
-const AUX_ITEMS = [
-  {
-    id: 'shield_std',
-    name: 'STANDARD SHIELD',
-    desc: 'Deflects damage while active.',
-    effect: 'shield',
-    energyDrain: 0.15,
-    licensePrice: 0,
-    buildPrice: 0,
-    buyable: true,
-  },
-  {
-    id: 'shield_heavy',
-    name: 'HEAVY SHIELD',
-    desc: 'Stronger deflection at higher energy cost.',
-    effect: 'shield',
-    energyDrain: 0.25,
-    licensePrice: 3500,
-    buildPrice: 500,
-    buyable: true,
-  },
-];
+const AUX_ITEMS = [];

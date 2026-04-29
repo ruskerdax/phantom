@@ -26,7 +26,9 @@ function enemyUpdate(e, s, enc, ew, eh) {
     if(res.hitIdx>=0){
       const tg=tgts[res.hitIdx];
       if(tg.kind==='ship'){
-        if(!s.shld&&!G.invincible){s.hp=Math.max(0,s.hp-ewp.dmg);tone(380,.08,'square',.08);if(s.hp<=0){encKillShip();return true;}}
+        const hit=applyShipDamage(s,ewp.dmg,{source:{x:ox,y:oy},kind:'beam',weapon:ewp});
+        shipDamageTone(hit);
+        if(s.hp<=0){encKillShip();return true;}
       } else if(tg.kind==='missile'){
         const m=enc.mis[tg.idx];m.hp-=ewp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);
         if(m.hp<=0){encExplodeMissile(enc,m,false);enc.mis.splice(tg.idx,1);if(s.hp<=0){encKillShip();return true;}}

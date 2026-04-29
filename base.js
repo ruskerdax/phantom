@@ -5,14 +5,14 @@ function baseTabs(){return[
   {id:'services',label:'SERVICES'},
   {id:'chassis',label:'CHASSIS'},
   {id:'weapons',label:'WEAPONS'},
-  {id:'aux',label:'AUX'},
+  {id:'shields',label:'SHIELDS'},
 ];}
 function baseTabId(tab=G.baseTab){return baseTabs()[tab]?.id||'services';}
 function shopItemsForTab(tab){
   const id=typeof tab==='string'?tab:baseTabId(tab);
   if(id==='chassis')return CHASSIS.filter(c=>c.buyable);
   if(id==='weapons')return WEAPONS.filter(w=>w.buyable);
-  if(id==='aux')return AUX_ITEMS.filter(a=>a.buyable);
+  if(id==='shields')return SHIELDS.filter(s=>s.buyable);
   return [];
 }
 function itemLicensePrice(item){return item.licensePrice??0;}
@@ -20,6 +20,7 @@ function itemBuildPrice(item){return item.buildPrice??0;}
 function itemTypeLabel(item){
   if(CHASSIS.includes(item))return 'CHASSIS';
   if(AUX_ITEMS.includes(item))return 'AUX';
+  if(SHIELDS.includes(item))return 'SHIELD';
   const wp=WEAPONS.find(w=>w===item);
   if(wp)return wp.wpnType.toUpperCase();
   return '';
@@ -102,9 +103,9 @@ function drawBaseShop(){
       detail=`HP ${ch.maxHp}  ENERGY ${ch.maxEnergy}  FWD ${t.fwd}${revStr}  ROT ${t.rotAccel}  SLOTS: `+ch.slots.map(s=>s.type.toUpperCase()).join(' + ');
     }
     else if(tabId==='weapons'){const wp=item;detail=`TYPE: ${wp.wpnType.toUpperCase()}  DMG ${wp.dmg}  CD ${wp.cd}s`+(wp.range?`  RANGE ${wp.range}`:'');}
-    else if(tabId==='aux'){const ax=item;detail=`${ax.desc}  DRAIN ${ax.energyDrain}/frame`;}
+    else if(tabId==='shields'){const sh=item;detail=`HP ${sh.hp}  ARC ${sh.coverageDeg}${String.fromCharCode(176)}  RECH ${sh.rechargeRate}/fr  COST ${sh.energyPerHp} NRG/HP`;}
     cx.fillText(detail,px+12,dy+6);
-    if(item.desc&&tabId!=='aux'){cx.fillStyle='#446';cx.font='10px monospace';cx.fillText(item.desc,px+12,dy+20);}
+    if(item.desc){cx.fillStyle='#446';cx.font='10px monospace';cx.fillText(item.desc,px+12,dy+20);}
     cx.fillStyle='#446';cx.font='10px monospace';cx.textAlign='right';
     if(!hasLicense(item.id))cx.fillText('BUILD: '+itemBuildPrice(item)+' CR  (after license)',px+pw-12,dy+6);
     else if(!isEquipped(item.id))cx.fillText('BUILD COST: '+itemBuildPrice(item)+' CR',px+pw-12,dy+6);
@@ -140,10 +141,10 @@ function shopActionOpts(item){
   if(!owned){
     opts.push({label:`BUY LICENSE  ${lp===0?'FREE':lp+' CR'}`,act:'buy_license',disabled:lp>0&&G.credits<lp});
     // can we equip on this chassis?
-    const canEquip=CHASSIS.includes(item)||AUX_ITEMS.includes(item)||(WEAPONS.includes(item)&&compatibleSlots(item).length>0);
+    const canEquip=CHASSIS.includes(item)||AUX_ITEMS.includes(item)||SHIELDS.includes(item)||(WEAPONS.includes(item)&&compatibleSlots(item).length>0);
     if(canEquip)opts.push({label:`BUY + EQUIP  ${lp+bp===0?'FREE':(lp+bp)+' CR'}`,act:'buy_equip',disabled:G.credits<lp+bp});
   }else if(!eq){
-    const canEquip=CHASSIS.includes(item)||AUX_ITEMS.includes(item)||(WEAPONS.includes(item)&&compatibleSlots(item).length>0);
+    const canEquip=CHASSIS.includes(item)||AUX_ITEMS.includes(item)||SHIELDS.includes(item)||(WEAPONS.includes(item)&&compatibleSlots(item).length>0);
     if(canEquip){
       if(WEAPONS.includes(item)){
         const cslots=compatibleSlots(item);
@@ -171,7 +172,7 @@ function drawEquipFlow(){
   // weapon slots
   const rows=[];
   for(let i=0;i<ch.slots.length;i++)rows.push({label:`SLOT ${i+1} [${ch.slots[i].type.toUpperCase()}]`,kind:'weapon',idx:i});
-  rows.push({label:'AUX SLOT',kind:'aux'});
+  rows.push({label:'SHIELD SLOT',kind:'shield'});
   rows.push({label:ef.warnShown?'CONFIRM (NO WEAPONS '+UI_GLYPH.dash+' ARE YOU SURE?)':'CONFIRM',kind:'confirm'});
   rows.push({label:'CANCEL',kind:'cancel'});
   for(let r=0;r<rows.length;r++){
@@ -185,10 +186,10 @@ function drawEquipFlow(){
       const wid=ef.slots[row.idx],wp=wid?WEAPONS.find(w=>w.id===wid):null;
       const opts=licensedWeaponsForSlot(ch.slots[row.idx]),label=wp?wp.id.toUpperCase():'(empty)';
       cx.fillStyle=wp?'#aaffcc':'#446';cx.fillText(arrowValue(label,opts.length>0),px+pw-20,ry);
-    }else if(row.kind==='aux'){
-      const ax=ef.auxId?AUX_ITEMS.find(a=>a.id===ef.auxId):null;
-      const opts=AUX_ITEMS.filter(a=>hasLicense(a.id)),label=ax?ax.name:'(empty)';
-      cx.fillStyle=ax?'#aaffcc':'#446';cx.fillText(arrowValue(label,opts.length>0),px+pw-20,ry);
+    }else if(row.kind==='shield'){
+      const sh=ef.shieldId?SHIELDS.find(s=>s.id===ef.shieldId):null;
+      const opts=SHIELDS.filter(s=>hasLicense(s.id)),label=sh?sh.name:'(empty)';
+      cx.fillStyle=sh?'#aaffcc':'#446';cx.fillText(arrowValue(label,opts.length>0),px+pw-20,ry);
     }
   }
   if(ef.warnShown){cx.fillStyle='#f84';cx.font='11px monospace';cx.textAlign='center';cx.fillText('WARNING: no weapons equipped!',W/2,py+ph-18);}
@@ -197,7 +198,7 @@ function drawEquipFlow(){
 
 function updEquipFlow(up,dn,lt,rt,ok,bk){
   const ef=G.equipFlow,ch=CHASSIS.find(c=>c.id===ef.chassisId);
-  const nRows=ch.slots.length+3; // slots + aux + confirm + cancel
+  const nRows=ch.slots.length+3; // slots + shield + confirm + cancel
   ef.focus=moveSelection(ef.focus,nRows-1,up,dn);
   const row=ef.focus;
   if(row<ch.slots.length){
@@ -208,11 +209,11 @@ function updEquipFlow(up,dn,lt,rt,ok,bk){
       ef.slots[row]=valid[((cur+(rt?1:-1))+valid.length)%valid.length];
     }
   }else if(row===ch.slots.length){
-    // aux slot
+    // shield slot
     if(lt||rt){
-      const valid=[null,...AUX_ITEMS.filter(a=>hasLicense(a.id)).map(a=>a.id)];
-      const cur=valid.indexOf(ef.auxId);
-      ef.auxId=valid[((cur+(rt?1:-1))+valid.length)%valid.length];
+      const valid=[null,...SHIELDS.filter(s=>hasLicense(s.id)).map(s=>s.id)];
+      const cur=valid.indexOf(ef.shieldId);
+      ef.shieldId=valid[((cur+(rt?1:-1))+valid.length)%valid.length];
     }
   }else if(row===ch.slots.length+1&&ok){
     // confirm
@@ -222,12 +223,12 @@ function updEquipFlow(up,dn,lt,rt,ok,bk){
     G.credits-=ef.buildPrice;
     G.loadout.chassis=ef.chassisId;
     G.loadout.weapons=[...ef.slots];
-    G.loadout.aux=ef.auxId;
+    G.loadout.shield=ef.shieldId;
     // resize weapons array to chassis slot count
     while(G.loadout.weapons.length<ch.slots.length)G.loadout.weapons.push(null);
     G.loadout.weapons=G.loadout.weapons.slice(0,ch.slots.length);
     // update ship stats in-flight
-    const s=G.OW?.s;if(s){s.maxHp=ch.maxHp;s.maxEnergy=ch.maxEnergy;s.hp=s.maxHp;s.energy=s.maxEnergy;}
+    const s=G.OW?.s;if(s){s.maxHp=ch.maxHp;s.maxEnergy=ch.maxEnergy;s.hp=s.maxHp;s.energy=s.maxEnergy;resetShipShield(s);}
     G.equipFlow=null;G.shopActionId=null;
     saveGame();tone(660,.2,'sine',.08);
   }else if(row===ch.slots.length+2&&ok){
@@ -254,18 +255,21 @@ function execShopAction(opt){
     tone(660,.15,'sine',.08);G.shopActionId=null;saveGame();
   }else if(opt.act==='buy_equip'||opt.act==='equip'){
     // For chassis: pay license now (non-refundable), build cost deducted on confirm.
-    // For aux/weapon: pay total now.
+    // For equipment/weapon: pay total now.
     if(opt.act==='buy_equip'){
       if(G.credits<lp){tone(80,.1,'square',.06);return;}
       G.credits-=lp;if(!hasLicense(item.id))G.licenses.push(item.id);
     }
     if(CHASSIS.includes(item)){
       if(G.credits<bp){tone(80,.1,'square',.06);if(opt.act==='buy_equip')saveGame();return;}
-      G.equipFlow={chassisId:item.id,slots:item.slots.map(()=>null),auxId:G.loadout.aux,focus:0,buildPrice:bp,warnShown:false};
+      G.equipFlow={chassisId:item.id,slots:item.slots.map(()=>null),shieldId:G.loadout.shield,focus:0,buildPrice:bp,warnShown:false};
       G.shopActionId=null;
     }else if(AUX_ITEMS.includes(item)){
       if(G.credits<bp){tone(80,.1,'square',.06);if(opt.act==='buy_equip')saveGame();return;}
       G.credits-=bp;G.loadout.aux=item.id;tone(660,.15,'sine',.08);G.shopActionId=null;saveGame();
+    }else if(SHIELDS.includes(item)){
+      if(G.credits<bp){tone(80,.1,'square',.06);if(opt.act==='buy_equip')saveGame();return;}
+      G.credits-=bp;G.loadout.shield=item.id;resetShipShield(G.OW?.s);tone(660,.15,'sine',.08);G.shopActionId=null;saveGame();
     }
   }else if(opt.act==='equip_weapon'){
     if(G.credits<bp){tone(80,.1,'square',.06);return;}
