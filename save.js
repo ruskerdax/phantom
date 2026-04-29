@@ -1,6 +1,8 @@
 'use strict';
 
 const SAVE_KEY = 'phantom_save';
+const SETTINGS_VERSION = 1;
+const DEFAULT_VOLUME = 7;
 
 function defaultSave() {
   return {
@@ -22,8 +24,9 @@ function defaultSave() {
     lastLocation: null,
     currentHp: null,
     currentEnergy: null,
-    sfxVol: 10,
-    musVol: 10,
+    settingsVersion: SETTINGS_VERSION,
+    sfxVol: DEFAULT_VOLUME,
+    musVol: DEFAULT_VOLUME,
     dynamicZoom: true,
     renderQuality: 'full',
   };
@@ -66,6 +69,15 @@ function loadSave() {
     if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
     if (typeof d.dynamicZoom !== 'boolean')  d.dynamicZoom = true;
+    if (!d.settingsVersion) {
+      if (d.sfxVol === 10) d.sfxVol = DEFAULT_VOLUME;
+      if (d.musVol === 10) d.musVol = DEFAULT_VOLUME;
+    }
+    if (!Number.isFinite(d.sfxVol)) d.sfxVol = DEFAULT_VOLUME;
+    if (!Number.isFinite(d.musVol)) d.musVol = DEFAULT_VOLUME;
+    d.sfxVol = Math.max(0, Math.min(10, Math.round(d.sfxVol)));
+    d.musVol = Math.max(0, Math.min(10, Math.round(d.musVol)));
+    d.settingsVersion = SETTINGS_VERSION;
     d.renderQuality = normalizeRenderQuality(d.renderQuality);
     d.lastLocation = normalizeLastLocation(d.lastLocation);
     return d;
@@ -101,6 +113,7 @@ function buildSaveData() {
     lastLocation: normalizeLastLocation(G.lastLocation),
     currentHp: (s?.alive && s.hp > 0) ? s.hp : null,
     currentEnergy: (s?.alive && s.hp > 0) ? s.energy : null,
+    settingsVersion: SETTINGS_VERSION,
     sfxVol: G.sfxVol,
     musVol: G.musVol,
     dynamicZoom: G.dynamicZoom,

@@ -97,9 +97,9 @@ function ia(){
   musicResumeHtmlFallbacks();
 }
 
-function sfxVolumeTarget(){return clampAudio((typeof G!=='undefined'?G.sfxVol:10)/10);}
+function sfxVolumeTarget(){return clampAudio((typeof G!=='undefined'?G.sfxVol:7)/5,0,2);}
 function musicVolumeTarget(){
-  const base=clampAudio((typeof G!=='undefined'?G.musVol:10)/10);
+  const base=clampAudio((typeof G!=='undefined'?G.musVol:7)/10);
   return musicPauseFilterActive()?base*.25:base;
 }
 function audioSyncSfxVolume(immediate=false){

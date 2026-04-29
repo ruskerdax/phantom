@@ -95,6 +95,6 @@ function shouldSaveOnUnload(){
 }
 window.addEventListener('beforeunload',()=>{if(shouldSaveOnUnload())saveGame();});
 // Restore audio settings from save, then show title (game starts on PLAY GAME)
-{const sv=loadSave();if(sv){G.sfxVol=sv.sfxVol??10;G.musVol=sv.musVol??10;G.dynamicZoom=sv.dynamicZoom??true;G.renderQuality=normalizeRenderQuality(sv.renderQuality);}}
+{const sv=loadSave();if(sv){G.sfxVol=sv.sfxVol??7;G.musVol=sv.musVol??7;G.dynamicZoom=sv.dynamicZoom??true;G.renderQuality=normalizeRenderQuality(sv.renderQuality);}}
 G.seed=TUTORIAL_SEED;genWorld(G.seed);
 loop();
