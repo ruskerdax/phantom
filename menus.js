@@ -72,7 +72,7 @@ function cheatItems(){return cheatMenuItems().map(i=>i.label);}
 
 function drawShipConfig(){
   const ch=activeChassisObj(),sh=activeShieldObj();
-  const pw=420,ph=280,px=W/2-pw/2,py=H/2-ph/2;
+  const pw=560,ph=320,px=W/2-pw/2,py=H/2-ph/2;
   cx.save();
   cx.fillStyle='rgba(0,0,0,.85)';cx.fillRect(0,0,W,H);
   cx.fillStyle='rgba(0,12,8,.97)';cx.fillRect(px,py,pw,ph);
@@ -81,18 +81,20 @@ function drawShipConfig(){
   cx.fillText('SHIP CONFIGURATION',W/2,py+28);cx.shadowBlur=0;
   cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+38);cx.lineTo(px+pw-10,py+38);cx.stroke();
   const rows=[
-    ['CHASSIS',ch.name+`  HP ${ch.maxHp}  NRG ${ch.maxEnergy}  ${thrustStatText(ch)}`],
-    ['SHIELD',sh?sh.name:'(empty)'],
+    ['CHASSIS',ch.name],
+    ['HULL',chassisHullStatsText(ch)],
+    ['THRUST',chassisThrustStatsText(ch)],
+    ['SHIELD',shieldLoadoutText(sh)],
   ];
   activeChassisObj().slots.forEach((sl,i)=>{
     const wp=wpSlot(i);
-    rows.push([`SLOT ${i+1} [${sl.type.toUpperCase()}]`,wp?wp.id.toUpperCase():'(empty)']);
+    rows.push([`SLOT ${i+1} [${sl.type.toUpperCase()}]`,weaponLoadoutText(wp)]);
   });
   rows.push(['','']);
   rows.push(['SYSTEMS VISITED',''+G.visitedSeeds.length]);
   cx.font='12px monospace';
   for(let r=0;r<rows.length;r++){
-    const[label,val]=rows[r],ry=py+56+r*30;
+    const[label,val]=rows[r],ry=py+56+r*26;
     if(!label)continue;
     cx.fillStyle='#446';cx.textAlign='left';cx.fillText(label,px+20,ry);
     cx.fillStyle='#aaffcc';cx.textAlign='right';cx.fillText(val,px+pw-20,ry);

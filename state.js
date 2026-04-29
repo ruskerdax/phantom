@@ -64,6 +64,65 @@ function thrustStatText(ch){
   const str=Math.max(t.strafeL||0,t.strafeR||0);
   return `FWD ${t.fwd}  REV ${t.rev}  STR ${str}`;
 }
+function statHas(obj,key){return obj&&obj[key]!==undefined&&obj[key]!==null;}
+function statValue(v,suffix=''){return `${v}${suffix}`;}
+function chassisStatsText(ch,opts={}){
+  if(!ch)return '';
+  const parts=[chassisHullStatsText(ch),thrustStatText(ch)];
+  if(opts.rot!==false&&ch.thrust?.rotAccel!==undefined)parts.push(`ROT ${ch.thrust.rotAccel}`);
+  if(opts.slots!==false&&Array.isArray(ch.slots))parts.push('SLOTS '+ch.slots.map(s=>s.type.toUpperCase()).join('+'));
+  return parts.filter(Boolean).join('  ');
+}
+function chassisHullStatsText(ch){
+  if(!ch)return '';
+  return `HP ${ch.maxHp}  NRG ${ch.maxEnergy}`;
+}
+function chassisThrustStatsText(ch){
+  if(!ch)return '';
+  const parts=[thrustStatText(ch)];
+  if(ch.thrust?.rotAccel!==undefined)parts.push(`ROT ${ch.thrust.rotAccel}`);
+  return parts.join('  ');
+}
+function weaponStatsText(wp,opts={}){
+  if(!wp)return '';
+  const parts=[];
+  if(opts.type!==false&&wp.wpnType)parts.push(`TYPE ${wp.wpnType.toUpperCase()}`);
+  if(statHas(wp,'dmg'))parts.push(`DMG ${wp.dmg}`);
+  if(statHas(wp,'expDmg')||statHas(wp,'expR'))parts.push(`BLAST ${wp.expDmg??0}@${wp.expR??0}`);
+  if(statHas(wp,'cd'))parts.push(`CD ${statValue(wp.cd,'s')}`);
+  if(statHas(wp,'range'))parts.push(`RANGE ${wp.range}`);
+  if(statHas(wp,'spd'))parts.push(statHas(wp,'maxSpd')?`SPD ${wp.spd}-${wp.maxSpd}`:`SPD ${wp.spd}`);
+  if(statHas(wp,'pulses')&&wp.pulses>1)parts.push(`PULSES ${wp.pulses}`);
+  if(statHas(wp,'salvo')&&wp.salvo>1)parts.push(`SALVO ${wp.salvo}`);
+  if(statHas(wp,'energyCost'))parts.push(`NRG ${wp.energyCost}`);
+  if(statHas(wp,'chargeDelay'))parts.push(`CHG ${wp.chargeDelay}fr`);
+  return parts.join('  ');
+}
+function shieldStatsText(sh){
+  if(!sh)return '';
+  const parts=[];
+  if(statHas(sh,'hp'))parts.push(`HP ${sh.hp}`);
+  if(statHas(sh,'coverageDeg'))parts.push(`ARC ${sh.coverageDeg}${String.fromCharCode(176)}`);
+  if(statHas(sh,'rechargeRate'))parts.push(`RECH ${sh.rechargeRate}/fr`);
+  if(statHas(sh,'rechargeDelay'))parts.push(`DELAY ${sh.rechargeDelay}fr`);
+  if(statHas(sh,'energyPerHp'))parts.push(`COST ${sh.energyPerHp} NRG/HP`);
+  return parts.join('  ');
+}
+function weaponLoadoutText(wp){
+  if(!wp)return '(empty)';
+  const parts=[wp.name||wp.id.toUpperCase()];
+  if(statHas(wp,'dmg'))parts.push(`DMG ${wp.dmg}`);
+  if(statHas(wp,'cd'))parts.push(`CD ${statValue(wp.cd,'s')}`);
+  if(statHas(wp,'range'))parts.push(`RNG ${wp.range}`);
+  return parts.join('  ');
+}
+function shieldLoadoutText(sh){
+  if(!sh)return '(empty)';
+  const parts=[sh.name];
+  if(statHas(sh,'hp'))parts.push(`HP ${sh.hp}`);
+  if(statHas(sh,'coverageDeg'))parts.push(`ARC ${sh.coverageDeg}${String.fromCharCode(176)}`);
+  return parts.join('  ');
+}
 const ENERGY_PICKUP=38;
 const THRUST_ENERGY_DRAIN={overworld:.035,encounter:.01,site:.012};
 function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}

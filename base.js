@@ -98,16 +98,15 @@ function drawBaseShop(){
     const tabId=baseTabId();
     if(tabId==='chassis'){
       const ch=item;
-      const t=ch.thrust;
-      detail=`HP ${ch.maxHp}  ENERGY ${ch.maxEnergy}  ${thrustStatText(ch)}  ROT ${t.rotAccel}  SLOTS: `+ch.slots.map(s=>s.type.toUpperCase()).join(' + ');
+      detail=chassisStatsText(ch);
     }
-    else if(tabId==='weapons'){const wp=item;detail=`TYPE: ${wp.wpnType.toUpperCase()}  DMG ${wp.dmg}  CD ${wp.cd}s`+(wp.range?`  RANGE ${wp.range}`:'');}
-    else if(tabId==='shields'){const sh=item;detail=`HP ${sh.hp}  ARC ${sh.coverageDeg}${String.fromCharCode(176)}  RECH ${sh.rechargeRate}/fr  COST ${sh.energyPerHp} NRG/HP`;}
+    else if(tabId==='weapons')detail=weaponStatsText(item);
+    else if(tabId==='shields')detail=shieldStatsText(item);
     cx.fillText(detail,px+12,dy+6);
     if(item.desc){cx.fillStyle='#446';cx.font='10px monospace';cx.fillText(item.desc,px+12,dy+20);}
     cx.fillStyle='#446';cx.font='10px monospace';cx.textAlign='right';
-    if(!hasLicense(item.id))cx.fillText('BUILD: '+itemBuildPrice(item)+' CR  (after license)',px+pw-12,dy+6);
-    else if(!isEquipped(item.id))cx.fillText('BUILD COST: '+itemBuildPrice(item)+' CR',px+pw-12,dy+6);
+    if(!hasLicense(item.id))cx.fillText('BUILD: '+itemBuildPrice(item)+' CR  (after license)',px+pw-12,dy+34);
+    else if(!isEquipped(item.id))cx.fillText('BUILD COST: '+itemBuildPrice(item)+' CR',px+pw-12,dy+34);
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
   drawMenuFooter(UI_GLYPH.left+UI_GLYPH.right+' SWITCH TAB   ENTER SELECT   '+pausePrompt('TO LEAVE'),W/2,py+348);
