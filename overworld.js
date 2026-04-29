@@ -630,8 +630,8 @@ function drawOW(){
   cx.fillStyle='#000008';cx.fillRect(0,0,W,H);drStars();
   const ow=G.OW,s=ow.s;
   const cam=updateWorldCamera(ow.cam||(ow.cam={x:Math.max(0,Math.min(OW_W-W,s.x-W/2)),y:Math.max(0,Math.min(OW_H-H,s.y-H/2)),z:1}),s.x,s.y,OW_W,OW_H,cameraZoomTarget('overworld',s),.5,.5,dynZoomOn()?.12:1);
-  const camX=cam.x,camY=cam.y;
-  drDust(camX-(ow.pcx??camX),camY-(ow.pcy??camY));ow.pcx=camX;ow.pcy=camY;
+  const dustV=dustVelocityForShip(s,cam);
+  drDust(dustV.x,dustV.y);
   cx.save();applyWorldCamera(cam);
   drawOWOrbitGuides();
   drawOWAsteroidBelt();

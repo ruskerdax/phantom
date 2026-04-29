@@ -216,6 +216,10 @@ function drStars(scroll=0){
   }
   cx.globalAlpha=1;
 }
+function dustVelocityForShip(s,cam){
+  const z=cam?.z||1;
+  return{x:(s?.vx||0)*z,y:(s?.vy||0)*z};
+}
 function drDust(vx,vy){
   const spd=Math.sqrt(vx*vx+vy*vy);if(spd>6){const s=6/spd;vx*=s;vy*=s;}
   const p=renderProfile(),n=Math.min(p.dustCount,DUST.length);

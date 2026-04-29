@@ -6,7 +6,7 @@ function encDist(enc,ax,ay,bx,by){return encToroidalActive(enc)?toroidalDistance
 function encDelta(enc,ax,ay,bx,by){return encToroidalActive(enc)?wrapDelta(ax,ay,bx,by,enc.ew,enc.eh):{dx:ax-bx,dy:ay-by};}
 function encPointNear(enc,x,y,refX,refY){return encToroidalActive(enc)?toroidalPointNear(x,y,refX,refY,enc.ew,enc.eh):{x,y};}
 function updEncPts(enc){if(encToroidalActive(enc)){for(let i=enc.pts.length-1;i>=0;i--){const p=enc.pts[i];p.x=wrap(p.x+p.vx,enc.ew);p.y=wrap(p.y+p.vy,enc.eh);p.l--;if(p.l<=0)enc.pts.splice(i,1);}}else updPts(enc.pts);}
-function clampEncCameraForExit(enc){enc.cam=updateWorldCamera(enc.cam,enc.s.x,enc.s.y,enc.ew,enc.eh,encounterZoomTarget(enc),.5,.5,1);enc.pcx=enc.cam.x;enc.pcy=enc.cam.y;}
+function clampEncCameraForExit(enc){enc.cam=updateWorldCamera(enc.cam,enc.s.x,enc.s.y,enc.ew,enc.eh,encounterZoomTarget(enc),.5,.5,1);}
 function encKillShip(){
   const enc=G.ENC;killShip(enc.s,enc.pts,'dead_enc');
 }
@@ -253,7 +253,8 @@ function drawEnc(){
   const enc=G.ENC,et=OET[enc.et];
   const camX=enc.cam?enc.cam.x:0,camY=enc.cam?enc.cam.y:0;
   cx.fillStyle='#030408';cx.fillRect(0,0,W,H);drStars();
-  drDust(camX-(enc.pcx??camX),camY-(enc.pcy??camY));enc.pcx=camX;enc.pcy=camY;
+  const dustV=dustVelocityForShip(enc.s,enc.cam);
+  drDust(dustV.x,dustV.y);
   cx.save();applyWorldCamera(enc.cam||{x:camX,y:camY,z:1});
   const tierCol=['#667','#556','#445'];
   const tor=encToroidalActive(enc),cam=enc.cam||{x:camX,y:camY,z:1};
