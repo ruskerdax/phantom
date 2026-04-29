@@ -10,6 +10,9 @@ function dseg(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;if(!l2)r
 function pip(px,py,p){let r=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const xi=p[i][0],yi=p[i][1],xj=p[j][0],yj=p[j][1];if((yi>py)!=(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi)r=!r;}return r;}
 function wrap(v,m){return((v%m)+m)%m;}
 function wrapDelta(ax,ay,bx,by,ew,eh){let dx=ax-bx,dy=ay-by;if(Math.abs(dx)>ew/2)dx-=Math.sign(dx)*ew;if(Math.abs(dy)>eh/2)dy-=Math.sign(dy)*eh;return{dx,dy};}
+function wrapCoordNear(v,ref,m){let d=v-ref;d-=Math.round(d/m)*m;return ref+d;}
+function toroidalPointNear(x,y,refX,refY,ew,eh){return{x:wrapCoordNear(x,refX,ew),y:wrapCoordNear(y,refY,eh)};}
+function toroidalDistance(ax,ay,bx,by,ew,eh){return Math.hypot(wrapCoordNear(ax,bx,ew)-bx,wrapCoordNear(ay,by,eh)-by);}
 function angDiff(a,b){let d=b-a;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;return d;}
 function normalizeRenderQuality(v){return RENDER_QUALITY_VALUES.includes(v)?v:'full';}
 function renderQuality(){return normalizeRenderQuality(typeof G!=='undefined'?G.renderQuality:null);}

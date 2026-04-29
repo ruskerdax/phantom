@@ -249,6 +249,22 @@ function killShip(s,pts,deadState,orangeCount=16){
 // Ray-cast laser: marches a ray from (ox,oy) in direction a, finding the nearest target or wall segment.
 // Returns endpoint (x2,y2) and hitIdx: a target array index (>=0) or -1 if a wall stopped the ray first.
 function castLaser(ox,oy,a,range,targets,walls=[]){const rdx=Math.sin(a),rdy=-Math.cos(a),ex=ox+rdx*range,ey=oy+rdy*range;let bestT=range,hitIdx=-1;for(let i=0;i<targets.length;i++){const tg=targets[i];if(dseg(tg.x,tg.y,ox,oy,ex,ey)<tg.r){const t=(tg.x-ox)*rdx+(tg.y-oy)*rdy;if(t>0&&t<bestT){bestT=t;hitIdx=i;}}}for(const[x1,y1,x2,y2]of walls){const dx=x2-x1,dy=y2-y1,det=dx*rdy-dy*rdx;if(Math.abs(det)<1e-9)continue;const t=(dx*(y1-oy)-dy*(x1-ox))/det,u=(rdx*(y1-oy)-rdy*(x1-ox))/det;if(t>0&&t<bestT&&u>=0&&u<=1){bestT=t;hitIdx=-1;}}return{x2:ox+rdx*bestT,y2:oy+rdy*bestT,hitIdx};}
+function castLaserForSpace(ox,oy,a,range,targets,walls=[],space=null){
+  if(!space?.toroidal)return castLaser(ox,oy,a,range,targets,walls);
+  const rdx=Math.sin(a),rdy=-Math.cos(a),ex=ox+rdx*range,ey=oy+rdy*range;
+  let bestT=range,hitIdx=-1;
+  for(let i=0;i<targets.length;i++){
+    const tg=targets[i];
+    for(let kx=-1;kx<=1;kx++)for(let ky=-1;ky<=1;ky++){
+      const tx=tg.x+kx*space.worldW,ty=tg.y+ky*space.worldH;
+      if(dseg(tx,ty,ox,oy,ex,ey)<tg.r){
+        const t=(tx-ox)*rdx+(ty-oy)*rdy;
+        if(t>0&&t<bestT){bestT=t;hitIdx=i;}
+      }
+    }
+  }
+  return{x2:ox+rdx*bestT,y2:oy+rdy*bestT,hitIdx};
+}
 
 function owPos(b){const a=b.orbitA+G.owFr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
 function recordLastLocation(kind,index=null){

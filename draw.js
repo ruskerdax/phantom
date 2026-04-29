@@ -54,11 +54,12 @@ function cameraZoomTarget(mode,s){
 function encounterZoomTarget(enc){
   if(!dynZoomOn())return 1;
   const s=enc?.s;if(!s)return 1;
+  const tor=enc&&!enc.isHBase&&!enc.cleared;
   let far=0,alive=0;
   for(const e of enc.en||[]){
     if(!e.alive)continue;
     alive++;
-    far=Math.max(far,Math.hypot(e.x-s.x,e.y-s.y));
+    far=Math.max(far,tor?toroidalDistance(e.x,e.y,s.x,s.y,enc.ew,enc.eh):Math.hypot(e.x-s.x,e.y-s.y));
   }
   if(enc.isHBase){
     for(const t of enc.hbase?.turrets||[]){
@@ -90,6 +91,35 @@ function updateWorldCamera(cam,fx,fy,worldW,worldH,targetZ=1,ax=.5,ay=.5,smooth=
   else{cam.x+=(tx-cam.x)*smooth;cam.y+=(ty-cam.y)*smooth;}
   return cam;
 }
+function updateToroidalWorldCamera(cam,fx,fy,worldW,worldH,targetZ=1,ax=.5,ay=.5,smooth=.12){
+  if(!cam)cam={x:fx-W*.5,y:fy-H*.5,z:1};
+  if(!Number.isFinite(cam.z)||cam.z<=0)cam.z=1;
+  if(smooth>=1)cam.z=targetZ;else cam.z+=(targetZ-cam.z)*smooth;
+  const viewW=W/cam.z,viewH=H/cam.z;
+  const refX=(Number.isFinite(cam.x)?cam.x:fx-viewW*ax)+viewW*ax;
+  const refY=(Number.isFinite(cam.y)?cam.y:fy-viewH*ay)+viewH*ay;
+  const tx=wrapCoordNear(fx,refX,worldW)-viewW*ax;
+  const ty=wrapCoordNear(fy,refY,worldH)-viewH*ay;
+  if(smooth>=1){cam.x=tx;cam.y=ty;}
+  else{cam.x+=(tx-cam.x)*smooth;cam.y+=(ty-cam.y)*smooth;}
+  return cam;
+}
+function drawToroidalCopies(x,y,r,worldW,worldH,cam,fn){
+  const z=cam?.z||1,left=cam.x,top=cam.y,right=cam.x+W/z,bottom=cam.y+H/z;
+  const kx0=Math.ceil((left-r-x)/worldW),kx1=Math.floor((right+r-x)/worldW);
+  const ky0=Math.ceil((top-r-y)/worldH),ky1=Math.floor((bottom+r-y)/worldH);
+  for(let kx=kx0;kx<=kx1;kx++)for(let ky=ky0;ky<=ky1;ky++)fn(x+kx*worldW,y+ky*worldH,kx,ky);
+}
+function drawToroidalSegmentCopies(x1,y1,x2,y2,pad,worldW,worldH,cam,fn){
+  const z=cam?.z||1,left=cam.x,top=cam.y,right=cam.x+W/z,bottom=cam.y+H/z;
+  const minX=Math.min(x1,x2),maxX=Math.max(x1,x2),minY=Math.min(y1,y2),maxY=Math.max(y1,y2);
+  const kx0=Math.ceil((left-pad-maxX)/worldW),kx1=Math.floor((right+pad-minX)/worldW);
+  const ky0=Math.ceil((top-pad-maxY)/worldH),ky1=Math.floor((bottom+pad-minY)/worldH);
+  for(let kx=kx0;kx<=kx1;kx++)for(let ky=ky0;ky<=ky1;ky++){
+    const ox=kx*worldW,oy=ky*worldH;
+    fn(x1+ox,y1+oy,x2+ox,y2+oy,kx,ky);
+  }
+}
 function applyWorldCamera(cam){
   const z=cam?.z||1;
   cx.scale(z,z);cx.translate(-(cam?.x||0),-(cam?.y||0));
@@ -98,14 +128,16 @@ function indicatorProjection(opts,t){
   const cam=opts.cam||{x:0,y:0,z:1},z=cam.z||1,p=opts.player;
   let wx=t.x,wy=t.y,dx=t.x-p.x,dy=t.y-p.y;
   if(opts.toroidal){
-    const d=wrapDelta(p.x,p.y,t.x,t.y,opts.worldW,opts.worldH);
-    dx=-d.dx;dy=-d.dy;wx=p.x+dx;wy=p.y+dy;
+    const viewW=W/z,viewH=H/z;
+    const vp=toroidalPointNear(p.x,p.y,cam.x+viewW*.5,cam.y+viewH*.5,opts.worldW,opts.worldH);
+    const wt=toroidalPointNear(t.x,t.y,vp.x,vp.y,opts.worldW,opts.worldH);
+    wx=wt.x;wy=wt.y;dx=wx-vp.x;dy=wy-vp.y;
   }
   const dist=Math.hypot(dx,dy);
   if((opts.maxRange!=null&&dist>opts.maxRange)||dist<=0)return null;
   const r=(t.r||0)*z,sx=(wx-cam.x)*z,sy=(wy-cam.y)*z;
   if(sx+r>=0&&sx-r<=W&&sy+r>=0&&sy-r<=H)return null;
-  const psx=(p.x-cam.x)*z,psy=(p.y-cam.y)*z;
+  const psx=((opts.toroidal?wx-dx:p.x)-cam.x)*z,psy=((opts.toroidal?wy-dy:p.y)-cam.y)*z;
   return{sx,sy,psx,psy,dist};
 }
 function indicatorEdgePoint(ox,oy,dx,dy,inset){

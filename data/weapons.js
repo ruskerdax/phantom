@@ -42,14 +42,14 @@ const WEAPON_TYPES = {
     },
     // Advances one laser pulse; returns castLaser result or null if timer not ready.
     // Caller is responsible for building tgts (context-specific) and handling the hit.
-    tick(wp, s, slot, tgts, lsb, walls=[]) {
+    tick(wp, s, slot, tgts, lsb, walls=[], space=null) {
       const[plK,ptK,cdK]=slot===0?['pulsesLeft','pulseTimer','scd']:['pulsesLeft2','pulseTimer2','scd2'];
       if(--s[ptK]>0){
         if(wp.chargeTone&&s[ptK]===wp.chargeDelay-1)toneRise(wp.chargeTone[0],wp.chargeTone[1],wp.chargeDelay/60,wp.chargeTone[2],wp.chargeTone[3]);
         return null;
       }
       const ox=s.x+Math.sin(s.a)*13,oy=s.y-Math.cos(s.a)*13;
-      const res=castLaser(ox,oy,s.a,wp.range,tgts,walls);
+      const res=castLaserForSpace(ox,oy,s.a,wp.range,tgts,walls,space);
       lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:wp.beamColor??'#0cf',w:wp.beamWidth??2});
       if(wp.beamSound)tone(...wp.beamSound);else tone(1200,.08,'sine',.05);
       s[plK]--;

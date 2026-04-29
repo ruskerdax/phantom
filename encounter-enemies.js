@@ -8,25 +8,27 @@ function mkEncEnemy(type, x, y, timer) {
 // Returns true if the player ship was killed (caller should return from updEnc).
 function enemyUpdate(e, s, enc, ew, eh) {
   const ecDef=OET[e.t],ec=ecDef.enc;
+  const tor=encToroidalActive(enc);
   e.spin+=ecDef.spinRate;
   ENEMY_TYPES[ecDef.aiType].update(e, ec, s, ew, eh);
   e.vx*=.975;e.vy*=.975;const es=Math.hypot(e.vx,e.vy);if(es>ec.spd){e.vx=e.vx/es*ec.spd;e.vy=e.vy/es*ec.spd;}
   e.x=wrap(e.x+e.vx,ew);e.y=wrap(e.y+e.vy,eh);
-  for(const rk of enc.rocks){const rd=Math.hypot(e.x-rk.x,e.y-rk.y);if(rd<rk.r+16){e.vx+=(e.x-rk.x)/rd*.3;e.vy+=(e.y-rk.y)/rd*.3;}}
-  for(const oe of enc.en){if(oe===e||!oe.alive)continue;const od=Math.hypot(e.x-oe.x,e.y-oe.y)||1;const minD=ec.r+OET[oe.t].enc.r;if(od<minD){const nx=(e.x-oe.x)/od,ny=(e.y-oe.y)/od;const push=(minD-od)/minD*.5;e.vx+=nx*push;e.vy+=ny*push;}}
+  for(const rk of enc.rocks){const d=tor?wrapDelta(e.x,e.y,rk.x,rk.y,ew,eh):{dx:e.x-rk.x,dy:e.y-rk.y},rd=Math.hypot(d.dx,d.dy)||1;if(rd<rk.r+16){e.vx+=(d.dx/rd)*.3;e.vy+=(d.dy/rd)*.3;}}
+  for(const oe of enc.en){if(oe===e||!oe.alive)continue;const d=tor?wrapDelta(e.x,e.y,oe.x,oe.y,ew,eh):{dx:e.x-oe.x,dy:e.y-oe.y},od=Math.hypot(d.dx,d.dy)||1;const minD=ec.r+OET[oe.t].enc.r;if(od<minD){const nx=d.dx/od,ny=d.dy/od;const push=(minD-od)/minD*.5;e.vx+=nx*push;e.vy+=ny*push;}}
   const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
   const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn];
   if(ewp.wpnType==='beam gun'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
     const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;
     const tgts=[{x:s.x,y:s.y,r:12,kind:'ship'}];
     for(let mi=0;mi<enc.mis.length;mi++)tgts.push({x:enc.mis[mi].x,y:enc.mis[mi].y,r:5,kind:'missile',idx:mi});
-    const res=castLaser(ox,oy,e.a,ewp.range,tgts);
+    const res=castLaserForSpace(ox,oy,e.a,ewp.range,tgts,[],tor?{toroidal:true,worldW:ew,worldH:eh}:null);
     enc.lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ec.col});
     tone(550+e.t*80,.08,'sine',.04);
     if(res.hitIdx>=0){
       const tg=tgts[res.hitIdx];
       if(tg.kind==='ship'){
-        const hit=applyShipDamage(s,ewp.dmg,{source:{x:ox,y:oy},kind:'beam',weapon:ewp});
+        const src=tor?toroidalPointNear(ox,oy,s.x,s.y,ew,eh):{x:ox,y:oy};
+        const hit=applyShipDamage(s,ewp.dmg,{source:src,kind:'beam',weapon:ewp});
         shipDamageTone(hit);
         if(s.hp<=0){encKillShip();return true;}
       } else if(tg.kind==='missile'){
