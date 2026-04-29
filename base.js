@@ -47,7 +47,7 @@ function drawBaseHeader(px,py,pw){
 function drawBaseServices(){
   const{pw,ph,px,py}=basePanel();
   const s=G.OW.s;
-  const repairCost=(s.maxHp-s.hp)*100,rechargeCost=Math.ceil((s.maxEnergy-s.energy)*10);
+  const repairCost=(s.maxHp-s.hp)*10,rechargeCost=Math.ceil((s.maxEnergy-s.energy)*1);
   const costs=[repairCost,rechargeCost],maxed=[s.hp>=s.maxHp,s.energy>=s.maxEnergy];
   const items=['REPAIR HULL','RECHARGE ENERGY'];
   cx.font='13px monospace';
