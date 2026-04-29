@@ -94,6 +94,79 @@ function applyWorldCamera(cam){
   const z=cam?.z||1;
   cx.scale(z,z);cx.translate(-(cam?.x||0),-(cam?.y||0));
 }
+function indicatorProjection(opts,t){
+  const cam=opts.cam||{x:0,y:0,z:1},z=cam.z||1,p=opts.player;
+  let wx=t.x,wy=t.y,dx=t.x-p.x,dy=t.y-p.y;
+  if(opts.toroidal){
+    const d=wrapDelta(p.x,p.y,t.x,t.y,opts.worldW,opts.worldH);
+    dx=-d.dx;dy=-d.dy;wx=p.x+dx;wy=p.y+dy;
+  }
+  const dist=Math.hypot(dx,dy);
+  if((opts.maxRange!=null&&dist>opts.maxRange)||dist<=0)return null;
+  const r=(t.r||0)*z,sx=(wx-cam.x)*z,sy=(wy-cam.y)*z;
+  if(sx+r>=0&&sx-r<=W&&sy+r>=0&&sy-r<=H)return null;
+  const psx=(p.x-cam.x)*z,psy=(p.y-cam.y)*z;
+  return{sx,sy,psx,psy,dist};
+}
+function indicatorEdgePoint(ox,oy,dx,dy,inset){
+  ox=Math.max(inset,Math.min(W-inset,ox));
+  oy=Math.max(inset,Math.min(H-inset,oy));
+  let best=Infinity,edge='right';
+  if(dx>0){const t=(W-inset-ox)/dx;if(t>=0&&t<best){best=t;edge='right';}}
+  else if(dx<0){const t=(inset-ox)/dx;if(t>=0&&t<best){best=t;edge='left';}}
+  if(dy>0){const t=(H-inset-oy)/dy;if(t>=0&&t<best){best=t;edge='bottom';}}
+  else if(dy<0){const t=(inset-oy)/dy;if(t>=0&&t<best){best=t;edge='top';}}
+  if(!Number.isFinite(best))best=0;
+  return{x:Math.max(inset,Math.min(W-inset,ox+dx*best)),y:Math.max(inset,Math.min(H-inset,oy+dy*best)),edge};
+}
+function collectOffscreenIndicators(opts){
+  const out=[],inset=opts?.inset??22;
+  if(!opts?.player||!opts?.cam||!opts?.targets)return out;
+  for(const t of opts.targets){
+    if(t.alive===false)continue;
+    const pr=indicatorProjection(opts,t);if(!pr)continue;
+    const dx=pr.sx-pr.psx,dy=pr.sy-pr.psy,len=Math.hypot(dx,dy);
+    if(len<=0)continue;
+    const p=indicatorEdgePoint(pr.psx,pr.psy,dx,dy,inset);
+    out.push({x:p.x,y:p.y,edge:p.edge,a:Math.atan2(dy,dx),col:t.col||'#f44',scale:Math.max(.85,Math.min(1.35,(t.r||12)/13)),dist:pr.dist});
+  }
+  return out;
+}
+function spaceIndicatorGroup(g,inset,gap){
+  const vertical=g[0]?.edge==='left'||g[0]?.edge==='right';
+  const key=vertical?'y':'x',min=inset,max=(vertical?H:W)-inset;
+  g.sort((a,b)=>a[key]-b[key]);
+  for(let i=1;i<g.length;i++)if(g[i][key]-g[i-1][key]<gap)g[i][key]=g[i-1][key]+gap;
+  const over=g.length?g[g.length-1][key]-max:0;
+  if(over>0)for(const it of g)it[key]-=over;
+  for(let i=0;i<g.length;i++)g[i][key]=Math.max(min,Math.min(max,i?Math.max(g[i][key],g[i-1][key]+gap):g[i][key]));
+}
+function drawIndicatorChevron(x,y,a,col,scale=1,alpha=1){
+  const size=10*scale,ux=Math.cos(a),uy=Math.sin(a),px=-uy,py=ux;
+  const q=renderQuality();
+  cx.save();
+  cx.globalAlpha=alpha;
+  cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=q==='minimal'?0:q==='reduced'?4:8;
+  cx.lineWidth=1.7;cx.lineCap='round';cx.lineJoin='round';
+  cx.beginPath();
+  cx.moveTo(x-ux*size*.75+px*size*.55,y-uy*size*.75+py*size*.55);
+  cx.lineTo(x+ux*size*.75,y+uy*size*.75);
+  cx.lineTo(x-ux*size*.75-px*size*.55,y-uy*size*.75-py*size*.55);
+  cx.stroke();
+  cx.restore();
+}
+function drawOffscreenIndicators(indicators,opts={}){
+  if(!indicators?.length)return;
+  const inset=opts.inset??22,gap=opts.gap??18;
+  const groups={left:[],right:[],top:[],bottom:[]};
+  for(const it of indicators)groups[it.edge]?.push({...it});
+  const pulse=.78+.22*Math.sin(G.fr*.12);
+  for(const edge of Object.keys(groups)){
+    const g=groups[edge];if(!g.length)continue;
+    spaceIndicatorGroup(g,inset,gap);
+    for(const it of g)drawIndicatorChevron(it.x,it.y,it.a,it.col,it.scale,pulse*(opts.alpha??.86));
+  }
+}
 
 function drStars(scroll=0){
   const layer=getStarLayer(),p=renderProfile();
