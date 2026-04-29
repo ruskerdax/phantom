@@ -252,8 +252,11 @@ function drPts(pts){
 function drShip(x,y,a,ship,thr,energy,inv,fr){
   if(inv>0&&fr%4>=2)return;
   const thrust=typeof thr==='object'&&thr?thr:{forward:!!thr};
-  cx.save();cx.translate(x,y);cx.rotate(a);
   const def=shieldDefForShip(ship);
+  const shieldMax=ship?.shieldMaxHp||def?.hp||0;
+  const shieldFrac=def&&ship?.shieldId&&shieldMax>0?Math.max(0,Math.min(1,(ship.shieldHp||0)/shieldMax)):1;
+  const showShieldBar=def&&ship?.shieldId&&shieldFrac<1;
+  cx.save();cx.translate(x,y);cx.rotate(a);
   const shieldVisible=def&&ship?.shieldId&&ship.shieldEnabled!==false&&!ship.shieldOffline&&ship.shieldHp>0;
   if(shieldVisible){
     const shieldR=shipShieldHitRadius(ship,def);
@@ -274,6 +277,16 @@ function drShip(x,y,a,ship,thr,energy,inv,fr){
   if(thrust.strafeLeft)flame(7,-2,11+Math.random()*side,0,7,2,lit?8:4);
   if(thrust.strafeRight)flame(-7,-2,-11-Math.random()*side,0,-7,2,lit?8:4);
   cx.restore();
+  if(showShieldBar){
+    const bw=26,bh=4,by=y-22;
+    cx.save();
+    cx.shadowBlur=0;
+    cx.fillStyle='#123';
+    cx.fillRect(x-bw*.5,by,bw,bh);
+    cx.fillStyle=ship.shieldEnabled===false?'#557':'#6cf';
+    cx.fillRect(x-bw*.5,by,bw*shieldFrac,bh);
+    cx.restore();
+  }
 }
 // All distances are in pixels from the ship center.
 const CONE={innerR:30,outerR:350,half:15*Math.PI/180,gap:3,dot:1,col:'#ffb060',alpha:0.3,alphaRot:0.5};
@@ -316,15 +329,6 @@ function drHUD(energy,maxEnergy=100,hp=15,maxHp=15,ship=null){
   cx.fillStyle='#aaffcc';cx.fillText('ENERGY',W-88,32);
   cx.strokeRect(W-82,21,70,11);
   cx.fillStyle=energy>maxEnergy*.2?'#0f8':'#f40';cx.fillRect(W-81,22,energy/maxEnergy*68,9);
-  const sh=ship?shieldDefForShip(ship):null;
-  if(sh&&ship.shieldId){
-    const sf=Math.max(0,Math.min(1,(ship.shieldHp||0)/(ship.shieldMaxHp||sh.hp||1)));
-    const label=ship.shieldEnabled===false?'SHIELD OFF':ship.shieldOffline?'SHIELD DOWN':'SHIELD';
-    cx.fillStyle=ship.shieldEnabled===false?'#668':'#aaffcc';cx.fillText(label,W-88,47);
-    cx.strokeStyle=ship.shieldEnabled===false?'#668':'#aaffcc';cx.strokeRect(W-82,36,70,11);
-    cx.fillStyle=ship.shieldEnabled===false?'#555':ship.shieldOffline?'#f84':'#6cf';
-    cx.fillRect(W-81,37,sf*68,9);
-  }
   cx.restore();
 }
 function drBullet(x,y,col='#fff'){cx.save();cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=6;cx.beginPath();cx.arc(x,y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
