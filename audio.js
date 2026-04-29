@@ -2,7 +2,7 @@
 
 // Audio is built on one Web Audio graph:
 // SFX -> sfxMaster -> destination
-// Music -> musicPreFx -> pauseHighpass -> musicMaster -> destination
+// Music -> musicPreFx -> pauseFilter -> musicMaster -> destination
 let AC=null;
 
 var MUSIC_TRACKS={
@@ -23,7 +23,7 @@ const AUDIO={
   ready:false,
   sfxMaster:null,
   musicPreFx:null,
-  pauseHighpass:null,
+  pauseFilter:null,
   musicMaster:null,
   lastSfxGain:null,
   lastMusicGain:null,
@@ -61,18 +61,18 @@ function initAudioGraph(){
   if(AUDIO.ready||!AC)return;
   AUDIO.sfxMaster=AC.createGain();
   AUDIO.musicPreFx=AC.createGain();
-  AUDIO.pauseHighpass=AC.createBiquadFilter();
+  AUDIO.pauseFilter=AC.createBiquadFilter();
   AUDIO.musicMaster=AC.createGain();
 
   AUDIO.sfxMaster.gain.value=sfxVolumeTarget();
   AUDIO.sfxMaster.connect(AC.destination);
 
-  AUDIO.pauseHighpass.type='highpass';
-  AUDIO.pauseHighpass.frequency.value=20;
-  AUDIO.pauseHighpass.Q.value=.7;
+  AUDIO.pauseFilter.type='lowpass';
+  AUDIO.pauseFilter.frequency.value=20000;
+  AUDIO.pauseFilter.Q.value=.7;
   AUDIO.musicMaster.gain.value=musicVolumeTarget();
-  AUDIO.musicPreFx.connect(AUDIO.pauseHighpass);
-  AUDIO.pauseHighpass.connect(AUDIO.musicMaster);
+  AUDIO.musicPreFx.connect(AUDIO.pauseFilter);
+  AUDIO.pauseFilter.connect(AUDIO.musicMaster);
   AUDIO.musicMaster.connect(AC.destination);
 
   AUDIO.ready=true;
@@ -98,7 +98,10 @@ function ia(){
 }
 
 function sfxVolumeTarget(){return clampAudio((typeof G!=='undefined'?G.sfxVol:10)/10);}
-function musicVolumeTarget(){return clampAudio((typeof G!=='undefined'?G.musVol:10)/10);}
+function musicVolumeTarget(){
+  const base=clampAudio((typeof G!=='undefined'?G.musVol:10)/10);
+  return musicPauseFilterActive()?base*.25:base;
+}
 function audioSyncSfxVolume(immediate=false){
   if(!AUDIO.sfxMaster)return;
   const target=sfxVolumeTarget();
@@ -123,11 +126,11 @@ function musicPauseFilterActive(){
   return !!(typeof G!=='undefined'&&(G.paused||((G.st==='options'||G.st==='controls')&&G.optFrom!=='title')));
 }
 function musicSyncPauseFilter(immediate=false){
-  if(!AUDIO.pauseHighpass)return;
+  if(!AUDIO.pauseFilter)return;
   const active=musicPauseFilterActive();
   if(!immediate&&AUDIO.lastPauseFilter===active)return;
   AUDIO.lastPauseFilter=active;
-  audioRamp(AUDIO.pauseHighpass.frequency,active?650:20,immediate?0:.22);
+  audioRamp(AUDIO.pauseFilter.frequency,active?900:20000,immediate?0:.22);
 }
 
 // tone(f,d,t,v): spawns an oscillator at frequency f, ramps its gain to silence over d seconds, then stops.
@@ -263,6 +266,9 @@ function musicResumeHtmlFallbacks(){
     if(entry.audio&&(entry.audio.paused||entry.playBlocked))musicPlayHtmlEntry(entry);
   }
 }
+function musicCanRouteHtmlThroughGraph(){
+  return !(typeof location!=='undefined'&&location.protocol==='file:');
+}
 function musicStopEntry(entry,fadeSec=.5){
   if(!entry)return;
   entry.stopping=true;
@@ -290,7 +296,7 @@ function musicStartHtmlLayer(layer,cfg,entry,fadeSec){
     entry.audio=audio;
     entry.mediaSource=null;
     entry.htmlDirect=true;
-    if(AC&&AUDIO.musicPreFx){
+    if(AC&&AUDIO.musicPreFx&&musicCanRouteHtmlThroughGraph()){
       try{
         const gain=AC.createGain(),mediaSource=AC.createMediaElementSource(audio);
         gain.gain.setValueAtTime(0,AC.currentTime);
