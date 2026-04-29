@@ -1,8 +1,49 @@
 'use strict';
 
-// Site wall collision. pip() (point-in-polygon) returns false when the ship is outside the site boundary — that's a hit.
-// dseg() measures distance to each wall segment to catch close-range overlap. LV from gen.js; dseg/pip from util.js.
-function wHit(x,y,r,li){if(y<0)return false;const d=LV[li],t=d.terrain;for(let i=0;i<t.length-1;i++)if(dseg(x,y,t[i][0],t[i][1],t[i+1][0],t[i+1][1])<r)return true;if(!pip(x,y,t))return true;for(const o of d.obs){if(pip(x,y,o))return true;for(let i=0;i<o.length;i++){const j=(i+1)%o.length;if(dseg(x,y,o[i][0],o[i][1],o[j][0],o[j][1])<r)return true;}}return false;}
+const SITE_BOUNDARY_STEP=14;
+const SITE_BOUNDARY_SAMPLE=2.25;
+
+function sitePointEmpty(d,x,y){
+  if(y<0)return true;
+  if(!pip(x,y,d.terrain))return false;
+  for(const o of d.obs)if(pip(x,y,o))return false;
+  return true;
+}
+
+function addSiteBoundaryChunks(segs,d,a,b){
+  const dx=b[0]-a[0],dy=b[1]-a[1],len=Math.hypot(dx,dy);
+  if(!len)return;
+  const nx=-dy/len,ny=dx/len;
+  const n=Math.max(1,Math.ceil(len/SITE_BOUNDARY_STEP));
+  for(let k=0;k<n;k++){
+    const t0=k/n,t1=(k+1)/n,tm=(t0+t1)/2;
+    const mx=a[0]+dx*tm,my=a[1]+dy*tm;
+    const e0=sitePointEmpty(d,mx+nx*SITE_BOUNDARY_SAMPLE,my+ny*SITE_BOUNDARY_SAMPLE);
+    const e1=sitePointEmpty(d,mx-nx*SITE_BOUNDARY_SAMPLE,my-ny*SITE_BOUNDARY_SAMPLE);
+    if(e0===e1)continue;
+    segs.push([a[0]+dx*t0,a[1]+dy*t0,a[0]+dx*t1,a[1]+dy*t1]);
+  }
+}
+
+function siteBoundarySegments(d){
+  if(d._boundarySegs)return d._boundarySegs;
+  const segs=[],t=d.terrain;
+  for(let i=0;i<t.length-1;i++)addSiteBoundaryChunks(segs,d,t[i],t[i+1]);
+  for(const o of d.obs){
+    for(let i=0;i<o.length;i++)addSiteBoundaryChunks(segs,d,o[i],o[(i+1)%o.length]);
+  }
+  d._boundarySegs=segs;
+  return segs;
+}
+
+function polyPath(poly,closed=true){
+  poly.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));
+  if(closed)cx.closePath();
+}
+
+// Site wall collision. The terrain and obstacles are treated as one solid mass, so
+// intersecting shapes do not leave visible or physical seams.
+function wHit(x,y,r,li){if(y<0)return false;const d=LV[li];for(const s of siteBoundarySegments(d))if(dseg(x,y,s[0],s[1],s[2],s[3])<r)return true;return !sitePointEmpty(d,x,y);}
 
 // Detonate a site missile: applies expDmg to entities within expR + visual/audio.
 // Player missile (isEnemy=false) damages turrets + reactor. Enemy missile (isEnemy=true) damages the player ship.
@@ -73,28 +114,17 @@ function updSiteMissiles(site, mis, isEnemy){
 // ===================== SITE LEVEL =====================
 function wNormal(x,y,li){
   const d=LV[li];let best=Infinity,nx=0,ny=1;
-  const t=d.terrain;
-  for(let i=0;i<t.length-1;i++){
-    const dist=dseg(x,y,t[i][0],t[i][1],t[i+1][0],t[i+1][1]);
+  for(const s of siteBoundarySegments(d)){
+    const dist=dseg(x,y,s[0],s[1],s[2],s[3]);
     if(dist<best){
       best=dist;
-      const dx=t[i+1][0]-t[i][0],dy=t[i+1][1]-t[i][1],len=Math.hypot(dx,dy)||1;
-      nx=-dy/len;ny=dx/len;
-      if(nx*(x-t[i][0])+ny*(y-t[i][1])<0){nx=-nx;ny=-ny;}
-    }
-  }
-  for(const o of d.obs){
-    const ocx=o.reduce((s,p)=>s+p[0],0)/o.length;
-    const ocy=o.reduce((s,p)=>s+p[1],0)/o.length;
-    for(let i=0;i<o.length;i++){
-      const j=(i+1)%o.length;
-      const dist=dseg(x,y,o[i][0],o[i][1],o[j][0],o[j][1]);
-      if(dist<best){
-        best=dist;
-        const dx=o[j][0]-o[i][0],dy=o[j][1]-o[i][1],len=Math.hypot(dx,dy)||1;
-        nx=-dy/len;ny=dx/len;
-        if(nx*(x-ocx)+ny*(y-ocy)<0){nx=-nx;ny=-ny;}
+      const dx=s[2]-s[0],dy=s[3]-s[1],len=Math.hypot(dx,dy)||1;
+      let tx=-dy/len,ty=dx/len;
+      const mx=(s[0]+s[2])*.5,my=(s[1]+s[3])*.5;
+      if(!sitePointEmpty(d,mx+tx*SITE_BOUNDARY_SAMPLE,my+ty*SITE_BOUNDARY_SAMPLE)){
+        tx=-tx;ty=-ty;
       }
+      nx=tx;ny=ty;
     }
   }
   return{nx,ny};
@@ -154,7 +184,7 @@ function updSite(){
   if(wHit(s.x,s.y,9,G.lv)){siteBounce(s);if(s.hp<=0){siteKillShip();return;}}
   for(const f of site.fu){if(!f.got&&Math.hypot(s.x-f.x,s.y-f.y)<22){f.got=true;pickupEnergy(s,f.x,f.y,site.pts,d.col);}}
   if(G.st==='esc'){site.esc--;if(site.esc<=0){G.cleared[G.lv]=true;delete G.lvState[G.lv];if(G.cleared.every(c=>c)){G.slipgateActive=true;G.slipMsg=360;}saveGame();siteKillShip();return;}}
-  const walls=[];for(let i=0;i<d.terrain.length-1;i++)walls.push([d.terrain[i][0],d.terrain[i][1],d.terrain[i+1][0],d.terrain[i+1][1]]);for(const o of d.obs){for(let i=0;i<o.length;i++){const j=(i+1)%o.length;walls.push([o[i][0],o[i][1],o[j][0],o[j][1]]);}}
+  const walls=siteBoundarySegments(d);
   {const wp=wpSlot(0);if(wp){const wt=WEAPON_TYPES[wp.wpnType];
   if(s.pulsesLeft>0&&wt.tick){const tgts=[];site.en.forEach((e,i)=>{if(e.alive)tgts.push({x:e.x,y:e.y,r:13,kind:'turret',idx:i});});if(site.rx.alive)tgts.push({x:site.rx.x,y:site.rx.y,r:18,kind:'reactor',idx:0});const res=wt.tick(wp,s,0,tgts,site.lsb,walls);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='turret'){const e=site.en[tg.idx];e.alive=false;addStake(250);boomAt(site.pts,e.x,e.y,d.col,14);tone(220,.3,'sawtooth',.1);}else if(tg.kind==='reactor'){const rx=site.rx;rx.hp-=wp.dmg;addStake(100);tone(350,.1,'square',.08);boomAt(site.pts,res.x2,res.y2,d.col,4);if(rx.hp<=0){rx.alive=false;site.rdone=true;site.esc=1200;G.st='esc';addStake(2000);boomAt(site.pts,rx.x,rx.y,d.col,40);boomAt(site.pts,rx.x,rx.y,'#fff',20);tone(150,.8,'sawtooth',.18);}}}}
   if(s.misLeft>0&&wt.tick&&wp.wpnType==='missile launcher') wt.tick(wp,s,0,site.mis);
@@ -194,11 +224,10 @@ function drawSite(){
   const camX=site.cam?site.cam.x:0,camY=site.cam?site.cam.y:0;
   cx.fillStyle=d.bg;cx.fillRect(0,0,W,H);
   cx.save();applyWorldCamera(site.cam||{x:camX,y:camY,z:1});
-  cx.fillStyle='#000';cx.beginPath();d.terrain.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.closePath();cx.fill();
-  cx.fillStyle=d.bg;for(const o of d.obs){cx.beginPath();o.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.closePath();cx.fill();}
+  cx.fillStyle='#000';cx.beginPath();polyPath(d.terrain);cx.fill();
+  cx.fillStyle=d.bg;for(const o of d.obs){cx.beginPath();polyPath(o);cx.fill();}
   cx.save();cx.shadowColor=col;cx.shadowBlur=10;cx.strokeStyle=col;cx.lineWidth=1.5;
-  cx.beginPath();d.terrain.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.stroke();
-  for(const o of d.obs){cx.beginPath();o.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.closePath();cx.stroke();}
+  cx.beginPath();for(const s of siteBoundarySegments(d)){cx.moveTo(s[0],s[1]);cx.lineTo(s[2],s[3]);}cx.stroke();
   cx.restore();
   for(const f of site.fu)if(!f.got)drEnergy(f.x,f.y,col);
   const rx=site.rx;cx.save();
