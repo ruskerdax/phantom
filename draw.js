@@ -1,7 +1,7 @@
 'use strict';
 
-// Static starfield
-const STARS=(()=>{const a=[];for(let i=0;i<220;i++)a.push({x:Math.random()*W,y:Math.random()*H,r:.3+Math.random()*1.4,ph:Math.random()*Math.PI*2,ci:i%5});return a;})();
+// Static starfield, regenerated from the current system seed.
+let STARS=[],DUST=[];
 const SCOLS=['#ffffff','#aaaaff','#ffeebb','#aaffee','#ffaaaa'];
 const RENDER_PROFILES={
   full:{starCount:220,twinkleCount:72,dustCount:140,scanlines:true,scanlineAlpha:.035,particleAlphaStep:0},
@@ -12,6 +12,14 @@ const STAR_LAYERS={},SCANLINE_LAYERS={};
 
 function renderProfile(){return RENDER_PROFILES[renderQuality()]||RENDER_PROFILES.full;}
 function mkLayer(w=W,h=H){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+function clearStarLayers(){for(const k in STAR_LAYERS)delete STAR_LAYERS[k];}
+function genBackground(seed){
+  seed=seed>>>0;
+  clearStarLayers();
+  const sr=mkRNG(seedChild(seed,0x5100)),dr=mkRNG(seedChild(seed,0x5101));
+  STARS=[];for(let i=0;i<220;i++)STARS.push({x:sr.fl(0,W),y:sr.fl(0,H),r:sr.fl(.3,1.7),ph:sr.fl(0,Math.PI*2),ci:sr.int(0,SCOLS.length-1)});
+  DUST=[];for(let i=0;i<140;i++)DUST.push({x:dr.fl(0,W),y:dr.fl(0,H),r:dr.fl(.4,2.0),depth:dr.fl(.15,.85)});
+}
 function getStarLayer(){
   const q=renderQuality(),p=renderProfile();
   if(STAR_LAYERS[q])return STAR_LAYERS[q];
@@ -32,8 +40,8 @@ function getScanlineLayer(){
   for(let y=0;y<H;y+=2)g.fillRect(0,y,W,1);
   g.globalAlpha=1;SCANLINE_LAYERS[q]=c;return c;
 }
-// Motion dust — screen-space parallax particles, drift opposite player velocity
-const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Math.random()*H,r:.4+Math.random()*1.6,depth:.15+Math.random()*.7});return a;})();
+// Motion dust - screen-space parallax particles, drift opposite player velocity
+genBackground(0);
 
 function dynZoomOn(){return G.dynamicZoom!==false;}
 function cameraZoomTarget(mode,s){
