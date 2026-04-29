@@ -118,13 +118,13 @@ function updEncMissiles(enc, mis, isEnemy, ew, eh){
         }
       } else if(s.alive){
         const src=encPointNear(enc,m.x,m.y,s.x,s.y),hitOpts={source:src,kind:'missile',weapon:m};
-        if(encDist(enc,m.x,m.y,s.x,s.y)<SHIELD_HIT_R&&shipShieldCanTakeHit(s,hitOpts)){
+        if(encDist(enc,m.x,m.y,s.x,s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,hitOpts)){
           const shieldHit=applyShipShieldDamage(s,m.dmg,hitOpts);
           m.dmg=shieldHit.passthroughDamage;
           shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
           if(shieldHit.blocked||m.dmg<=0)det=true;
         }
-        if(!det&&encDist(enc,m.x,m.y,s.x,s.y)<SHIP_HIT_R){
+        if(!det&&encDist(enc,m.x,m.y,s.x,s.y)<shipHitRadius(s)){
           const hit=applyShipDamage(s,m.dmg,hitOpts);
           shipDamageTone(hit);
           det=true;
@@ -231,13 +231,13 @@ function updEnc(){
     if(rm){enc.ebu.splice(i,1);continue;}
     if(enc.isHBase&&pip(b.x,b.y,enc.hbase.hexPoly)){enc.ebu.splice(i,1);continue;}
     const bSrc=encPointNear(enc,b.x,b.y,s.x,s.y),bHitOpts={source:bSrc,kind:'projectile',weapon:b};
-    if(encDist(enc,b.x,b.y,s.x,s.y)<SHIELD_HIT_R&&shipShieldCanTakeHit(s,bHitOpts)){
+    if(encDist(enc,b.x,b.y,s.x,s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,bHitOpts)){
       const shieldHit=applyShipShieldDamage(s,b.dmg,bHitOpts);
       b.dmg=shieldHit.passthroughDamage;
       shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
       if(shieldHit.blocked||b.dmg<=0){enc.ebu.splice(i,1);continue;}
     }
-    if(encDist(enc,b.x,b.y,s.x,s.y)<SHIP_HIT_R){
+    if(encDist(enc,b.x,b.y,s.x,s.y)<shipHitRadius(s)){
       enc.ebu.splice(i,1);
       const hit=applyShipDamage(s,b.dmg,bHitOpts);
       shipDamageTone(hit);

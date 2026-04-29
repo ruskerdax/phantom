@@ -125,8 +125,17 @@ function shieldLoadoutText(sh){
 }
 const ENERGY_PICKUP=38;
 const THRUST_ENERGY_DRAIN={overworld:.035,encounter:.01,site:.012};
-const SHIP_HIT_R=12;
-const SHIELD_HIT_R=17;
+const FALLBACK_SHIP_HIT_RADIUS=12;
+function chassisDefForShip(s){return CHASSIS.find(c=>c.id===s?.chassisId)||activeChassisObj();}
+function shipHitRadius(s){
+  const r=chassisDefForShip(s)?.hitRadius??FALLBACK_SHIP_HIT_RADIUS;
+  return Number.isFinite(r)&&r>0?r:FALLBACK_SHIP_HIT_RADIUS;
+}
+function shipShieldHitRadius(s,def=shieldDefForShip(s)){
+  const fallbackScale=1.42;
+  const scale=def?.radiusScale??fallbackScale;
+  return shipHitRadius(s)*(Number.isFinite(scale)&&scale>0?scale:fallbackScale);
+}
 function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
 function drainEnergy(s,amount){if(s.energy>0)s.energy=Math.max(0,s.energy-amount);}
 // Particle system: boomAt() spawns n particles in random directions; updPts() advances and culls them each frame.
@@ -235,7 +244,7 @@ function shipDamageTone(hit,hullFreq=380,hullDur=.08,hullType='square',hullVol=.
 }
 function mkShip(x,y){
   const ch=activeChassisObj(),sh=activeShieldObj();
-  const s={x,y,vx:0,vy:0,va:0,a:0,energy:ch.maxEnergy,maxEnergy:ch.maxEnergy,alive:true,inv:120,scd:0,scd2:0,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};
+  const s={x,y,chassisId:ch.id,vx:0,vy:0,va:0,a:0,energy:ch.maxEnergy,maxEnergy:ch.maxEnergy,alive:true,inv:120,scd:0,scd2:0,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};
   resetShipShield(s,sh);
   return s;
 }

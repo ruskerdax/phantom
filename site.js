@@ -100,13 +100,13 @@ function updSiteMissiles(site, mis, isEnemy){
         }
       } else if(s.alive){
         const hitOpts={source:{x:m.x,y:m.y},kind:'missile',weapon:m};
-        if(Math.hypot(m.x-s.x,m.y-s.y)<SHIELD_HIT_R&&shipShieldCanTakeHit(s,hitOpts)){
+        if(Math.hypot(m.x-s.x,m.y-s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,hitOpts)){
           const shieldHit=applyShipShieldDamage(s,m.dmg,hitOpts);
           m.dmg=shieldHit.passthroughDamage;
           shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
           if(shieldHit.blocked||m.dmg<=0)det=true;
         }
-        if(!det&&Math.hypot(m.x-s.x,m.y-s.y)<SHIP_HIT_R){
+        if(!det&&Math.hypot(m.x-s.x,m.y-s.y)<shipHitRadius(s)){
           const hit=applyShipDamage(s,m.dmg,hitOpts);
           shipDamageTone(hit);
           det=true;
@@ -224,13 +224,13 @@ function updSite(){
     for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){siteExplodeMissile(site,m,false);site.mis.splice(mi,1);if(s.hp<=0){siteKillShip();return;}}rm=true;break;}}
     if(rm){site.ebu.splice(i,1);continue;}
     const bHitOpts={source:{x:b.x,y:b.y},kind:'projectile',weapon:b};
-    if(Math.hypot(b.x-s.x,b.y-s.y)<SHIELD_HIT_R&&shipShieldCanTakeHit(s,bHitOpts)){
+    if(Math.hypot(b.x-s.x,b.y-s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,bHitOpts)){
       const shieldHit=applyShipShieldDamage(s,b.dmg,bHitOpts);
       b.dmg=shieldHit.passthroughDamage;
       shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
       if(shieldHit.blocked||b.dmg<=0){site.ebu.splice(i,1);continue;}
     }
-    if(Math.hypot(b.x-s.x,b.y-s.y)<SHIP_HIT_R){
+    if(Math.hypot(b.x-s.x,b.y-s.y)<shipHitRadius(s)){
       site.ebu.splice(i,1);
       const hit=applyShipDamage(s,b.dmg,bHitOpts);
       shipDamageTone(hit);

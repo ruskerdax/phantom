@@ -7,6 +7,7 @@ const CHASSIS = [
     desc: 'Balanced starter hull.',
     maxHp: 15,
     maxEnergy: 200,
+    hitRadius: 12,
     thrust: {
       fwd:      0.04,
       rev:      0.018,
@@ -26,6 +27,7 @@ const CHASSIS = [
     desc: 'Fast and energy-rich. Light armor.',
     maxHp: 10,
     maxEnergy: 300,
+    hitRadius: 12,
     thrust: {
       fwd:      0.08,
       rev:      0.036,
@@ -45,6 +47,7 @@ const CHASSIS = [
     desc: 'Heavy armor and firepower. Reduced speed.',
     maxHp: 28,
     maxEnergy: 250,
+    hitRadius: 12,
     thrust: {
       fwd:      0.025,
       rev:      0.01125,
@@ -64,6 +67,7 @@ const CHASSIS = [
     desc: 'Agile hull with stronger reverse thrusters.',
     maxHp: 12,
     maxEnergy: 240,
+    hitRadius: 12,
     thrust: {
       fwd:      0.05,
       rev:      0.035,

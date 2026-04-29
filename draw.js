@@ -256,10 +256,11 @@ function drShip(x,y,a,ship,thr,energy,inv,fr){
   const def=shieldDefForShip(ship);
   const shieldVisible=def&&ship?.shieldId&&ship.shieldEnabled!==false&&!ship.shieldOffline&&ship.shieldHp>0;
   if(shieldVisible){
+    const shieldR=shipShieldHitRadius(ship,def);
     const half=(def.coverageDeg*Math.PI/180)/2;
     cx.strokeStyle='rgba(100,200,255,.8)';cx.shadowColor='#8cf';cx.shadowBlur=18;cx.lineWidth=2;cx.beginPath();
-    if((def.coverageDeg??360)>=359.9)cx.arc(0,0,17,0,Math.PI*2);
-    else cx.arc(0,0,17,-Math.PI/2-half,-Math.PI/2+half);
+    if((def.coverageDeg??360)>=359.9)cx.arc(0,0,shieldR,0,Math.PI*2);
+    else cx.arc(0,0,shieldR,-Math.PI/2-half,-Math.PI/2+half);
     cx.stroke();
   }
   cx.strokeStyle='#fff';cx.shadowColor='#fff';cx.shadowBlur=8;cx.lineWidth=1.5;
