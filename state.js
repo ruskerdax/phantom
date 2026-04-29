@@ -20,6 +20,14 @@ function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENER
 function boomAt(pts,x,y,c,n=14){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=.7+Math.random()*3;pts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:22+Math.random()*28,ml:50,c});}}
 function updPts(pts,gy=0){for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=gy;p.l--;if(p.l<=0)pts.splice(i,1);}}
 function mkShip(x,y){const ch=activeChassisObj();return{x,y,vx:0,vy:0,va:0,a:0,energy:ch.maxEnergy,maxEnergy:ch.maxEnergy,alive:true,inv:120,scd:0,scd2:0,shld:false,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};}
+function stopShipMotion(s){
+  if(!s)return;
+  s.vx=0;s.vy=0;s.va=0;s.shld=false;
+}
+function returnToOverworld(opts={}){
+  if(!opts.keepVelocity)stopShipMotion(G.OW?.s);
+  G.st='overworld';
+}
 function markNeedsRebuild(){G.needsRebuild=true;saveGame();}
 function enterRebuild(){
   G.needsRebuild=true;

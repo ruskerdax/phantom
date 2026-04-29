@@ -99,7 +99,7 @@ function update(){
       if(m.confirm){
         ia();
         if(isTutFirst){
-          if(G.slipSel===1){G.st='overworld';return;}
+          if(G.slipSel===1){returnToOverworld();return;}
           G.tutorialDone=true;
           jumpToSeed((Math.random()*0xFFFFFFFF)>>>0,TUTORIAL_SEED);
         } else {
@@ -109,7 +109,7 @@ function update(){
         return;
       }
     }
-    if(m.cancel)G.st='overworld';
+    if(m.cancel)returnToOverworld();
     return;
   }
   if(iPause()){
@@ -130,9 +130,9 @@ function update(){
       if(m.down)G.cheatSubSel=Math.min(CITEMS.length-1,G.cheatSubSel+1);
       if(m.confirm){
         if(G.cheatSubSel===0){G.OW.s.hp=G.OW.s.maxHp;G.OW.s.energy=G.OW.s.maxEnergy;if(G.ENC){G.ENC.s.hp=G.ENC.s.maxHp;G.ENC.s.energy=G.ENC.s.maxEnergy;}tone(660,.2,'sine',.08);G.paused=false;G.cheatSub=false;}
-        else if(G.cheatSubSel===1){const sgp=owPos(SLIPGATE);G.OW.s.x=sgp.x;G.OW.s.y=sgp.y;G.OW.s.vx=0;G.OW.s.vy=0;if(G.ENC){G.ENC=null;G.site=null;}G.st='overworld';G.paused=false;G.cheatSub=false;}
+        else if(G.cheatSubSel===1){const sgp=owPos(SLIPGATE);G.OW.s.x=sgp.x;G.OW.s.y=sgp.y;G.ENC=null;G.site=null;returnToOverworld();G.paused=false;G.cheatSub=false;}
         else if(G.cheatSubSel===2){showSeedInput(v=>{if(v!=null){G.paused=false;G.cheatSub=false;jumpToSeed(v,null);}});}
-        else if(G.cheatSubSel===3){G.cleared=[true,true,true];G.slipgateActive=true;G.slipMsg=360;if(G.ENC){G.ENC=null;G.site=null;}G.st='overworld';G.paused=false;G.cheatSub=false;}
+        else if(G.cheatSubSel===3){G.cleared=[true,true,true];G.slipgateActive=true;G.slipMsg=360;G.ENC=null;G.site=null;returnToOverworld();G.paused=false;G.cheatSub=false;}
         else if(G.cheatSubSel===4){G.credits+=10000;tone(880,.15,'sine',.07);G.paused=false;G.cheatSub=false;}
         else if(G.cheatSubSel===5){G.credits=0;tone(220,.15,'sawtooth',.07);G.paused=false;G.cheatSub=false;}
         else if(G.cheatSubSel===6){G.invincible=!G.invincible;tone(G.invincible?1200:400,.08,'square',.05);}

@@ -6,14 +6,15 @@ function encKillShip(){
 }
 function encWin(){
   const enc=G.ENC,ow=G.OW;
+  const keepVelocity=enc.fleetIdx!=null;
   if(enc.isHBase){G.hbCleared=true;G.hbState=null;}
   if(enc.owIdx!=null)ow.en[enc.owIdx].alive=false;
   if(enc.fleetIdx!=null)ow.fleets[enc.fleetIdx].alive=false;
   ow.s.energy=enc.s.energy;
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
-  ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;
+  if(keepVelocity){ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;}
   ow.s.inv=80;
-  G.ENC=null;G.st='overworld';
+  G.ENC=null;returnToOverworld({keepVelocity});
   tone(660,.12,'sine',.09);setTimeout(()=>tone(880,.25,'sine',.09),140);
 }
 function splitRock(enc,ri){
@@ -146,7 +147,7 @@ function updEnc(){
   }
   const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}
-  else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;ow.s.energy=s.energy;ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;ow.s.vx+=(Math.random()-.5)*1.5;ow.s.vy+=(Math.random()-.5)*1.5;ow.s.inv=80;G.ENC=null;G.st='overworld';return;}}
+  else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;ow.s.energy=s.energy;ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;ow.s.inv=80;G.ENC=null;returnToOverworld();return;}}
   else{s.x=wrap(s.x+s.vx,ew);s.y=wrap(s.y+s.vy,eh);}
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
   // Lerp the camera toward the player (clamped to world bounds). The 0.12 multiplier controls follow speed —

@@ -322,7 +322,7 @@ function updBase(){
     if(dn)G.shopSel=Math.min(Math.max(0,items.length-1),G.shopSel+1);
     if(ok&&items.length>0)openShopAction(items[G.shopSel]);
   }
-  if(bk){G.st='overworld';saveGame();}
+  if(bk){returnToOverworld();saveGame();}
 }
 
 function drawBaseMenu(){
