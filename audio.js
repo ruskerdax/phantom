@@ -293,6 +293,7 @@ function musicStartHtmlLayer(layer,cfg,entry,fadeSec){
     const audio=new Audio(src);
     audio.loop=def.loop!==false;
     audio.preload='auto';
+    audio.volume=0;
     entry.audio=audio;
     entry.mediaSource=null;
     entry.htmlDirect=true;
