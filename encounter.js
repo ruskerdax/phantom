@@ -142,7 +142,7 @@ function updEnc(){
   const s=enc.s;if(!s.alive)return;
   const{ew,eh}=enc;
   for(let i=enc.fu.length-1;i>=0;i--){const f=enc.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,ew);f.y=wrap(f.y+f.vy,eh);if(Math.hypot(s.x-f.x,s.y-f.y)<18){pickupEnergy(s,f.x,f.y,enc.pts,'#0f8');enc.fu.splice(i,1);}}
-  applyRotation(s, iRot(), s.energy<=0);
+  applyRotation(s, iRotCombat(), s.energy<=0);
   if(iShieldToggle())toggleShipShield(s);
   tickShieldRecharge(s);
   const thrustIn=iThrustInput();

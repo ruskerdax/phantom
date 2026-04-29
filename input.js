@@ -87,12 +87,13 @@ function fmtKey(c){return({ArrowLeft:'◄ LEFT',ArrowRight:'► RIGHT',ArrowUp:'
 function fmtBtn(i){const n=['A','B','X','Y','LB','RB','LT','RT','SEL','START','L3','R3','↑','↓','◄','►'];return n[i]!==undefined?n[i]:'BTN'+i;}
 
 // Gamepad
-var GP={connected:false,id:'',axL:0,rotDigital:0,thrust:false,reverse:false,strafeLeft:false,strafeRight:false,fire:false,fireSec:false,shield:false,shieldj:false,startj:false,menuUp:false,menuDown:false,menuLeft:false,menuRight:false,confirmj:false};
+var GP={connected:false,id:'',axL:0,axLCombat:0,rotDigital:0,thrust:false,reverse:false,strafeLeft:false,strafeRight:false,fire:false,fireSec:false,shield:false,shieldj:false,startj:false,menuUp:false,menuDown:false,menuLeft:false,menuRight:false,confirmj:false};
 let _gsh=false,_gshield=false,_gmuh=false,_gmdh=false,_gmlh=false,_gmrh=false,_gconfirm=false,_gprev=[];
 const GP_AXIS_DEADZONE=.18;
 const GP_ROT_AXIS_CURVE=1.4;
-const DIGITAL_ROT_RAMP_FRAMES=36;
-const DIGITAL_ROT_RAMP_CURVE=1.55;
+const GP_COMBAT_ROT_AXIS_CURVE=2.4;
+const DIGITAL_ROT_RAMP_FRAMES=48;
+const DIGITAL_ROT_RAMP_CURVE=1.75;
 let _rotDigitalDir=0,_rotDigitalFrames=0,_rotDigitalFrame=-1;
 window.addEventListener('gamepadconnected',e=>{GP.connected=true;GP.id=e.gamepad.id;ia();tone(660,.2,'sine',.08);});
 window.addEventListener('gamepaddisconnected',()=>{GP.connected=false;GP.id='';});
@@ -107,7 +108,7 @@ function shapeGPAxis(v,dead=GP_AXIS_DEADZONE,curve=GP_ROT_AXIS_CURVE){
 function pollGP(){
   const pads=navigator.getGamepads?navigator.getGamepads():[];let gp=null;
   for(const p of pads){if(p&&p.connected){gp=p;GP.connected=true;GP.id=p.id.slice(0,36);break;}}
-  if(!gp){GP.axL=0;GP.rotDigital=0;GP.thrust=false;GP.reverse=false;GP.strafeLeft=false;GP.strafeRight=false;GP.fire=false;GP.fireSec=false;GP.shield=false;GP.shieldj=false;GP.startj=false;GP.menuUp=false;GP.menuDown=false;GP.menuLeft=false;GP.menuRight=false;GP.confirmj=false;_gprev=[];return;}
+  if(!gp){GP.axL=0;GP.axLCombat=0;GP.rotDigital=0;GP.thrust=false;GP.reverse=false;GP.strafeLeft=false;GP.strafeRight=false;GP.fire=false;GP.fireSec=false;GP.shield=false;GP.shieldj=false;GP.startj=false;GP.menuUp=false;GP.menuDown=false;GP.menuLeft=false;GP.menuRight=false;GP.confirmj=false;_gprev=[];return;}
   const ax=gp.axes,bt=gp.buttons,dead=GP_AXIS_DEADZONE;
   if(G&&G.optListen==='btn'){
     for(let i=0;i<bt.length;i++){
@@ -117,10 +118,12 @@ function pollGP(){
   _gprev=bt.map(b=>!!(b&&(b.pressed||b.value>.3)));
   const rawLx=ax[0]||0;
   const lx=shapeGPAxis(rawLx,dead);
+  const lxCombat=shapeGPAxis(rawLx,dead,GP_COMBAT_ROT_AXIS_CURVE);
   const ly=ax[1]||0;
   const dL=bpressed(bt,BND.rotLeft.btn),dR=bpressed(bt,BND.rotRight.btn);
   GP.rotDigital=dL?-1:dR?1:0;
   GP.axL=lx;
+  GP.axLCombat=lxCombat;
   const dU=bpressed(bt,12);
   GP.thrust=bpressed(bt,BND.thrust.btn);
   GP.reverse=bpressed(bt,BND.reverse.btn);
@@ -154,7 +157,7 @@ function digitalRotInput(dir){
   const t=Math.min(1,_rotDigitalFrames/DIGITAL_ROT_RAMP_FRAMES);
   return dir*Math.pow(t,DIGITAL_ROT_RAMP_CURVE);
 }
-function iRot(){
+function iRotWithAnalog(analog){
   const digital=kdown('rotLeft')?-1:kdown('rotRight')?1:GP.rotDigital;
   const instantDigital=typeof G!=='undefined'&&(G.st==='overworld'||G.st==='play'||G.st==='esc');
   if(digital&&instantDigital){
@@ -163,7 +166,13 @@ function iRot(){
   }
   if(digital)return digitalRotInput(digital);
   digitalRotInput(0);
-  return GP.axL;
+  return analog;
+}
+function iRot(){
+  return iRotWithAnalog(GP.axL);
+}
+function iRotCombat(){
+  return iRotWithAnalog(GP.axLCombat);
 }
 function iThrustInput(){
   const forward=!!(kdown('thrust')||GP.thrust);
