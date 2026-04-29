@@ -81,7 +81,7 @@ function drawShipConfig(){
   cx.fillText('SHIP CONFIGURATION',W/2,py+28);cx.shadowBlur=0;
   cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+38);cx.lineTo(px+pw-10,py+38);cx.stroke();
   const rows=[
-    ['CHASSIS',ch.name+`  HP ${ch.maxHp}  NRG ${ch.maxEnergy}  FWD ${ch.thrust.fwd}`+(ch.thrust.rev>0?` REV ${ch.thrust.rev}`:'')],
+    ['CHASSIS',ch.name+`  HP ${ch.maxHp}  NRG ${ch.maxEnergy}  ${thrustStatText(ch)}`],
     ['SHIELD',sh?sh.name:'(empty)'],
   ];
   activeChassisObj().slots.forEach((sl,i)=>{

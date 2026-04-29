@@ -99,8 +99,7 @@ function drawBaseShop(){
     if(tabId==='chassis'){
       const ch=item;
       const t=ch.thrust;
-      const revStr = t.rev>0 ? `  REV ${t.rev}` : '';
-      detail=`HP ${ch.maxHp}  ENERGY ${ch.maxEnergy}  FWD ${t.fwd}${revStr}  ROT ${t.rotAccel}  SLOTS: `+ch.slots.map(s=>s.type.toUpperCase()).join(' + ');
+      detail=`HP ${ch.maxHp}  ENERGY ${ch.maxEnergy}  ${thrustStatText(ch)}  ROT ${t.rotAccel}  SLOTS: `+ch.slots.map(s=>s.type.toUpperCase()).join(' + ');
     }
     else if(tabId==='weapons'){const wp=item;detail=`TYPE: ${wp.wpnType.toUpperCase()}  DMG ${wp.dmg}  CD ${wp.cd}s`+(wp.range?`  RANGE ${wp.range}`:'');}
     else if(tabId==='shields'){const sh=item;detail=`HP ${sh.hp}  ARC ${sh.coverageDeg}${String.fromCharCode(176)}  RECH ${sh.rechargeRate}/fr  COST ${sh.energyPerHp} NRG/HP`;}

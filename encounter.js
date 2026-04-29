@@ -145,9 +145,10 @@ function updEnc(){
   applyRotation(s, iRot(), s.energy<=0);
   if(iShieldToggle())toggleShipShield(s);
   tickShieldRecharge(s);
-  if(iThr()){
-    applyLinearThrust(s, 1, s.energy<=0);
-    drainEnergy(s, THRUST_ENERGY_DRAIN.encounter);
+  const thrustIn=iThrustInput();
+  if(thrustIn.activeAxes>0){
+    applyShipThrust(s, thrustIn, s.energy<=0);
+    drainEnergy(s, THRUST_ENERGY_DRAIN.encounter*thrustEnergyScale(thrustIn));
   }
   const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}
@@ -261,7 +262,7 @@ function drawEnc(){
   for(const m of enc.emi)drMissile(m.x,m.y,m.a,m.type);
   for(const lb of enc.lsb){const a=lb.l/8,bw=lb.w||2;cx.save();cx.globalAlpha=a;cx.strokeStyle=lb.col;cx.shadowColor=lb.col;cx.shadowBlur=10;cx.lineWidth=bw;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.globalAlpha=a*.6;cx.strokeStyle='#fff';cx.lineWidth=Math.max(1,bw/2);cx.shadowBlur=0;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.restore();}
   drPts(enc.pts);
-  if(enc.s.alive)drShip(enc.s.x,enc.s.y,enc.s.a,enc.s,(K['ArrowUp']||K['KeyW']||GP.thrust),enc.s.energy,enc.s.inv,G.fr);
+  if(enc.s.alive)drShip(enc.s.x,enc.s.y,enc.s.a,enc.s,iThrustInput(),enc.s.energy,enc.s.inv,G.fr);
   if(enc.s.alive)drAimCone(enc.s);
   cx.restore();
   if(G.st==='encounter'&&enc.introTimer<=0&&enc.s.alive){

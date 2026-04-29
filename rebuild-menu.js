@@ -80,7 +80,7 @@ function drawRebuildChassis(rf){
       cx.fillStyle=isSel?'#0f8':'#446';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='left';
       cx.fillText((isSel?UI_GLYPH.pointer+' ':'  ')+ch.name,px+14,iy);
       cx.fillStyle=isSel?'#0a6':'#334';cx.font='11px monospace';cx.textAlign='right';
-      cx.fillText('HP '+ch.maxHp+'  NRG '+ch.maxEnergy+'  FWD '+ch.thrust.fwd+(ch.thrust.rev>0?' REV '+ch.thrust.rev:'')+'  HULL: '+(cost===0?'FREE':cost+' CR'),px+pw-14,iy);
+      cx.fillText('HP '+ch.maxHp+'  NRG '+ch.maxEnergy+'  '+thrustStatText(ch)+'  HULL: '+(cost===0?'FREE':cost+' CR'),px+pw-14,iy);
     }
   }
   cx.fillStyle='#8df';cx.font='13px monospace';cx.textAlign='center';

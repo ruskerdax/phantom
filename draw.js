@@ -219,6 +219,7 @@ function drPts(pts){
 // skipping alternate 2-frame windows (fr%4 >= 2).
 function drShip(x,y,a,ship,thr,energy,inv,fr){
   if(inv>0&&fr%4>=2)return;
+  const thrust=typeof thr==='object'&&thr?thr:{forward:!!thr};
   cx.save();cx.translate(x,y);cx.rotate(a);
   const def=shieldDefForShip(ship);
   const shieldVisible=def&&ship?.shieldId&&ship.shieldEnabled!==false&&!ship.shieldOffline&&ship.shieldHp>0;
@@ -231,8 +232,14 @@ function drShip(x,y,a,ship,thr,energy,inv,fr){
   }
   cx.strokeStyle='#fff';cx.shadowColor='#fff';cx.shadowBlur=8;cx.lineWidth=1.5;
   cx.beginPath();cx.moveTo(0,-10);cx.lineTo(-7,8);cx.lineTo(0,4);cx.lineTo(7,8);cx.closePath();cx.stroke();
-  if(thr&&energy>0){cx.strokeStyle='#fb0';cx.shadowColor='#fb0';cx.shadowBlur=12;cx.beginPath();cx.moveTo(-3,7);cx.lineTo(0,13+Math.random()*6);cx.lineTo(3,7);cx.stroke();}
-  else if(thr&&energy<=0){cx.strokeStyle='#f22';cx.shadowColor='#f22';cx.shadowBlur=6;cx.beginPath();cx.moveTo(-1.5,7);cx.lineTo(0,9+Math.random()*2);cx.lineTo(1.5,7);cx.stroke();}
+  const lit=energy>0,col=lit?'#fb0':'#f22',glow=lit?12:6,main=lit?6:2,side=lit?4:1.5;
+  function flame(x1,y1,x2,y2,x3,y3,blur=glow){
+    cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=blur;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.lineTo(x3,y3);cx.stroke();
+  }
+  if(thrust.forward)flame(-3,7,0,13+Math.random()*main,3,7);
+  if(thrust.reverse)flame(-2,-8,0,-12-Math.random()*side,2,-8,lit?8:4);
+  if(thrust.strafeLeft)flame(7,-2,11+Math.random()*side,0,7,2,lit?8:4);
+  if(thrust.strafeRight)flame(-7,-2,-11-Math.random()*side,0,-7,2,lit?8:4);
   cx.restore();
 }
 // All distances are in pixels from the ship center.

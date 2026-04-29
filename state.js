@@ -59,6 +59,11 @@ function slotMatchesWeapon(slot,wp){return wp.wpnType.startsWith(slot.type+' ');
 function licensedWeaponsForSlot(slot){return WEAPONS.filter(w=>slotMatchesWeapon(slot,w)&&hasLicense(w.id));}
 function licensedWeaponIdsForSlot(slot){return licensedWeaponsForSlot(slot).map(w=>w.id);}
 function compatibleSlots(wp){return activeChassisObj().slots.map((sl,i)=>({sl,i})).filter(({sl})=>slotMatchesWeapon(sl,wp));}
+function thrustStatText(ch){
+  const t=ch.thrust;
+  const str=Math.max(t.strafeL||0,t.strafeR||0);
+  return `FWD ${t.fwd}  REV ${t.rev}  STR ${str}`;
+}
 const ENERGY_PICKUP=38;
 const THRUST_ENERGY_DRAIN={overworld:.035,encounter:.01,site:.012};
 function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
@@ -280,16 +285,32 @@ function applyRotation(s, rotIn, energyEmpty){
   s.a += s.va;
 }
 
-// Apply linear forward/reverse thrust to a ship in place.
-// thrIn: -1 (reverse), 0, or 1 (forward); accepts analog values too.
-// energyEmpty: true when ship.energy <= 0. Caller owns energy-cost deduction (per-mode rates differ).
-function applyLinearThrust(s, thrIn, energyEmpty){
-  if(thrIn === 0) return;
+// Apply local-axis thrust to a ship in place. Forward/reverse and strafe are additive, so diagonal
+// thrust gives more acceleration and costs more energy in the callers.
+function applyShipThrust(s, thrustIn, energyEmpty){
+  if(!thrustIn || thrustIn.activeAxes<=0) return;
   const ch = activeChassisObj();
-  const base = thrIn > 0 ? ch.thrust.fwd : ch.thrust.rev;
-  if(base <= 0) return; // chassis has no reverse capability
-  const power = base * (energyEmpty ? 0.2 : 1);
-  const dir = Math.sign(thrIn);
-  s.vx += Math.sin(s.a) * power * dir;
-  s.vy -= Math.cos(s.a) * power * dir;
+  const energyMul = energyEmpty ? 0.2 : 1;
+  const linear = Number.isFinite(thrustIn.linear) ? Math.max(-1,Math.min(1,thrustIn.linear)) : 0;
+  const strafe = Number.isFinite(thrustIn.strafe) ? Math.max(-1,Math.min(1,thrustIn.strafe)) : 0;
+  if(linear!==0){
+    const base = linear > 0 ? ch.thrust.fwd : ch.thrust.rev;
+    if(base>0){
+      const power = base * Math.abs(linear) * energyMul * Math.sign(linear);
+      s.vx += Math.sin(s.a) * power;
+      s.vy -= Math.cos(s.a) * power;
+    }
+  }
+  if(strafe!==0){
+    const base = strafe < 0 ? ch.thrust.strafeL : ch.thrust.strafeR;
+    if(base>0){
+      const power = base * Math.abs(strafe) * energyMul * Math.sign(strafe);
+      s.vx += Math.cos(s.a) * power;
+      s.vy += Math.sin(s.a) * power;
+    }
+  }
+}
+function thrustEnergyScale(thrustIn){
+  if(!thrustIn)return 0;
+  return (thrustIn.linear!==0?1:0)+(thrustIn.strafe!==0?1:0);
 }

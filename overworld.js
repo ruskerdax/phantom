@@ -293,9 +293,10 @@ function updOW(){
   applyRotation(s, iRot(), s.energy<=0);
   if(iShieldToggle())toggleShipShield(s);
   // sin(angle) = X component, -cos(angle) = Y component: canvas Y increases downward, so "forward" is -cos.
-  if(iThr()){
-    applyLinearThrust(s, 1, s.energy<=0);
-    drainEnergy(s, THRUST_ENERGY_DRAIN.overworld);
+  const thrustIn=iThrustInput();
+  if(thrustIn.activeAxes>0){
+    applyShipThrust(s, thrustIn, s.energy<=0);
+    drainEnergy(s, THRUST_ENERGY_DRAIN.overworld*thrustEnergyScale(thrustIn));
   }
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   const maxSpd=sdist<220?7:4.2;
@@ -674,7 +675,7 @@ function drawOW(){
   drPts(ow.pts);
   drBase(ow.nearBase);
   drSlipgate(ow.nearSlipgate);
-  if(s.alive)drShip(s.x,s.y,s.a,s,(K['ArrowUp']||K['KeyW']||GP.thrust),s.energy,s.inv,G.fr);
+  if(s.alive)drShip(s.x,s.y,s.a,s,iThrustInput(),s.energy,s.inv,G.fr);
   cx.restore();
   if(G.st==='overworld'&&s.alive){
     drawOffscreenIndicators(collectOffscreenIndicators({
