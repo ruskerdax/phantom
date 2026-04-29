@@ -430,5 +430,5 @@ function updPauseMenu(st){
   else if(id==='ship_config')G.showShipConfig=true;
   else if(id==='options'){G.optFrom=st;G.paused=false;G.st='options';}
   else if(id==='cheats'){G.cheatSub=true;G.cheatSubSel=0;}
-  else if(id==='quit'){G.paused=false;G.ENC=null;G.site=null;G.st='title';}
+  else if(id==='quit'){saveGame();G.paused=false;G.ENC=null;G.site=null;G.st='title';}
 }

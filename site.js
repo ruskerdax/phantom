@@ -123,6 +123,8 @@ function enterLv(){
     rx:ls?{...d.rx,hp:ls.rx.hp,alive:ls.rx.alive}:{...d.rx,alive:true},
     bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:0,z:1}};
   G.st='play';
+  recordLastLocation('planet',G.lv);
+  saveGame();
 }
 function siteKillShip(){
   const site=G.site;killShip(site.s,site.pts,'dead_site',18);

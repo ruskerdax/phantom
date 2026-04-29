@@ -19,12 +19,28 @@ function defaultSave() {
     prevSeed: null,
     systemStates: {},
     needsRebuild: false,
+    lastLocation: null,
     currentHp: null,
     currentEnergy: null,
     sfxVol: 10,
     musVol: 10,
     dynamicZoom: true,
   };
+}
+
+function normalizeLastLocation(loc) {
+  if (!loc || typeof loc !== 'object') return null;
+  const kinds = ['base', 'slipgate', 'planet', 'asteroid', 'hbase'];
+  if (!kinds.includes(loc.kind)) return null;
+  if (typeof loc.seed !== 'number' || !Number.isFinite(loc.seed)) return null;
+  const seed = loc.seed >>> 0;
+  let index = null;
+  if (loc.kind === 'planet' || loc.kind === 'asteroid') {
+    if (typeof loc.index !== 'number' || !Number.isFinite(loc.index)) return null;
+    index = Math.floor(loc.index);
+    if (index < 0) return null;
+  }
+  return {seed, kind: loc.kind, index};
 }
 
 function loadSave() {
@@ -49,6 +65,7 @@ function loadSave() {
     if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
     if (typeof d.dynamicZoom !== 'boolean')  d.dynamicZoom = true;
+    d.lastLocation = normalizeLastLocation(d.lastLocation);
     return d;
   } catch(e) { return null; }
 }
@@ -79,6 +96,7 @@ function buildSaveData() {
     prevSeed: G.prevSeed,
     systemStates: G.systemStates,
     needsRebuild: !!G.needsRebuild,
+    lastLocation: normalizeLastLocation(G.lastLocation),
     currentHp: (s?.alive && s.hp > 0) ? s.hp : null,
     currentEnergy: (s?.alive && s.hp > 0) ? s.energy : null,
     sfxVol: G.sfxVol,

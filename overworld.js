@@ -87,11 +87,12 @@ function owKillShip(){
 function doRebuildFinalize(){
   const bp=owPos(BASE);G.ENC=null;G.site=null;G.stake=0;
   G.needsRebuild=false;
-  if(!G.OW){initOW(activeChassisObj().maxEnergy);saveGame();return;}
+  if(!G.OW){initOW(activeChassisObj().maxEnergy);recordLastLocation('base');saveGame();return;}
   G.OW.s=mkShip(bp.x,bp.y);G.OW.s.inv=180;
   G.OW.en=[];G.OW.fleets=[];
   G.OW.slipgateSpawnTimer=1800;G.OW.convoySpawnTimer=5400;
   seedSystemFleets(bp.x,bp.y);
+  recordLastLocation('base');
   G.st='overworld';saveGame();tone(660,.2,'sine',.08);
 }
 function jumpToSeed(newSeed,sourceSeed){
@@ -109,6 +110,7 @@ function jumpToSeed(newSeed,sourceSeed){
   if(!G.visitedSeeds.includes(G.seed))G.visitedSeeds.push(G.seed);
   const sgp=owPos(SLIPGATE);
   initOW(energy,sgp.x,sgp.y);
+  recordLastLocation('slipgate');
   saveGame();
   tone(300,.15,'sine',.07);setTimeout(()=>tone(500,.15,'sine',.07),160);setTimeout(()=>tone(800,.4,'sine',.07),330);
 }
@@ -195,6 +197,8 @@ function startAstEnc(){
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:ens.length?70:0,cleared:!ens.length,
     ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2),z:1}};
   G.st=ens.length?'enc_in':'encounter';
+  recordLastLocation('asteroid',ow.nearAst);
+  saveGame();
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
 function startHBaseEnc(){
@@ -217,6 +221,8 @@ function startHBaseEnc(){
     ew,eh,hbase:{HEX_R,hx,hy,softpts,turrets,hexPoly},
     cam:{x:Math.max(0,hx-W/2),y:Math.max(0,hy-H/2),z:1}};
   G.st='enc_in';
+  recordLastLocation('hbase');
+  saveGame();
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
 function owStartFleetEnc(fi,contactA,playerA){
@@ -312,11 +318,11 @@ function updOW(){
   if(!G.hbCleared){const hbp=owPos(HBASE);if(Math.hypot(s.x-hbp.x,s.y-hbp.y)<HBASE.r+28)ow.nearHBase=true;}
   {const sgp=owPos(SLIPGATE);ow.nearSlipgate=Math.hypot(s.x-sgp.x,s.y-sgp.y)<SLIPGATE.r+28;}
   const owFired=iFir();
-  if(owFired&&ow.nearBase){G.credits+=G.stake;G.stake=0;G.baseSel=0;G.baseTab=0;G.shopSel=0;G.shopActionId=null;G.equipFlow=null;suppressMenuInput();G.st='base';return;}
+  if(owFired&&ow.nearBase){G.credits+=G.stake;G.stake=0;G.baseSel=0;G.baseTab=0;G.shopSel=0;G.shopActionId=null;G.equipFlow=null;suppressMenuInput();recordLastLocation('base');G.st='base';saveGame();return;}
   if(owFired&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
   if(owFired&&ow.nearAst>=0){startAstEnc();return;}
   if(owFired&&ow.nearHBase){startHBaseEnc();return;}
-  if(owFired&&ow.nearSlipgate){G.slipSel=0;suppressMenuInput();G.st='slipgate';return;}
+  if(owFired&&ow.nearSlipgate){G.slipSel=0;suppressMenuInput();recordLastLocation('slipgate');G.st='slipgate';saveGame();return;}
   for(let i=0;i<ow.en.length;i++){
     const e=ow.en[i];if(!e.alive)continue;
     const et=OET[e.t];e.spin+=.04+e.t*.015;
