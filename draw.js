@@ -85,8 +85,11 @@ function updateWorldCamera(cam,fx,fy,worldW,worldH,targetZ=1,ax=.5,ay=.5,smooth=
   const viewW=W/cam.z,viewH=H/cam.z;
   const minX=worldW>viewW?0:(worldW-viewW)/2,maxX=worldW>viewW?worldW-viewW:minX;
   const minY=worldH>viewH?0:(worldH-viewH)/2,maxY=worldH>viewH?worldH-viewH:minY;
-  const tx=Math.max(minX,Math.min(maxX,fx-viewW*ax));
-  const ty=Math.max(minY,Math.min(maxY,fy-viewH*ay));
+  const ux=fx-viewW*ax,uy=fy-viewH*ay;
+  const tx=Math.max(minX,Math.min(maxX,ux));
+  const ty=Math.max(minY,Math.min(maxY,uy));
+  cam.dustX=Math.abs(tx-ux)<.001?1:0;
+  cam.dustY=Math.abs(ty-uy)<.001?1:0;
   if(smooth>=1){cam.x=tx;cam.y=ty;}
   else{cam.x+=(tx-cam.x)*smooth;cam.y+=(ty-cam.y)*smooth;}
   return cam;
@@ -100,6 +103,7 @@ function updateToroidalWorldCamera(cam,fx,fy,worldW,worldH,targetZ=1,ax=.5,ay=.5
   const refY=(Number.isFinite(cam.y)?cam.y:fy-viewH*ay)+viewH*ay;
   const tx=wrapCoordNear(fx,refX,worldW)-viewW*ax;
   const ty=wrapCoordNear(fy,refY,worldH)-viewH*ay;
+  cam.dustX=1;cam.dustY=1;
   if(smooth>=1){cam.x=tx;cam.y=ty;}
   else{cam.x+=(tx-cam.x)*smooth;cam.y+=(ty-cam.y)*smooth;}
   return cam;
@@ -227,7 +231,7 @@ function drStars(scroll=0){
 }
 function dustVelocityForShip(s,cam){
   const z=cam?.z||1;
-  return{x:(s?.vx||0)*z,y:(s?.vy||0)*z};
+  return{x:(s?.vx||0)*z*(cam?.dustX??1),y:(s?.vy||0)*z*(cam?.dustY??1)};
 }
 function drDust(vx,vy){
   const spd=Math.sqrt(vx*vx+vy*vy);if(spd>6){const s=6/spd;vx*=s;vy*=s;}
