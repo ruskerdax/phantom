@@ -463,10 +463,26 @@ function drSlipgate(near){
   if(near){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.fillText(active?'[ FIRE TO JUMP ]':'[ FIRE TO ENTER ]',x,y+28+16);}
   cx.restore();
 }
+const OW_INDICATOR_RANGE=900;
+const FLEET_COLS={HUNTER:'#ff6655',SWARM:'#00ddff',PATROL:'#ffaa44',CONVOY:'#ddccaa',ARMADA:'#ff3322'};
+function fleetColor(id){return FLEET_COLS[id]||'#fff';}
+function owIndicatorTargets(ow){
+  const out=[];
+  for(const e of ow.en){
+    if(!e.alive)continue;
+    const et=OET[e.t];
+    out.push({x:e.x,y:e.y,r:et.enc?.r||14,col:et.col,alive:true});
+  }
+  for(const f of ow.fleets){
+    if(!f.alive)continue;
+    const F=fleetDef(f.id);
+    out.push({x:f.x,y:f.y,r:F.trigR||18,col:fleetColor(f.id),alive:true});
+  }
+  return out;
+}
 function drFleet(f){
   const F=fleetDef(f.id),pu=.5+.5*Math.sin(G.fr*.07+f.x*.001);
-  const cols={HUNTER:'#ff6655',SWARM:'#00ddff',PATROL:'#ffaa44',CONVOY:'#ddccaa',ARMADA:'#ff3322'};
-  const col=cols[f.id]||'#fff';
+  const col=fleetColor(f.id);
   cx.save();cx.translate(f.x,f.y);
   if(f.flash>0)cx.globalAlpha=f.flash%4<2?1:.3;
   cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=8+pu*8;cx.lineWidth=1.5;
@@ -658,6 +674,12 @@ function drawOW(){
   drSlipgate(ow.nearSlipgate);
   if(s.alive)drShip(s.x,s.y,s.a,s.shld,(K['ArrowUp']||K['KeyW']||GP.thrust),s.energy,s.inv,G.fr);
   cx.restore();
+  if(G.st==='overworld'&&s.alive){
+    drawOffscreenIndicators(collectOffscreenIndicators({
+      cam,player:s,worldW:OW_W,worldH:OW_H,maxRange:OW_INDICATOR_RANGE,
+      targets:owIndicatorTargets(ow)
+    }));
+  }
   drHUD(s.energy,s.maxEnergy,s.hp,s.maxHp);
   if(G.slipMsg>0){
     const alpha=Math.min(1,G.slipMsg/40);
