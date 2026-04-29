@@ -82,11 +82,7 @@ function initOW(energy,sx,sy){
   G.st='overworld';
 }
 function owKillShip(){
-  const ow=G.OW,s=ow.s;if(!s.alive)return;
-  s.alive=false;boomAt(ow.pts,s.x,s.y,'#fff',28);boomAt(ow.pts,s.x,s.y,'#fa0',16);
-  tone(200,.5,'sawtooth',.15);
-  G.st='dead_ow';markNeedsRebuild();
-  setTimeout(()=>{enterRebuild();},1800);
+  const ow=G.OW;killShip(ow.s,ow.pts,'dead_ow');
 }
 function doRebuildFinalize(){
   const bp=owPos(BASE);G.ENC=null;G.site=null;G.stake=0;

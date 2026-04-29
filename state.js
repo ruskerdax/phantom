@@ -26,6 +26,14 @@ function enterRebuild(){
   G.st='rebuild';
   saveGame();
 }
+function killShip(s,pts,deadState,orangeCount=16){
+  if(!s.alive)return false;
+  s.alive=false;boomAt(pts,s.x,s.y,'#fff',28);boomAt(pts,s.x,s.y,'#fa0',orangeCount);
+  tone(200,.5,'sawtooth',.15);
+  G.st=deadState;markNeedsRebuild();
+  setTimeout(()=>{enterRebuild();},1800);
+  return true;
+}
 // Ray-cast laser: marches a ray from (ox,oy) in direction a, finding the nearest target or wall segment.
 // Returns endpoint (x2,y2) and hitIdx: a target array index (>=0) or -1 if a wall stopped the ray first.
 function castLaser(ox,oy,a,range,targets,walls=[]){const rdx=Math.sin(a),rdy=-Math.cos(a),ex=ox+rdx*range,ey=oy+rdy*range;let bestT=range,hitIdx=-1;for(let i=0;i<targets.length;i++){const tg=targets[i];if(dseg(tg.x,tg.y,ox,oy,ex,ey)<tg.r){const t=(tg.x-ox)*rdx+(tg.y-oy)*rdy;if(t>0&&t<bestT){bestT=t;hitIdx=i;}}}for(const[x1,y1,x2,y2]of walls){const dx=x2-x1,dy=y2-y1,det=dx*rdy-dy*rdx;if(Math.abs(det)<1e-9)continue;const t=(dx*(y1-oy)-dy*(x1-ox))/det,u=(rdx*(y1-oy)-rdy*(x1-ox))/det;if(t>0&&t<bestT&&u>=0&&u<=1){bestT=t;hitIdx=-1;}}return{x2:ox+rdx*bestT,y2:oy+rdy*bestT,hitIdx};}

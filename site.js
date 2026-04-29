@@ -125,11 +125,7 @@ function enterLv(){
   G.st='play';
 }
 function siteKillShip(){
-  const site=G.site,s=site.s;if(!s.alive)return;
-  s.alive=false;boomAt(site.pts,s.x,s.y,'#fff',28);boomAt(site.pts,s.x,s.y,'#fa0',18);
-  tone(200,.5,'sawtooth',.15);
-  G.st='dead_site';markNeedsRebuild();
-  setTimeout(()=>{enterRebuild();},1800);
+  const site=G.site;killShip(site.s,site.pts,'dead_site',18);
 }
 function updSite(){
   const site=G.site;updPts(site.pts,.06);for(let i=site.lsb.length-1;i>=0;i--){if(--site.lsb[i].l<=0)site.lsb.splice(i,1);}

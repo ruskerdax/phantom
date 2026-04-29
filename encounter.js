@@ -2,11 +2,7 @@
 
 // ===================== ENCOUNTER =====================
 function encKillShip(){
-  const enc=G.ENC,s=enc.s;if(!s.alive)return;
-  s.alive=false;boomAt(enc.pts,s.x,s.y,'#fff',28);boomAt(enc.pts,s.x,s.y,'#fa0',16);
-  tone(200,.5,'sawtooth',.15);
-  G.st='dead_enc';markNeedsRebuild();
-  setTimeout(()=>{enterRebuild();},1800);
+  const enc=G.ENC;killShip(enc.s,enc.pts,'dead_enc');
 }
 function encWin(){
   const enc=G.ENC,ow=G.OW;
