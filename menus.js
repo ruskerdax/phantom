@@ -41,6 +41,7 @@ function optionItems(){return[
   {id:'sfx',label:'SOUND EFFECTS'},
   {id:'music',label:'MUSIC'},
   {id:'zoom',label:'DYNAMIC ZOOM'},
+  {id:'render_quality',label:'VISUAL FX'},
   {id:'cheats',label:'CHEAT MODE'},
   {id:'fullscreen',label:'FULLSCREEN'},
   {id:'clear_data',label:'CLEAR GAME DATA'},
@@ -198,7 +199,7 @@ function drawOptions(){
   cx.shadowBlur=0;cx.strokeStyle='#1a4a2a';cx.lineWidth=1;
   cx.beginPath();cx.moveTo(60,88);cx.lineTo(W-60,88);cx.stroke();
   const items=optionItems();
-  const startY=140,rowH=52;
+  const startY=132,rowH=46;
   for(let i=0;i<items.length;i++){
     const y=startY+i*rowH-(i>=1?12:0),sel=i===G.optSel;
     const id=items[i].id;
@@ -210,6 +211,10 @@ function drawOptions(){
       drawMenuVolumeBar(id==='sfx'?G.sfxVol:G.musVol,W/2,y+14,sel);
     } else if(id==='zoom'){
       drawMenuToggle(G.dynamicZoom,W/2,y+18,sel);
+    } else if(id==='render_quality'){
+      cx.fillStyle=sel?'#0f8':'#446';cx.shadowColor='#0f8';cx.shadowBlur=sel?6:0;
+      cx.font='bold 13px monospace';cx.textAlign='center';
+      cx.fillText(arrowValue(renderQualityLabel(G.renderQuality),sel),W/2,y+18);
     } else if(id==='cheats'){
       drawMenuToggle(G.cheatMode,W/2,y+18,sel,'#ff8');
     } else if(id==='fullscreen'){
@@ -349,6 +354,12 @@ function updOptionsMenu(){
     if(m.right){G.musVol=Math.min(10,G.musVol+1);saveSettings();}
   }else if(item.id==='zoom'){
     if(m.confirm||m.left||m.right){G.dynamicZoom=!G.dynamicZoom;tone(G.dynamicZoom?1200:400,.08,'square',.05);saveSettings();}
+  }else if(item.id==='render_quality'){
+    if(m.confirm||m.left||m.right){
+      G.renderQuality=cycleValue(RENDER_QUALITY_VALUES,normalizeRenderQuality(G.renderQuality),m.left?-1:1);
+      tone(G.renderQuality==='full'?1200:G.renderQuality==='reduced'?800:400,.08,'square',.05);
+      saveSettings();
+    }
   }else if(item.id==='cheats'){
     if(m.confirm||m.left||m.right){G.cheatMode=!G.cheatMode;tone(G.cheatMode?1200:400,.08,'square',.05);}
   }else if(item.id==='fullscreen'){

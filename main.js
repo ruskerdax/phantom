@@ -81,13 +81,22 @@ function draw(){
 
 // Standard browser game loop: update all logic, render the current frame, advance the frame counter,
 // then schedule the next iteration via requestAnimationFrame (targets 60fps, synced to the display).
-function loop(){update();draw();G.fr++;requestAnimationFrame(loop);}
+function trackFPS(ts){
+  if(typeof ts!=='number')return;
+  if(G.lastFrameTs){
+    const dt=Math.max(1,Math.min(250,ts-G.lastFrameTs));
+    G.frameMs+=(dt-G.frameMs)*.08;
+    G.fps=1000/G.frameMs;
+  }
+  G.lastFrameTs=ts;
+}
+function loop(ts){trackFPS(ts);update();draw();G.fr++;requestAnimationFrame(loop);}
 function shouldSaveOnUnload(){
   const activeStates=['overworld','enc_in','encounter','play','esc','base','slipgate','rebuild','dead_ow','dead_enc','dead_site'];
   return !!(G.OW||G.ENC||G.site)&&(activeStates.includes(G.st)||((G.st==='options'||G.st==='controls')&&G.optFrom!=='title'));
 }
 window.addEventListener('beforeunload',()=>{if(shouldSaveOnUnload())saveGame();});
 // Restore audio settings from save, then show title (game starts on PLAY GAME)
-{const sv=loadSave();if(sv){G.sfxVol=sv.sfxVol??10;G.musVol=sv.musVol??10;G.dynamicZoom=sv.dynamicZoom??true;}}
+{const sv=loadSave();if(sv){G.sfxVol=sv.sfxVol??10;G.musVol=sv.musVol??10;G.dynamicZoom=sv.dynamicZoom??true;G.renderQuality=normalizeRenderQuality(sv.renderQuality);}}
 G.seed=TUTORIAL_SEED;genWorld(G.seed);
 loop();

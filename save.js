@@ -25,6 +25,7 @@ function defaultSave() {
     sfxVol: 10,
     musVol: 10,
     dynamicZoom: true,
+    renderQuality: 'full',
   };
 }
 
@@ -65,6 +66,7 @@ function loadSave() {
     if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
     if (typeof d.dynamicZoom !== 'boolean')  d.dynamicZoom = true;
+    d.renderQuality = normalizeRenderQuality(d.renderQuality);
     d.lastLocation = normalizeLastLocation(d.lastLocation);
     return d;
   } catch(e) { return null; }
@@ -102,6 +104,7 @@ function buildSaveData() {
     sfxVol: G.sfxVol,
     musVol: G.musVol,
     dynamicZoom: G.dynamicZoom,
+    renderQuality: normalizeRenderQuality(G.renderQuality),
   };
 }
 
@@ -111,5 +114,6 @@ function saveSettings() {
   d.sfxVol = G.sfxVol;
   d.musVol = G.musVol;
   d.dynamicZoom = G.dynamicZoom;
+  d.renderQuality = normalizeRenderQuality(G.renderQuality);
   writeSave(d);
 }

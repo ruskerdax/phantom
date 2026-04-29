@@ -3,6 +3,35 @@
 // Static starfield
 const STARS=(()=>{const a=[];for(let i=0;i<220;i++)a.push({x:Math.random()*W,y:Math.random()*H,r:.3+Math.random()*1.4,ph:Math.random()*Math.PI*2,ci:i%5});return a;})();
 const SCOLS=['#ffffff','#aaaaff','#ffeebb','#aaffee','#ffaaaa'];
+const RENDER_PROFILES={
+  full:{starCount:220,twinkleCount:36,dustCount:140,scanlines:true,scanlineAlpha:.035,particleAlphaStep:0},
+  reduced:{starCount:130,twinkleCount:12,dustCount:80,scanlines:true,scanlineAlpha:.022,particleAlphaStep:.12},
+  minimal:{starCount:70,twinkleCount:0,dustCount:40,scanlines:false,scanlineAlpha:0,particleAlphaStep:.18},
+};
+const STAR_LAYERS={},SCANLINE_LAYERS={};
+
+function renderProfile(){return RENDER_PROFILES[renderQuality()]||RENDER_PROFILES.full;}
+function mkLayer(w=W,h=H){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
+function getStarLayer(){
+  const q=renderQuality(),p=renderProfile();
+  if(STAR_LAYERS[q])return STAR_LAYERS[q];
+  const c=mkLayer(),g=c.getContext('2d');
+  for(let i=0;i<p.starCount&&i<STARS.length;i++){
+    const s=STARS[i];
+    g.globalAlpha=.62;g.fillStyle=SCOLS[s.ci];
+    g.beginPath();g.arc(s.x,s.y,s.r,0,Math.PI*2);g.fill();
+  }
+  g.globalAlpha=1;STAR_LAYERS[q]=c;return c;
+}
+function getScanlineLayer(){
+  const q=renderQuality(),p=renderProfile();
+  if(!p.scanlines)return null;
+  if(SCANLINE_LAYERS[q])return SCANLINE_LAYERS[q];
+  const c=mkLayer(),g=c.getContext('2d');
+  g.globalAlpha=p.scanlineAlpha;g.fillStyle='#000';
+  for(let y=0;y<H;y+=2)g.fillRect(0,y,W,1);
+  g.globalAlpha=1;SCANLINE_LAYERS[q]=c;return c;
+}
 // Motion dust — screen-space parallax particles, drift opposite player velocity
 const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Math.random()*H,r:.4+Math.random()*1.6,depth:.15+Math.random()*.7});return a;})();
 
@@ -59,30 +88,48 @@ function applyWorldCamera(cam){
 }
 
 function drStars(scroll=0){
-  cx.save();
-  for(const s of STARS){cx.globalAlpha=.5+.3*Math.sin(s.ph+G.fr*.015);cx.fillStyle=SCOLS[s.ci];cx.beginPath();cx.arc((s.x+scroll)%W,s.y,s.r,0,Math.PI*2);cx.fill();}
-  cx.globalAlpha=1;cx.restore();
+  const layer=getStarLayer(),p=renderProfile();
+  const dx=((scroll%W)+W)%W;
+  if(dx===0)cx.drawImage(layer,0,0);
+  else{cx.drawImage(layer,dx,0);cx.drawImage(layer,dx-W,0);}
+  for(let i=0;i<p.twinkleCount&&i<STARS.length;i++){
+    const s=STARS[i],x=(s.x+scroll)%W;
+    cx.globalAlpha=.25+.35*Math.sin(s.ph+G.fr*.015);
+    cx.fillStyle=SCOLS[s.ci];
+    cx.beginPath();cx.arc(x<0?x+W:x,s.y,s.r,0,Math.PI*2);cx.fill();
+  }
+  cx.globalAlpha=1;
 }
 function drDust(vx,vy){
   const spd=Math.sqrt(vx*vx+vy*vy);if(spd>6){const s=6/spd;vx*=s;vy*=s;}
-  cx.save();
-  for(const d of DUST){
+  const p=renderProfile(),n=Math.min(p.dustCount,DUST.length);
+  if(n<=0)return;
+  cx.strokeStyle='#cce4ff';cx.fillStyle='#cce4ff';cx.lineCap='round';
+  for(let i=0;i<n;i++){
+    const d=DUST[i];
     d.x=((d.x-vx*d.depth)%W+W)%W;
     d.y=((d.y-vy*d.depth)%H+H)%H;
     cx.globalAlpha=.12+d.depth*.2;
     const streak=spd*d.depth;
     if(streak>1){
       // draw a short streak in the direction the dust appears to trail
-      cx.strokeStyle='#cce4ff';cx.lineWidth=d.r*.9;cx.lineCap='round';
+      cx.lineWidth=d.r*.9;
       cx.beginPath();cx.moveTo(d.x,d.y);cx.lineTo(d.x+vx*d.depth*2.5,d.y+vy*d.depth*2.5);cx.stroke();
     } else {
-      cx.fillStyle='#cce4ff';
       cx.beginPath();cx.arc(d.x,d.y,d.r,0,Math.PI*2);cx.fill();
     }
   }
-  cx.globalAlpha=1;cx.restore();
+  cx.globalAlpha=1;
 }
-function drPts(pts){for(const p of pts){cx.save();cx.globalAlpha=Math.max(0,p.l/p.ml);cx.fillStyle=p.c;cx.beginPath();cx.arc(p.x,p.y,1.5,0,Math.PI*2);cx.fill();cx.restore();}}
+function drPts(pts){
+  const step=renderProfile().particleAlphaStep;
+  for(const p of pts){
+    let a=Math.max(0,p.l/p.ml);
+    if(step>0)a=Math.ceil(a/step)*step;
+    cx.globalAlpha=a;cx.fillStyle=p.c;cx.beginPath();cx.arc(p.x,p.y,1.5,0,Math.PI*2);cx.fill();
+  }
+  cx.globalAlpha=1;
+}
 // Ship is a triangle in local space (tip at y=-10, pointing up), then translate() moves the canvas origin to
 // the ship's world position and rotate() spins the local axes to face angle a. Invincibility blinks by
 // skipping alternate 2-frame windows (fr%4 >= 2).
@@ -150,4 +197,4 @@ function drMissile(x,y,a,type='standard'){
   cx.fillRect(-md.width*0.9,md.length*0.3,md.width*1.8,1.2);
   cx.restore();
 }
-function scanlines(){cx.save();cx.globalAlpha=.035;cx.fillStyle='#000';for(let y=0;y<H;y+=2)cx.fillRect(0,y,W,1);cx.restore();}
+function scanlines(){const layer=getScanlineLayer();if(layer)cx.drawImage(layer,0,0);}
