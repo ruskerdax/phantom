@@ -298,7 +298,10 @@ function drawEnc(){
   if(G.st==='encounter'&&enc.introTimer<=0&&enc.s.alive){
     drawOffscreenIndicators(collectOffscreenIndicators({
       cam:enc.cam||{x:camX,y:camY,z:1},player:enc.s,worldW:enc.ew,worldH:enc.eh,toroidal:tor,
-      targets:enc.en.map(e=>({x:e.x,y:e.y,r:OET[e.t].enc.r,col:OET[e.t].enc.col,alive:e.alive}))
+      targets:[
+        ...enc.en.map(e=>({x:e.x,y:e.y,r:OET[e.t].enc.r,col:OET[e.t].enc.col,alive:e.alive})),
+        ...enc.fu.map(f=>({x:f.x,y:f.y,r:12,col:'#0f8',kind:'energy'}))
+      ]
     }));
   }
   if(enc.introTimer>0){const a=Math.min(1,(70-enc.introTimer)/20);cx.save();cx.globalAlpha=a;cx.fillStyle='rgba(0,0,0,.7)';cx.fillRect(0,H/2-36,W,72);cx.fillStyle=et.enc.col;cx.shadowColor=et.enc.col;cx.shadowBlur=20;cx.font='bold 32px monospace';cx.textAlign='center';cx.fillText(enc.label,W/2,H/2+4);cx.shadowBlur=0;cx.fillStyle='#668';cx.font='13px monospace';cx.fillText(enc.isAst&&!enc.en.length?'YOU MAY LEAVE AT ANY TIME':enc.isHBase?'DESTROY ALL SOFT POINTS TO ESCAPE':'DESTROY ALL ENEMIES TO ESCAPE',W/2,H/2+26);cx.globalAlpha=1;cx.restore();}

@@ -160,7 +160,7 @@ function collectOffscreenIndicators(opts){
     const dx=pr.sx-pr.psx,dy=pr.sy-pr.psy,len=Math.hypot(dx,dy);
     if(len<=0)continue;
     const p=indicatorEdgePoint(pr.psx,pr.psy,dx,dy,inset);
-    out.push({x:p.x,y:p.y,edge:p.edge,a:Math.atan2(dy,dx),col:t.col||'#f44',scale:Math.max(.85,Math.min(1.35,(t.r||12)/13)),dist:pr.dist});
+    out.push({x:p.x,y:p.y,edge:p.edge,a:Math.atan2(dy,dx),col:t.col||'#f44',kind:t.kind,scale:Math.max(.85,Math.min(1.35,(t.r||12)/13)),dist:pr.dist});
   }
   return out;
 }
@@ -187,6 +187,12 @@ function drawIndicatorChevron(x,y,a,col,scale=1,alpha=1){
   cx.stroke();
   cx.restore();
 }
+function drawEnergyPickupIndicator(x,y,col,alpha=.5){
+  cx.save();
+  cx.globalAlpha=alpha;
+  drEnergy(x,y,col);
+  cx.restore();
+}
 function drawOffscreenIndicators(indicators,opts={}){
   if(!indicators?.length)return;
   const inset=opts.inset??22,gap=opts.gap??18;
@@ -196,7 +202,10 @@ function drawOffscreenIndicators(indicators,opts={}){
   for(const edge of Object.keys(groups)){
     const g=groups[edge];if(!g.length)continue;
     spaceIndicatorGroup(g,inset,gap);
-    for(const it of g)drawIndicatorChevron(it.x,it.y,it.a,it.col,it.scale,pulse*(opts.alpha??.86));
+    for(const it of g){
+      if(it.kind==='energy')drawEnergyPickupIndicator(it.x,it.y,it.col,.5);
+      else drawIndicatorChevron(it.x,it.y,it.a,it.col,it.scale,pulse*(opts.alpha??.86));
+    }
   }
 }
 
