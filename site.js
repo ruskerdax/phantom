@@ -137,7 +137,7 @@ function updSite(){
   if(s.shld){const ax=activeAuxObj();s.energy=Math.max(0,s.energy-(ax?.energyDrain??0.17));}
   if(iThr()&&!s.shld){
     applyLinearThrust(s, 1, s.energy<=0);
-    if(s.energy>0) s.energy=Math.max(0,s.energy-.045);
+    drainEnergy(s, THRUST_ENERGY_DRAIN.site);
   }
   s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;const sp=Math.hypot(s.vx,s.vy);if(sp>5.5){s.vx=s.vx/sp*5.5;s.vy=s.vy/sp*5.5;}
   s.x+=s.vx;s.y+=s.vy;

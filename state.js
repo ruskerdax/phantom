@@ -14,7 +14,9 @@ function licensedWeaponsForSlot(slot){return WEAPONS.filter(w=>slotMatchesWeapon
 function licensedWeaponIdsForSlot(slot){return licensedWeaponsForSlot(slot).map(w=>w.id);}
 function compatibleSlots(wp){return activeChassisObj().slots.map((sl,i)=>({sl,i})).filter(({sl})=>slotMatchesWeapon(sl,wp));}
 const ENERGY_PICKUP=38;
+const THRUST_ENERGY_DRAIN={overworld:.035,encounter:.01,site:.012};
 function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
+function drainEnergy(s,amount){if(s.energy>0)s.energy=Math.max(0,s.energy-amount);}
 // Particle system: boomAt() spawns n particles in random directions; updPts() advances and culls them each frame.
 // drPts() fades each particle using its remaining lifetime ratio (p.l / p.ml) as the alpha value.
 function boomAt(pts,x,y,c,n=14){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=.7+Math.random()*3;pts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:22+Math.random()*28,ml:50,c});}}

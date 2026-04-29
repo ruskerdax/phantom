@@ -291,7 +291,7 @@ function updOW(){
   // sin(angle) = X component, -cos(angle) = Y component: canvas Y increases downward, so "forward" is -cos.
   if(iThr()){
     applyLinearThrust(s, 1, s.energy<=0);
-    if(s.energy>0) s.energy=Math.max(0,s.energy-.035);
+    drainEnergy(s, THRUST_ENERGY_DRAIN.overworld);
   }
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   const maxSpd=sdist<220?7:4.2;

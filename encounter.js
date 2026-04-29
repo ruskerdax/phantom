@@ -143,7 +143,7 @@ function updEnc(){
   if(s.shld){const ax=activeAuxObj();s.energy=Math.max(0,s.energy-(ax?.energyDrain??0.15));}
   if(iThr()&&!s.shld){
     applyLinearThrust(s, 1, s.energy<=0);
-    if(s.energy>0) s.energy=Math.max(0,s.energy-.04);
+    drainEnergy(s, THRUST_ENERGY_DRAIN.encounter);
   }
   const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}
