@@ -1,11 +1,11 @@
 'use strict';
 
 // Keyboard
-var K={};
+var K={},suppressFireUntilRelease=false;
 document.addEventListener('keydown',e=>{
   if(G&&G.seedInputOpen)return;
   if(!K[e.code])ia();K[e.code]=true;if(!e.repeat)K[e.code+'j']=true;
-  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','KeyW','KeyA','KeyS','KeyD','KeyJ','KeyI'].includes(e.code))e.preventDefault();
+  if(['Space','ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Escape','KeyW','KeyA','KeyS','KeyD','KeyJ','KeyI','KeyP'].includes(e.code))e.preventDefault();
   if(G&&G.optListen==='key'){
     const blocked=['F1','F2','F3','F4','F5','F6','F7','F8','F9','F10','F11','F12','Tab','Escape'];
     if(e.code==='Escape'){G.optListen=null;}
@@ -29,12 +29,16 @@ function menuInput(opts){
   if(isRebinding() || menuInputSuppressed()){
     return {up:false,down:false,left:false,right:false,confirm:false,cancel:false,clear:false};
   }
+  const fireConfirms = o.fireConfirms !== false;
+  const enterConfirm = iEnter();
+  const fireConfirm = fireConfirms && kjust('fire');
+  if((enterConfirm||fireConfirm)&&kdown('fire'))suppressFireUntilRelease=true;
   return {
     up:    !!(jp('ArrowUp')    || jp('KeyW') || GP.menuUp),
     down:  !!(jp('ArrowDown')  || jp('KeyS') || GP.menuDown),
     left:  !!(jp('ArrowLeft')  || kjust('rotLeft')  || GP.menuLeft),
     right: !!(jp('ArrowRight') || kjust('rotRight') || GP.menuRight),
-    confirm: !!(iEnter() || (o.fireConfirms && iFir())),
+    confirm: !!(enterConfirm || fireConfirm),
     cancel:  !!iPause(),
     clear:   !!jp('Backspace'),
   };
@@ -48,12 +52,12 @@ var ACT_DEFS=[
   {id:'fire',    label:'FIRE',         defKey:'KeyJ',      defBtn:2},
   {id:'fireSec', label:'FIRE SECONDARY',defKey:'KeyO',     defBtn:3},
   {id:'shield',  label:'SHIELD',       defKey:'KeyI',      defBtn:4},
-  {id:'pause',   label:'PAUSE',        defKey:'Escape',    defBtn:9},
+  {id:'pause',   label:'PAUSE',        defKey:'KeyP',      defBtn:9},
 ];
 var BND={};ACT_DEFS.forEach(a=>{BND[a.id]={key:a.defKey,btn:a.defBtn};});
-try{const s=localStorage.getItem('phantom_bnd');if(s){const p=JSON.parse(s);Object.keys(p).forEach(k=>{if(BND[k])BND[k]=p[k];});}}catch(e){}
+try{const s=localStorage.getItem('phantom_bnd');if(s){const p=JSON.parse(s);Object.keys(p).forEach(k=>{if(BND[k])BND[k]=p[k];});if(BND.pause&&BND.pause.key==='Escape')BND.pause.key='KeyP';}}catch(e){}
 function saveBND(){try{localStorage.setItem('phantom_bnd',JSON.stringify(BND));}catch(e){}}
-function fmtKey(c){return({ArrowLeft:'◄ LEFT',ArrowRight:'► RIGHT',ArrowUp:'▲ UP',ArrowDown:'▼ DOWN',Space:'SPACE',ShiftLeft:'L-SHIFT',ShiftRight:'R-SHIFT',Enter:'ENTER',Escape:'ESC',KeyW:'W',KeyA:'A',KeyS:'S',KeyD:'D',KeyQ:'Q',KeyE:'E',KeyR:'R',KeyF:'F',KeyJ:'J',KeyI:'I',KeyZ:'Z',KeyX:'X',KeyC:'C',ControlLeft:'L-CTRL',AltLeft:'L-ALT',Tab:'TAB'})[c]||c.replace('Key','').replace('Digit','');}
+function fmtKey(c){return({ArrowLeft:'◄ LEFT',ArrowRight:'► RIGHT',ArrowUp:'▲ UP',ArrowDown:'▼ DOWN',Space:'SPACE',ShiftLeft:'L-SHIFT',ShiftRight:'R-SHIFT',Enter:'ENTER',Escape:'ESC',KeyW:'W',KeyA:'A',KeyS:'S',KeyD:'D',KeyP:'P',KeyQ:'Q',KeyE:'E',KeyR:'R',KeyF:'F',KeyJ:'J',KeyI:'I',KeyZ:'Z',KeyX:'X',KeyC:'C',ControlLeft:'L-CTRL',AltLeft:'L-ALT',Tab:'TAB'})[c]||c.replace('Key','').replace('Digit','');}
 function fmtBtn(i){const n=['A','B','X','Y','LB','RB','LT','RT','SEL','START','L3','R3','↑','↓','◄','►'];return n[i]!==undefined?n[i]:'BTN'+i;}
 
 // Gamepad
@@ -133,7 +137,13 @@ function iRot(){
 }
 function iThr(){return!!(kdown('thrust')||GP.thrust);}
 function iShd(f){const ax=activeAuxObj();return !!(ax&&ax.effect==='shield'&&f>0&&(kdown('shield')||GP.shield));}
-function iFir(){return!!(kdown('fire')||GP.fire);}
+function iFir(){
+  if(suppressFireUntilRelease){
+    if(!kdown('fire')&&!GP.fire)suppressFireUntilRelease=false;
+    else return false;
+  }
+  return!!(kdown('fire')||GP.fire);
+}
 function iFireSec(){return!!(kdown('fireSec')||GP.fireSec);}
 function iEnter(){return!!(jp('Enter')||jp('NumpadEnter')||GP.thrustj);}
 function iPause(){return!!(kjust('pause')||GP.startj);}
