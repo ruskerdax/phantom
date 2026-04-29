@@ -200,8 +200,7 @@ function drawEquipFlow(){
 function updEquipFlow(up,dn,lt,rt,ok,bk){
   const ef=G.equipFlow,ch=CHASSIS.find(c=>c.id===ef.chassisId);
   const nRows=ch.slots.length+3; // slots + aux + confirm + cancel
-  if(up)ef.focus=Math.max(0,ef.focus-1);
-  if(dn)ef.focus=Math.min(nRows-1,ef.focus+1);
+  ef.focus=moveSelection(ef.focus,nRows-1,up,dn);
   const row=ef.focus;
   if(row<ch.slots.length){
     // weapon slot: cycle compatible owned weapons + null
@@ -289,14 +288,13 @@ function updBase(){
     const item=items.find(it=>it.id===G.shopActionId);
     if(item){
       const opts=shopActionOpts(item);
-      if(up)G.shopActionSel=Math.max(0,G.shopActionSel-1);
-      if(dn)G.shopActionSel=Math.min(opts.length-1,G.shopActionSel+1);
+      G.shopActionSel=moveSelection(G.shopActionSel,opts.length-1,up,dn);
       if(ok)execShopAction(opts[G.shopActionSel]);
     }else{G.shopActionId=null;}
     if(bk)G.shopActionId=null;
     return;
   }
-  if(lt||rt){G.baseTab=clamp(G.baseTab+(rt?1:-1),0,baseTabs().length-1);G.shopSel=0;G.baseSel=0;}
+  if(lt||rt){G.baseTab=moveTabSelection(G.baseTab,baseTabs(),lt,rt);G.shopSel=0;G.baseSel=0;}
   if(baseTabId()==='services'){
     G.baseSel=moveSelection(G.baseSel,1,up,dn);
     if(ok){

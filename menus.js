@@ -314,7 +314,8 @@ function drawControls(){
 
 function returnFromOptions(){
   G.st=G.optFrom;
-  if(G.optFrom!=='title')G.paused=true;
+  if(G.optFrom==='title')G.titleSel=0;
+  else{G.pauseSel=0;G.paused=true;}
 }
 function updTitleMenu(){
   const items=titleItems();
@@ -324,7 +325,7 @@ function updTitleMenu(){
   ia();
   const id=items[G.titleSel].id;
   if(id==='play')startFromSave();
-  else if(id==='options'){G.optFrom='title';G.st='options';}
+  else if(id==='options'){G.optFrom='title';G.optSel=0;G.st='options';}
 }
 function updClearDataDialog(){
   const m=menuInput({fireConfirms:false});
@@ -332,7 +333,7 @@ function updClearDataDialog(){
   if(m.right)G.clearDataSel=1;
   if(m.confirm){
     if(G.clearDataSel===1){
-      resetSave();G.st='title';G.paused=false;tone(220,.3,'sawtooth',.1);
+      resetSave();G.titleSel=0;G.st='title';G.paused=false;tone(220,.3,'sawtooth',.1);
     }
     delete G.clearDataSel;
   }
@@ -439,7 +440,7 @@ function updPauseMenu(st){
   const id=items[G.pauseSel].id;
   if(id==='resume')G.paused=false;
   else if(id==='ship_config')G.showShipConfig=true;
-  else if(id==='options'){G.optFrom=st;G.paused=false;G.st='options';}
+  else if(id==='options'){G.optFrom=st;G.optSel=0;G.paused=false;G.st='options';}
   else if(id==='cheats'){G.cheatSub=true;G.cheatSubSel=0;}
-  else if(id==='quit'){saveGame();G.paused=false;G.ENC=null;G.site=null;G.st='title';}
+  else if(id==='quit'){saveGame();G.titleSel=0;G.paused=false;G.ENC=null;G.site=null;G.st='title';}
 }

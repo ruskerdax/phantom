@@ -12,7 +12,7 @@ function update(){
   if(st==='controls'){updControlsMenu();return;}
   if(st==='title'){updTitleMenu();return;}
   if(st==='rebuild'){updRebuild();return;}
-  if(st==='over'||st==='done'){if(iEnter()){ia();if(st==='over'){G.st='title';}else{G.stake=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.st='title';}}return;}
+  if(st==='over'||st==='done'){if(iEnter()){ia();G.titleSel=0;if(st==='over'){G.st='title';}else{G.stake=0;G.credits=0;G.cleared=[false,false,false];G.lvState={};G.st='title';}}return;}
   if(st==='dead_ow'||st==='dead_enc'||st==='dead_site')return;
   if(st==='base'){updBase();return;}
   if(st==='slipgate'){
@@ -20,12 +20,10 @@ function update(){
     if(G.slipgateActive){
       const isTutFirst=G.seed===TUTORIAL_SEED&&!G.tutorialDone;
       if(isTutFirst){
-        if(m.up)G.slipSel=0;
-        if(m.down)G.slipSel=1;
+        G.slipSel=moveSelection(G.slipSel,1,m.up,m.down);
       } else {
         const nb=slipNeighborList();
-        if(m.up)G.slipSel=Math.max(0,G.slipSel-1);
-        if(m.down)G.slipSel=Math.min(nb.length-1,G.slipSel+1);
+        G.slipSel=moveSelection(G.slipSel,nb.length-1,m.up,m.down);
       }
       if(m.confirm){
         ia();

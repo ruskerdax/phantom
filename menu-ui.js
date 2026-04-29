@@ -15,9 +15,12 @@ const UI_GLYPH={
 function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
 function moveSelection(sel,maxIdx,up,down){
   if(maxIdx<0)return 0;
-  if(up)return clamp(sel-1,0,maxIdx);
-  if(down)return clamp(sel+1,0,maxIdx);
+  if(up)return sel<=0?maxIdx:sel-1;
+  if(down)return sel>=maxIdx?0:sel+1;
   return clamp(sel,0,maxIdx);
+}
+function moveTabSelection(sel,tabs,left,right){
+  return moveSelection(sel,(tabs?.length??0)-1,left,right);
 }
 function cycleValue(values,current,dir){
   if(!values.length)return current;
