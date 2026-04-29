@@ -292,6 +292,7 @@ function updOW(){
   const s=ow.s;if(!s.alive)return;
   applyRotation(s, iRot(), s.energy<=0);
   if(iShieldToggle())toggleShipShield(s);
+  tickShieldRecharge(s);
   // sin(angle) = X component, -cos(angle) = Y component: canvas Y increases downward, so "forward" is -cos.
   const thrustIn=iThrustInput();
   if(thrustIn.activeAxes>0){

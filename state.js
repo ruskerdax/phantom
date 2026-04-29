@@ -125,6 +125,7 @@ function shieldLoadoutText(sh){
 }
 const ENERGY_PICKUP=38;
 const THRUST_ENERGY_DRAIN={overworld:.035,encounter:.01,site:.012};
+const SHIELD_EMPTY_ENERGY_DRAIN=.5/60;
 const FALLBACK_SHIP_HIT_RADIUS=12;
 function chassisDefForShip(s){return CHASSIS.find(c=>c.id===s?.chassisId)||activeChassisObj();}
 function shipHitRadius(s){
@@ -185,10 +186,18 @@ function rechargeShieldFromEnergy(s,force=false){
   refreshShieldOffline(s);
   return add;
 }
+function drainShieldWithoutEnergy(s){
+  if(s.energy>0||s.shieldHp<=0)return 0;
+  const drain=Math.min(s.shieldHp,SHIELD_EMPTY_ENERGY_DRAIN);
+  s.shieldHp-=drain;
+  refreshShieldOffline(s);
+  return drain;
+}
 function tickShieldRecharge(s){
   const def=shieldDefForShip(s);
   if(!def||s.shieldEnabled===false||!s.shieldId)return;
   refreshShieldOffline(s);
+  if(s.energy<=0){drainShieldWithoutEnergy(s);return;}
   if(s.shieldHp>=s.shieldMaxHp)return;
   if(s.shieldRechargeTimer>0){s.shieldRechargeTimer--;return;}
   rechargeShieldFromEnergy(s,false);
