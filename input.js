@@ -57,26 +57,40 @@ function fmtKey(c){return({ArrowLeft:'◄ LEFT',ArrowRight:'► RIGHT',ArrowUp:'
 function fmtBtn(i){const n=['A','B','X','Y','LB','RB','LT','RT','SEL','START','L3','R3','↑','↓','◄','►'];return n[i]!==undefined?n[i]:'BTN'+i;}
 
 // Gamepad
-var GP={connected:false,id:'',axL:0,thrust:false,fire:false,fireSec:false,shield:false,startj:false,menuUp:false,menuDown:false,menuLeft:false,menuRight:false,thrustj:false};
+var GP={connected:false,id:'',axL:0,rotDigital:0,thrust:false,fire:false,fireSec:false,shield:false,startj:false,menuUp:false,menuDown:false,menuLeft:false,menuRight:false,thrustj:false};
 let _gsh=false,_gmuh=false,_gmdh=false,_gmlh=false,_gmrh=false,_gtjh=false,_gprev=[];
+const GP_AXIS_DEADZONE=.18;
+const GP_ROT_AXIS_CURVE=1.4;
+const DIGITAL_ROT_RAMP_FRAMES=36;
+const DIGITAL_ROT_RAMP_CURVE=1.55;
+let _rotDigitalDir=0,_rotDigitalFrames=0,_rotDigitalFrame=-1;
 window.addEventListener('gamepadconnected',e=>{GP.connected=true;GP.id=e.gamepad.id;ia();tone(660,.2,'sine',.08);});
 window.addEventListener('gamepaddisconnected',()=>{GP.connected=false;GP.id='';});
 function bpressed(bt,i){return!!(bt[i]&&(bt[i].pressed||bt[i].value>.3));}
+function shapeGPAxis(v,dead=GP_AXIS_DEADZONE,curve=GP_ROT_AXIS_CURVE){
+  if(!Number.isFinite(v))return 0;
+  const mag=Math.abs(v);
+  if(mag<=dead)return 0;
+  const norm=Math.min(1,(mag-dead)/(1-dead));
+  return Math.sign(v)*Math.pow(norm,curve);
+}
 function pollGP(){
   const pads=navigator.getGamepads?navigator.getGamepads():[];let gp=null;
   for(const p of pads){if(p&&p.connected){gp=p;GP.connected=true;GP.id=p.id.slice(0,36);break;}}
-  if(!gp){GP.axL=0;GP.thrust=false;GP.fire=false;GP.fireSec=false;GP.shield=false;GP.startj=false;GP.menuUp=false;GP.menuDown=false;GP.menuLeft=false;GP.menuRight=false;GP.thrustj=false;_gprev=[];return;}
-  const ax=gp.axes,bt=gp.buttons,dead=.18;
+  if(!gp){GP.axL=0;GP.rotDigital=0;GP.thrust=false;GP.fire=false;GP.fireSec=false;GP.shield=false;GP.startj=false;GP.menuUp=false;GP.menuDown=false;GP.menuLeft=false;GP.menuRight=false;GP.thrustj=false;_gprev=[];return;}
+  const ax=gp.axes,bt=gp.buttons,dead=GP_AXIS_DEADZONE;
   if(G&&G.optListen==='btn'){
     for(let i=0;i<bt.length;i++){
       if(bpressed(bt,i)&&!_gprev[i]){BND[ACT_DEFS[G.ctrlSel].id].btn=i;saveBND();G.optListen=null;_gsh=true;_gmuh=true;_gmdh=true;_gmlh=true;_gmrh=true;_gtjh=true;break;}
     }
   }
   _gprev=bt.map(b=>!!(b&&(b.pressed||b.value>.3)));
-  const lx=Math.abs(ax[0])>dead?ax[0]:0;
+  const rawLx=ax[0]||0;
+  const lx=shapeGPAxis(rawLx,dead);
   const ly=ax[1]||0;
   const dL=bpressed(bt,BND.rotLeft.btn),dR=bpressed(bt,BND.rotRight.btn);
-  GP.axL=dL?-1:dR?1:lx;
+  GP.rotDigital=dL?-1:dR?1:0;
+  GP.axL=lx;
   const dU=bpressed(bt,12),rt=bt[7]?bt[7].value||+bt[7].pressed:0;
   const thrBtn=bpressed(bt,BND.thrust.btn);
   GP.thrust=rt>.3||dU||thrBtn;
@@ -87,13 +101,36 @@ function pollGP(){
   const mu=dU||(ly<-.5);GP.menuUp=mu&&!_gmuh;_gmuh=mu;
   const dD=bpressed(bt,13);
   const md=dD||(ly>.5);GP.menuDown=md&&!_gmdh;_gmdh=md;
-  const ml=dL||(lx<-.5);GP.menuLeft=ml&&!_gmlh;_gmlh=ml;
-  const mr=dR||(lx>.5);GP.menuRight=mr&&!_gmrh;_gmrh=mr;
+  const ml=dL||(rawLx<-.5);GP.menuLeft=ml&&!_gmlh;_gmlh=ml;
+  const mr=dR||(rawLx>.5);GP.menuRight=mr&&!_gmrh;_gmrh=mr;
   const tj=thrBtn;GP.thrustj=tj&&!_gtjh;_gtjh=tj;
 }
 function kdown(id){return!!K[BND[id].key];}
 function kjust(id){return jp(BND[id].key);}
-function iRot(){return kdown('rotLeft')?-1:kdown('rotRight')?1:GP.axL;}
+function digitalRotInput(dir){
+  if(dir===0){
+    _rotDigitalDir=0;_rotDigitalFrames=0;_rotDigitalFrame=typeof G!=='undefined'?G.fr:-1;
+    return 0;
+  }
+  const fr=typeof G!=='undefined'?G.fr:_rotDigitalFrame+1;
+  if(dir!==_rotDigitalDir){_rotDigitalDir=dir;_rotDigitalFrames=0;}
+  if(fr!==_rotDigitalFrame){
+    _rotDigitalFrames=Math.min(DIGITAL_ROT_RAMP_FRAMES,_rotDigitalFrames+1);
+    _rotDigitalFrame=fr;
+  }
+  const t=Math.min(1,_rotDigitalFrames/DIGITAL_ROT_RAMP_FRAMES);
+  return dir*Math.pow(t,DIGITAL_ROT_RAMP_CURVE);
+}
+function iRot(){
+  const digital=kdown('rotLeft')?-1:kdown('rotRight')?1:GP.rotDigital;
+  if(digital&&typeof G!=='undefined'&&G.st==='overworld'){
+    digitalRotInput(0);
+    return digital;
+  }
+  if(digital)return digitalRotInput(digital);
+  digitalRotInput(0);
+  return GP.axL;
+}
 function iThr(){return!!(kdown('thrust')||GP.thrust);}
 function iShd(f){const ax=activeAuxObj();return !!(ax&&ax.effect==='shield'&&f>0&&(kdown('shield')||GP.shield));}
 function iFir(){return!!(kdown('fire')||GP.fire);}

@@ -17,9 +17,7 @@ function drawTitle(){
     if(sel){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=12;cx.fillText(UI_GLYPH.pointer+' '+TITEMS[i].label,W/2,iy);}
     else{cx.fillStyle='#446';cx.shadowBlur=0;cx.fillText(TITEMS[i].label,W/2,iy);}
   }
-  cx.shadowBlur=0;cx.fillStyle='#223';cx.font='10px monospace';cx.textAlign='left';
-  cx.fillText('SEED  '+seedText(G.seed),8,H-8);
-  cx.restore();drGPI();scanlines();
+  cx.restore();drGPI(8,H-8,'left');scanlines();
 }
 
 function drawScreen(title,sub,tc,prompt){

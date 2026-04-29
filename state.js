@@ -125,14 +125,15 @@ function startFromSave(){
 // energyEmpty: true when ship.energy <= 0.
 function applyRotation(s, rotIn, energyEmpty){
   const ch = activeChassisObj();
-  const accel = ch.thrust.rotAccel * (energyEmpty ? 0.5 : 1);
-  const maxV  = ch.thrust.rotMax;
-  if(rotIn !== 0){
-    s.va += rotIn * accel;
-  } else if(s.va !== 0){
-    // Inertial dampening: clamp brake at |va| so we settle on 0 instead of overshooting into reverse spin.
-    const brake = Math.min(Math.abs(s.va), accel);
-    s.va -= Math.sign(s.va) * brake;
+  const accel = Math.max(0,(ch.thrust.rotAccel||0) * (energyEmpty ? 0.5 : 1));
+  const maxV  = Math.max(0,ch.thrust.rotMax||0);
+  const input = Number.isFinite(rotIn) ? Math.max(-1,Math.min(1,rotIn)) : 0;
+  if(!Number.isFinite(s.va))s.va=0;
+  const targetVa = input * maxV;
+  const delta = targetVa - s.va;
+  if(delta !== 0){
+    const step = Math.min(Math.abs(delta), accel);
+    s.va += Math.sign(delta) * step;
   }
   if(s.va >  maxV) s.va =  maxV;
   if(s.va < -maxV) s.va = -maxV;
