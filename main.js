@@ -60,7 +60,8 @@ function update(){
     if(m.down)G.ctrlSel=Math.min(nRows-1,G.ctrlSel+1);
     if(m.left)G.optCol=0;
     if(m.right)G.optCol=1;
-    if(m.confirm){
+    const confirm=m.confirm&&!m.left&&!m.right;
+    if(confirm){
       if(G.ctrlSel===ACT_DEFS.length){
         G.st='options';G.optListen=null;
       } else if(G.ctrlSel===ACT_DEFS.length+1){
