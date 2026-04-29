@@ -88,7 +88,7 @@ function trackFPS(ts){
   }
   G.lastFrameTs=ts;
 }
-function loop(ts){trackFPS(ts);update();draw();G.fr++;requestAnimationFrame(loop);}
+function loop(ts){trackFPS(ts);update();musicUpdate();draw();G.fr++;requestAnimationFrame(loop);}
 function shouldSaveOnUnload(){
   const activeStates=['overworld','enc_in','encounter','play','esc','base','slipgate','rebuild','dead_ow','dead_enc','dead_site'];
   return !!(G.OW||G.ENC||G.site)&&(activeStates.includes(G.st)||((G.st==='options'||G.st==='controls')&&G.optFrom!=='title'));
