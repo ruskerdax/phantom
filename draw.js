@@ -6,6 +6,33 @@ const SCOLS=['#ffffff','#aaaaff','#ffeebb','#aaffee','#ffaaaa'];
 // Motion dust — screen-space parallax particles, drift opposite player velocity
 const DUST=(()=>{const a=[];for(let i=0;i<140;i++)a.push({x:Math.random()*W,y:Math.random()*H,r:.4+Math.random()*1.6,depth:.15+Math.random()*.7});return a;})();
 
+function dynZoomOn(){return G.dynamicZoom!==false;}
+function cameraZoomTarget(mode,s){
+  if(!dynZoomOn())return 1;
+  const sp=Math.hypot(s?.vx||0,s?.vy||0);
+  if(mode==='overworld')return Math.max(.82,1.02-Math.min(1,sp/7)*.20);
+  if(mode==='encounter')return Math.max(.25,.98-Math.min(1,sp/5)*.14);
+  if(mode==='site')return Math.max(.92,1-Math.min(1,sp/5.5)*.08);
+  return 1;
+}
+function updateWorldCamera(cam,fx,fy,worldW,worldH,targetZ=1,ax=.5,ay=.5,smooth=.12){
+  if(!cam)cam={x:0,y:0,z:1};
+  if(!Number.isFinite(cam.z)||cam.z<=0)cam.z=1;
+  if(smooth>=1)cam.z=targetZ;else cam.z+=(targetZ-cam.z)*smooth;
+  const viewW=W/cam.z,viewH=H/cam.z;
+  const minX=worldW>viewW?0:(worldW-viewW)/2,maxX=worldW>viewW?worldW-viewW:minX;
+  const minY=worldH>viewH?0:(worldH-viewH)/2,maxY=worldH>viewH?worldH-viewH:minY;
+  const tx=Math.max(minX,Math.min(maxX,fx-viewW*ax));
+  const ty=Math.max(minY,Math.min(maxY,fy-viewH*ay));
+  if(smooth>=1){cam.x=tx;cam.y=ty;}
+  else{cam.x+=(tx-cam.x)*smooth;cam.y+=(ty-cam.y)*smooth;}
+  return cam;
+}
+function applyWorldCamera(cam){
+  const z=cam?.z||1;
+  cx.scale(z,z);cx.translate(-(cam?.x||0),-(cam?.y||0));
+}
+
 function drStars(scroll=0){
   cx.save();
   for(const s of STARS){cx.globalAlpha=.5+.3*Math.sin(s.ph+G.fr*.015);cx.fillStyle=SCOLS[s.ci];cx.beginPath();cx.arc((s.x+scroll)%W,s.y,s.r,0,Math.PI*2);cx.fill();}

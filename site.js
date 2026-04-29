@@ -121,7 +121,7 @@ function enterLv(){
     en:d.en.map((e,i)=>({...e,alive:ls?ls.en[i]:true,timer:20+Math.floor(Math.random()*80)})),
     fu:d.fu.map((f,i)=>({...f,got:ls?ls.fu[i]:false})),
     rx:ls?{...d.rx,hp:ls.rx.hp,alive:ls.rx.alive}:{...d.rx,alive:true},
-    bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:0}};
+    bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:0,z:1}};
   G.st='play';
 }
 function siteKillShip(){
@@ -145,8 +145,7 @@ function updSite(){
   s.x+=s.vx;s.y+=s.vy;
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
   const wH=d.worldH||H;
-  const tcy=Math.max(0,Math.min(wH-H,s.y-H*.45));
-  site.cam.y+=(tcy-site.cam.y)*.12;
+  site.cam=updateWorldCamera(site.cam,s.x,s.y,W,wH,cameraZoomTarget('site',s),.5,.45,dynZoomOn()?.12:1);
   if(s.y<0){
     if(G.st==='esc'){addStake(1000);tone(660,.4,'sine',.1);G.cleared[G.lv]=true;delete G.lvState[G.lv];
       if(G.cleared.every(c=>c)){G.slipgateActive=true;G.slipMsg=360;}saveGame();}
@@ -196,7 +195,7 @@ function drawSite(){
   const site=G.site,d=site.d,col=d.col;
   const camX=site.cam?site.cam.x:0,camY=site.cam?site.cam.y:0;
   cx.fillStyle=d.bg;cx.fillRect(0,0,W,H);
-  cx.save();cx.translate(-camX,-camY);
+  cx.save();applyWorldCamera(site.cam||{x:camX,y:camY,z:1});
   cx.fillStyle='#000';cx.beginPath();d.terrain.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.closePath();cx.fill();
   cx.fillStyle=d.bg;for(const o of d.obs){cx.beginPath();o.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));cx.closePath();cx.fill();}
   cx.save();cx.shadowColor=col;cx.shadowBlur=10;cx.strokeStyle=col;cx.lineWidth=1.5;

@@ -22,26 +22,28 @@ function update(){
     }
     const m=menuInput();
     if(m.up)G.optSel=Math.max(0,G.optSel-1);
-    if(m.down)G.optSel=Math.min(6,G.optSel+1);
+    if(m.down)G.optSel=Math.min(7,G.optSel+1);
     if(G.optSel===0){
       if(m.confirm||m.right){G.ctrlSel=0;G.optCol=0;G.optListen=null;G.st='controls';return;}
     } else if(G.optSel===1){
-      if(m.left){G.sfxVol=Math.max(0,G.sfxVol-1);tone(900,.04,'square',.05);}
-      if(m.right){G.sfxVol=Math.min(10,G.sfxVol+1);tone(900,.04,'square',.05);}
+      if(m.left){G.sfxVol=Math.max(0,G.sfxVol-1);tone(900,.04,'square',.05);saveSettings();}
+      if(m.right){G.sfxVol=Math.min(10,G.sfxVol+1);tone(900,.04,'square',.05);saveSettings();}
     } else if(G.optSel===2){
-      if(m.left)G.musVol=Math.max(0,G.musVol-1);
-      if(m.right)G.musVol=Math.min(10,G.musVol+1);
+      if(m.left){G.musVol=Math.max(0,G.musVol-1);saveSettings();}
+      if(m.right){G.musVol=Math.min(10,G.musVol+1);saveSettings();}
     } else if(G.optSel===3){
-      if(m.confirm||m.left||m.right){G.cheatMode=!G.cheatMode;tone(G.cheatMode?1200:400,.08,'square',.05);}
+      if(m.confirm||m.left||m.right){G.dynamicZoom=!G.dynamicZoom;tone(G.dynamicZoom?1200:400,.08,'square',.05);saveSettings();}
     } else if(G.optSel===4){
+      if(m.confirm||m.left||m.right){G.cheatMode=!G.cheatMode;tone(G.cheatMode?1200:400,.08,'square',.05);}
+    } else if(G.optSel===5){
       if(m.confirm||m.left||m.right){
         if(!document.fullscreenElement){document.documentElement.requestFullscreen();}
         else{document.exitFullscreen();}
         tone(G.fullscreen?400:1200,.08,'square',.05);
       }
-    } else if(G.optSel===5){
-      if(m.confirm){G.clearDataSel=0;}
     } else if(G.optSel===6){
+      if(m.confirm){G.clearDataSel=0;}
+    } else if(G.optSel===7){
       if(m.confirm){G.st=G.optFrom;if(G.optFrom!=='title')G.paused=true;}
     }
     if(m.cancel){G.st=G.optFrom;if(G.optFrom!=='title')G.paused=true;}
@@ -177,6 +179,6 @@ function draw(){
 // then schedule the next iteration via requestAnimationFrame (targets 60fps, synced to the display).
 function loop(){update();draw();G.fr++;requestAnimationFrame(loop);}
 // Restore audio settings from save, then show title (game starts on PLAY GAME)
-{const sv=loadSave();if(sv){G.sfxVol=sv.sfxVol??10;G.musVol=sv.musVol??10;}}
+{const sv=loadSave();if(sv){G.sfxVol=sv.sfxVol??10;G.musVol=sv.musVol??10;G.dynamicZoom=sv.dynamicZoom??true;}}
 G.seed=TUTORIAL_SEED;genWorld(G.seed);
 loop();

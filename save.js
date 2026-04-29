@@ -22,6 +22,7 @@ function defaultSave() {
     currentEnergy: null,
     sfxVol: 10,
     musVol: 10,
+    dynamicZoom: true,
   };
 }
 
@@ -42,6 +43,7 @@ function loadSave() {
     if (!d.systemStates || typeof d.systemStates !== 'object') d.systemStates = {};
     if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
+    if (typeof d.dynamicZoom !== 'boolean')  d.dynamicZoom = true;
     return d;
   } catch(e) { return null; }
 }
@@ -75,7 +77,15 @@ function buildSaveData() {
     currentEnergy: (s?.alive && s.hp > 0) ? s.energy : null,
     sfxVol: G.sfxVol,
     musVol: G.musVol,
+    dynamicZoom: G.dynamicZoom,
   };
 }
 
 function saveGame() { writeSave(buildSaveData()); }
+function saveSettings() {
+  const d = (G.OW||G.ENC||G.site) ? buildSaveData() : (loadSave() || defaultSave());
+  d.sfxVol = G.sfxVol;
+  d.musVol = G.musVol;
+  d.dynamicZoom = G.dynamicZoom;
+  writeSave(d);
+}

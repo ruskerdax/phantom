@@ -155,8 +155,7 @@ function updEnc(){
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
   // Lerp the camera toward the player (clamped to world bounds). The 0.12 multiplier controls follow speed —
   // smaller values add more lag; 1.0 would snap instantly. Same pattern is used in the site level.
-  enc.cam.x+=(Math.max(0,Math.min(ew-W,s.x-W*.5))-enc.cam.x)*.12;
-  enc.cam.y+=(Math.max(0,Math.min(eh-H,s.y-H*.5))-enc.cam.y)*.12;
+  enc.cam=updateWorldCamera(enc.cam,s.x,s.y,ew,eh,cameraZoomTarget('encounter',s),.5,.5,dynZoomOn()?.12:1);
   for(const rk of enc.rocks){rk.x=wrap(rk.x+rk.vx,ew);rk.y=wrap(rk.y+rk.vy,eh);}
   for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(Math.hypot(s.x-rk.x,s.y-rk.y)<rk.r+7){
     const spd=Math.hypot(s.vx,s.vy);
@@ -226,7 +225,7 @@ function drawEnc(){
   const camX=enc.cam?enc.cam.x:0,camY=enc.cam?enc.cam.y:0;
   cx.fillStyle='#030408';cx.fillRect(0,0,W,H);drStars();
   drDust(camX-(enc.pcx??camX),camY-(enc.pcy??camY));enc.pcx=camX;enc.pcy=camY;
-  cx.save();cx.translate(-camX,-camY);
+  cx.save();applyWorldCamera(enc.cam||{x:camX,y:camY,z:1});
   const tierCol=['#667','#556','#445'];
   for(const rk of enc.rocks){
     cx.save();cx.strokeStyle=tierCol[rk.tier||0];cx.shadowColor='#334';cx.shadowBlur=rk.tier===0?6:3;cx.lineWidth=1.5;

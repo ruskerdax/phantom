@@ -299,9 +299,9 @@ function drawOptions(){
   cx.font='bold 28px monospace';cx.fillText('OPTIONS',W/2,70);
   cx.shadowBlur=0;cx.strokeStyle='#1a4a2a';cx.lineWidth=1;
   cx.beginPath();cx.moveTo(60,88);cx.lineTo(W-60,88);cx.stroke();
-  const items=['CONTROLS','SOUND EFFECTS','MUSIC','CHEAT MODE','FULLSCREEN','CLEAR GAME DATA','RETURN'];
+  const items=['CONTROLS','SOUND EFFECTS','MUSIC','DYNAMIC ZOOM','CHEAT MODE','FULLSCREEN','CLEAR GAME DATA','RETURN'];
   const startY=140,rowH=52;
-  for(let i=0;i<7;i++){
+  for(let i=0;i<8;i++){
     const y=startY+i*rowH-(i>=1?12:0),sel=i===G.optSel;
     cx.textAlign='center';
     cx.fillStyle=sel?'#aaffcc':'#668';cx.shadowBlur=sel?4:0;cx.shadowColor='#0f8';
@@ -320,24 +320,31 @@ function drawOptions(){
       }
       cx.shadowBlur=0;
     } else if(i===3){
+      const on=G.dynamicZoom;
+      cx.fillStyle=on?(sel?'#0f8':'#2a6a4a'):(sel?'#446':'#334');
+      cx.shadowColor='#0f8';cx.shadowBlur=on&&sel?8:0;
+      cx.font='bold 13px monospace';cx.textAlign='center';
+      cx.fillText(on?'ON':'OFF',W/2,y+18);
+      cx.shadowBlur=0;
+    } else if(i===4){
       const on=G.cheatMode;
       cx.fillStyle=on?(sel?'#ff8':'#664'):(sel?'#446':'#334');
       cx.shadowColor=on?'#ff8':'#0f8';cx.shadowBlur=on&&sel?8:0;
       cx.font='bold 13px monospace';cx.textAlign='center';
       cx.fillText(on?'ON':'OFF',W/2,y+18);
       cx.shadowBlur=0;
-    } else if(i===4){
+    } else if(i===5){
       const on=G.fullscreen;
       cx.fillStyle=on?(sel?'#0f8':'#2a6a4a'):(sel?'#446':'#334');
       cx.shadowColor='#0f8';cx.shadowBlur=on&&sel?8:0;
       cx.font='bold 13px monospace';cx.textAlign='center';
       cx.fillText(on?'ON':'OFF',W/2,y+18);
       cx.shadowBlur=0;
-    } else if(i===5){
+    } else if(i===6){
       cx.fillStyle=sel?'#f84':'#446';cx.shadowColor='#f84';cx.shadowBlur=sel?8:0;
       cx.font='bold 13px monospace';cx.textAlign='center';
       cx.fillText('',W/2,y+18);cx.shadowBlur=0;
-    } else if(i===6){
+    } else if(i===7){
       // RETURN - styled as normal option (green)
     }
   }

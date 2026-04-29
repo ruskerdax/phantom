@@ -76,7 +76,7 @@ function initOW(energy,sx,sy){
   const bp=owPos(BASE);
   const px=sx??bp.x,py=sy??bp.y;
   G.OW={s:mkShip(px,py),en:[],fleets:[],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1,
-    slipgateSpawnTimer:1800,convoySpawnTimer:5400};
+    slipgateSpawnTimer:1800,convoySpawnTimer:5400,cam:{x:Math.max(0,Math.min(OW_W-W,px-W/2)),y:Math.max(0,Math.min(OW_H-H,py-H/2)),z:1}};
   G.OW.s.energy=energy??G.OW.s.maxEnergy;G.OW.s.inv=120;
   seedSystemFleets(px,py);
   G.st='overworld';
@@ -167,7 +167,7 @@ function owStartEnc(idx,contactA,playerA){
   const label=ec.groups?et.name+' ENCOUNTER':(ec.cnt>1?'SWARM ATTACK':et.name+' ENCOUNTER');
   G.ENC={owIdx:idx,et:e.t,label,
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
-    ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2))}};
+    ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2)),z:1}};
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
@@ -196,7 +196,7 @@ function startAstEnc(){
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   G.ENC={owIdx:null,isAst:true,et:0,label:'ASTEROID FIELD',
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:ens.length?70:0,cleared:!ens.length,
-    ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2)}};
+    ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2),z:1}};
   G.st=ens.length?'enc_in':'encounter';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
@@ -218,7 +218,7 @@ function startHBaseEnc(){
   G.ENC={owIdx:null,isHBase:true,et:0,label:'HOSTILE BASE',
     s:encShip,en:[],rocks:[],bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew,eh,hbase:{HEX_R,hx,hy,softpts,turrets,hexPoly},
-    cam:{x:Math.max(0,hx-W/2),y:Math.max(0,hy-H/2)}};
+    cam:{x:Math.max(0,hx-W/2),y:Math.max(0,hy-H/2),z:1}};
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
@@ -252,7 +252,7 @@ function owStartFleetEnc(fi,contactA,playerA){
   const repType=f.comp.length>0?f.comp[0].t:4;
   G.ENC={owIdx:null,fleetIdx:fi,et:repType,label:f.id+' FLEET',
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
-    ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2))}};
+    ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2)),z:1}};
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
@@ -538,10 +538,10 @@ function drawSlipgateMenu(){
 function drawOW(){
   cx.fillStyle='#000008';cx.fillRect(0,0,W,H);drStars();
   const ow=G.OW,s=ow.s;
-  const camX=Math.max(0,Math.min(OW_W-W,s.x-W/2));
-  const camY=Math.max(0,Math.min(OW_H-H,s.y-H/2));
+  const cam=updateWorldCamera(ow.cam||(ow.cam={x:Math.max(0,Math.min(OW_W-W,s.x-W/2)),y:Math.max(0,Math.min(OW_H-H,s.y-H/2)),z:1}),s.x,s.y,OW_W,OW_H,cameraZoomTarget('overworld',s),.5,.5,dynZoomOn()?.12:1);
+  const camX=cam.x,camY=cam.y;
   drDust(camX-(ow.pcx??camX),camY-(ow.pcy??camY));ow.pcx=camX;ow.pcy=camY;
-  cx.save();cx.translate(-camX,-camY);
+  cx.save();applyWorldCamera(cam);
   {cx.save();cx.lineWidth=1;cx.globalAlpha=.65;
   const arrowBodies=[['#aaccff',BASE.orbitR,BASE],...PP.map((b,i)=>[LV[i].pcol,b.orbitR,b]),...(G.hbCleared?[]:[[`#ff4444`,HBASE.orbitR,HBASE]]),['#aa99cc',SLIPGATE.orbitR,SLIPGATE]];
   cx.setLineDash([4,2]);
