@@ -11,9 +11,34 @@ function cameraZoomTarget(mode,s){
   if(!dynZoomOn())return 1;
   const sp=Math.hypot(s?.vx||0,s?.vy||0);
   if(mode==='overworld')return Math.max(.82,1.02-Math.min(1,sp/7)*.20);
-  if(mode==='encounter')return Math.max(.25,.98-Math.min(1,sp/5)*.14);
   if(mode==='site')return Math.max(.92,1-Math.min(1,sp/5.5)*.08);
   return 1;
+}
+function encounterZoomTarget(enc){
+  if(!dynZoomOn())return 1;
+  const s=enc?.s;if(!s)return 1;
+  let far=0,alive=0;
+  for(const e of enc.en||[]){
+    if(!e.alive)continue;
+    alive++;
+    far=Math.max(far,Math.hypot(e.x-s.x,e.y-s.y));
+  }
+  if(enc.isHBase){
+    for(const t of enc.hbase?.turrets||[]){
+      if(!t.alive)continue;
+      alive++;
+      far=Math.max(far,Math.hypot(t.x-s.x,t.y-s.y));
+    }
+    for(const sp of enc.hbase?.softpts||[]){
+      if(!sp.alive)continue;
+      alive++;
+      far=Math.max(far,Math.hypot(sp.x-s.x,sp.y-s.y));
+    }
+  }
+  if(alive===0)return .98;
+  const distT=Math.max(0,Math.min(1,(far-220)/900));
+  const countT=Math.max(0,Math.min(1,(alive-1)/5));
+  return Math.max(.50,Math.min(1.08,1.08-distT*.62-countT*.12));
 }
 function updateWorldCamera(cam,fx,fy,worldW,worldH,targetZ=1,ax=.5,ay=.5,smooth=.12){
   if(!cam)cam={x:0,y:0,z:1};

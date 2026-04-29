@@ -155,7 +155,7 @@ function updEnc(){
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
   // Lerp the camera toward the player (clamped to world bounds). The 0.12 multiplier controls follow speed —
   // smaller values add more lag; 1.0 would snap instantly. Same pattern is used in the site level.
-  enc.cam=updateWorldCamera(enc.cam,s.x,s.y,ew,eh,cameraZoomTarget('encounter',s),.5,.5,dynZoomOn()?.12:1);
+  enc.cam=updateWorldCamera(enc.cam,s.x,s.y,ew,eh,encounterZoomTarget(enc),.5,.5,dynZoomOn()?.12:1);
   for(const rk of enc.rocks){rk.x=wrap(rk.x+rk.vx,ew);rk.y=wrap(rk.y+rk.vy,eh);}
   for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(Math.hypot(s.x-rk.x,s.y-rk.y)<rk.r+7){
     const spd=Math.hypot(s.vx,s.vy);
