@@ -121,7 +121,7 @@ function updRebuild(){
     if(dn)rf.sel=Math.min(nItems-1,rf.sel+1);
     if(ok){
       ia();
-      if(rf.sel===nItems-1){G.rebuildFlow=null;G.paused=false;G.ENC=null;G.site=null;G.st='title';return;}
+      if(rf.sel===nItems-1){G.rebuildFlow=null;G.paused=false;G.ENC=null;G.site=null;G.st='title';saveGame();return;}
       if(rf.sel===nItems-2){
         const def=defaultSave();G.credits=0;G.stake=0;
         G.loadout={...def.loadout,weapons:[...def.loadout.weapons]};

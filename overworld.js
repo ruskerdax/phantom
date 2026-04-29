@@ -85,12 +85,13 @@ function owKillShip(){
   const ow=G.OW,s=ow.s;if(!s.alive)return;
   s.alive=false;boomAt(ow.pts,s.x,s.y,'#fff',28);boomAt(ow.pts,s.x,s.y,'#fa0',16);
   tone(200,.5,'sawtooth',.15);
-  G.st='dead_ow';saveGame();
-  setTimeout(()=>{G.st='rebuild';},1800);
+  G.st='dead_ow';markNeedsRebuild();
+  setTimeout(()=>{enterRebuild();},1800);
 }
 function doRebuildFinalize(){
   const bp=owPos(BASE);G.ENC=null;G.site=null;G.stake=0;
-  if(!G.OW){initOW(activeChassisObj().maxEnergy);return;}
+  G.needsRebuild=false;
+  if(!G.OW){initOW(activeChassisObj().maxEnergy);saveGame();return;}
   G.OW.s=mkShip(bp.x,bp.y);G.OW.s.inv=180;
   G.OW.en=[];G.OW.fleets=[];
   G.OW.slipgateSpawnTimer=1800;G.OW.convoySpawnTimer=5400;

@@ -18,6 +18,7 @@ function defaultSave() {
     tutorialDone: false,
     prevSeed: null,
     systemStates: {},
+    needsRebuild: false,
     currentHp: null,
     currentEnergy: null,
     sfxVol: 10,
@@ -41,6 +42,7 @@ function loadSave() {
     if (typeof d.tutorialDone !== 'boolean') d.tutorialDone = false;
     if (!('prevSeed' in d))                  d.prevSeed = null;
     if (!d.systemStates || typeof d.systemStates !== 'object') d.systemStates = {};
+    if (typeof d.needsRebuild !== 'boolean') d.needsRebuild = false;
     if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
     if (typeof d.dynamicZoom !== 'boolean')  d.dynamicZoom = true;
@@ -73,6 +75,7 @@ function buildSaveData() {
     tutorialDone: G.tutorialDone,
     prevSeed: G.prevSeed,
     systemStates: G.systemStates,
+    needsRebuild: !!G.needsRebuild,
     currentHp: (s?.alive && s.hp > 0) ? s.hp : null,
     currentEnergy: (s?.alive && s.hp > 0) ? s.energy : null,
     sfxVol: G.sfxVol,
