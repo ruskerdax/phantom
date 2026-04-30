@@ -51,7 +51,7 @@ function enemyCollisionRadius(e) {
 }
 
 function enemyDisplayRadius(typeOrClass) {
-  const def=enemyDisplayDef(typeOrClass),h=enemyHullDef(def),scale=def.enc.scale??h.scale??1;
+  const def=enemyDisplayDef(typeOrClass),h=enemyHullDef(def),scale=actorScale(null,def,h);
   return (h.boundsR??def.enc.r)*scale;
 }
 
@@ -80,6 +80,12 @@ function drawEnemyHull(def) {
   drawHullParts(enemyHullDef(def));
 }
 
+function drawEnemyHealthBar(e, col, offset=8, height=4) {
+  const r=enemyCollisionRadius(e);
+  cx.fillStyle='#333';cx.fillRect(-r,-r-offset,r*2,height);
+  cx.fillStyle=col;cx.fillRect(-r,-r-offset,r*2*(e.hp/e.mhp),height);
+}
+
 const ENEMY_CLASSES = [
   {
     id: ENEMY_CLASS_IDS.MORRIGAN,
@@ -96,8 +102,8 @@ const ENEMY_CLASSES = [
       const ec=this.enc,a=combatFacingAngle(e);
       cx.save();cx.translate(e.x,e.y);cx.rotate(a);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      drawEnemyHull(this,e);cx.beginPath();cx.moveTo(-6,-6);cx.lineTo(-6,-14);cx.moveTo(0,-8);cx.lineTo(0,-16);cx.moveTo(6,-6);cx.lineTo(6,-14);cx.stroke();
-      if(e.hp<e.mhp){cx.save();cx.rotate(-a);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
+      withEnemyBodyScale(this,e,()=>{drawEnemyHull(this);cx.beginPath();cx.moveTo(-6,-6);cx.lineTo(-6,-14);cx.moveTo(0,-8);cx.lineTo(0,-16);cx.moveTo(6,-6);cx.lineTo(6,-14);cx.stroke();});
+      if(e.hp<e.mhp){cx.save();cx.rotate(-a);drawEnemyHealthBar(e,ec.col);cx.restore();}
       cx.restore();
     }
   },
@@ -116,8 +122,8 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      drawEnemyHull(this,e);
-      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
+      withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
+      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);drawEnemyHealthBar(e,ec.col);cx.restore();}
       cx.restore();
     }
   },
@@ -136,8 +142,8 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      drawEnemyHull(this,e);
-      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
+      withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
+      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);drawEnemyHealthBar(e,ec.col);cx.restore();}
       cx.restore();
     }
   },
@@ -156,8 +162,8 @@ const ENEMY_CLASSES = [
       const ec=this.enc,a=flightAngle(e);
       cx.save();cx.translate(e.x,e.y);cx.rotate(a);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      drawEnemyHull(this,e);
-      if(e.hp<e.mhp){cx.save();cx.rotate(-a);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
+      withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
+      if(e.hp<e.mhp){cx.save();cx.rotate(-a);drawEnemyHealthBar(e,ec.col);cx.restore();}
       cx.restore();
     }
   },
@@ -176,8 +182,8 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=8;cx.lineWidth=1.2;
-      drawEnemyHull(this,e);for(let k=0;k<3;k++){const a=k*Math.PI*2/3;cx.beginPath();cx.moveTo(Math.cos(a)*5,Math.sin(a)*5);cx.lineTo(Math.cos(a)*8,Math.sin(a)*8);cx.stroke();}
-      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-7,ec.r*2,3);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-7,ec.r*2*(e.hp/e.mhp),3);cx.restore();}
+      withEnemyBodyScale(this,e,()=>{drawEnemyHull(this);for(let k=0;k<3;k++){const a=k*Math.PI*2/3;cx.beginPath();cx.moveTo(Math.cos(a)*5,Math.sin(a)*5);cx.lineTo(Math.cos(a)*8,Math.sin(a)*8);cx.stroke();}});
+      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);drawEnemyHealthBar(e,ec.col,7,3);cx.restore();}
       cx.restore();
     }
   },
@@ -202,10 +208,9 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=12;cx.lineWidth=2;
-      drawEnemyHull(this,e);
+      withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
       cx.save();cx.rotate(-e.spin);
-      cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);
-      cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);
+      drawEnemyHealthBar(e,ec.col);
       cx.restore();
       cx.restore();
     }
@@ -229,10 +234,9 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=14;cx.lineWidth=2;
-      drawEnemyHull(this,e);
+      withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
       cx.save();cx.rotate(-e.spin);
-      cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);
-      cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);
+      drawEnemyHealthBar(e,ec.col);
       cx.restore();
       cx.restore();
     }

@@ -39,7 +39,8 @@ function segSegDistance(ax,ay,bx,by,cx2,cy2,dx2,dy2){
   return{dist:Math.hypot(qx,qy),s:sc,t:tc};
 }
 function validActorScale(scale,fallback=1){
-  return Number.isFinite(scale)&&scale>0?Math.max(.0001,scale):fallback;
+  const fb=Number.isFinite(fallback)&&fallback>0?Math.max(.0001,fallback):1;
+  return Number.isFinite(scale)&&scale>0?Math.max(.0001,scale):fb;
 }
 function actorScale(actor=null,def=null,hull=null){
   return validActorScale(actor?.scale,validActorScale(def?.scale,validActorScale(def?.enc?.scale,validActorScale(hull?.scale,1))));
@@ -56,7 +57,7 @@ function growActor(actor,mult){
 }
 function withActorBodyScale(actor,def,hull,drawFn){
   const scale=actorScale(actor,def,hull);
-  if(scale!==1){cx.save();cx.scale(scale,scale);drawFn(scale);cx.restore();}
+  if(scale!==1){cx.save();try{cx.scale(scale,scale);drawFn(scale);}finally{cx.restore();}}
   else drawFn(scale);
   return scale;
 }
