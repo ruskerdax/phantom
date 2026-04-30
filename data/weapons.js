@@ -49,7 +49,8 @@ const WEAPON_TYPES = {
         return null;
       }
       const ox=s.x+Math.sin(s.a)*13,oy=s.y-Math.cos(s.a)*13;
-      const res=castLaserForSpace(ox,oy,s.a,wp.range,tgts,walls,space);
+      const hitPad=typeof beamHitPadding==='function'?beamHitPadding(wp):Math.max(2,(wp.beamWidth??2)*.5);
+      const res=castLaserForSpace(ox,oy,s.a,wp.range,tgts,walls,space,hitPad);
       lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:wp.beamColor??'#0cf',w:wp.beamWidth??2});
       if(wp.beamSound)tone(...wp.beamSound);else tone(1200,.08,'sine',.05);
       s[plK]--;
