@@ -2,7 +2,8 @@
 
 // Master game state. G.st drives the state machine — update() and draw() both branch on it so only one
 // sub-system runs per frame. Active mode data lives in sub-objects: G.OW (overworld), G.ENC (encounter), G.site (site).
-var G={st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,site:null,paused:false,pauseSel:0,cheatSub:false,cheatSubSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',fps:60,frameMs:16.7,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,fullscreen:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',weapons:['mass driver','pulse laser'],aux:null,shield:'shield_std'},visitedSeeds:[],tutorialDone:false,prevSeed:null,systemFlavor:null,menuSuppressUntil:0,systemStates:{},needsRebuild:false,lastLocation:null};
+const STARTING_POWER=defaultPowerForChassisId('kestrel');
+var G={st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,site:null,paused:false,pauseSel:0,cheatSub:false,cheatSubSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',fps:60,frameMs:16.7,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,fullscreen:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',battery:STARTING_POWER.battery,reactor:STARTING_POWER.reactor,weapons:['mass driver','pulse laser'],aux:null,shield:'shield_std'},visitedSeeds:[],tutorialDone:false,prevSeed:null,systemFlavor:null,menuSuppressUntil:0,systemStates:{},needsRebuild:false,lastLocation:null};
 function openTitleMenu(){
   G.titleSel=0;
   G.paused=false;
@@ -55,11 +56,13 @@ function activeAuxObj(){return AUX_ITEMS.find(a=>a.id===G.loadout.aux)||null;}
 function activeShieldObj(){return SHIELDS.find(s=>s.id===G.loadout.shield)||null;}
 function batteryDefById(id){return BATTERIES.find(b=>b.id===id)||null;}
 function reactorDefById(id){return REACTORS.find(r=>r.id===id)||null;}
+function activeBatteryObj(){return batteryDefById(G.loadout.battery)||batteryDefForChassis(activeChassisObj());}
+function activeReactorObj(){return reactorDefById(G.loadout.reactor)||reactorDefForChassis(activeChassisObj());}
 function batteryDefForChassis(ch){
-  return batteryDefById(ch?.batteryId)||batteryDefById(CHASSIS[0]?.batteryId)||BATTERIES[0]||null;
+  return batteryDefById(defaultPowerForChassisId(ch?.id).battery)||BATTERIES[0]||null;
 }
 function reactorDefForChassis(ch){
-  return reactorDefById(ch?.reactorId)||reactorDefById(CHASSIS[0]?.reactorId)||REACTORS[0]||null;
+  return reactorDefById(defaultPowerForChassisId(ch?.id).reactor)||REACTORS[0]||null;
 }
 function batteryCapacityForDef(def,fallback=100){
   const cap=def?.capacity;
@@ -71,8 +74,10 @@ function reactorRateForDef(def){
 }
 function chassisBatteryCapacity(ch){return batteryCapacityForDef(batteryDefForChassis(ch),ch?.maxEnergy??100);}
 function chassisReactorRate(ch){return reactorRateForDef(reactorDefForChassis(ch));}
+function loadoutBatteryCapacity(){return batteryCapacityForDef(activeBatteryObj(),chassisBatteryCapacity(activeChassisObj()));}
+function loadoutReactorRate(){return reactorRateForDef(activeReactorObj());}
 function wpSlot(n){const id=G.loadout.weapons[n];return id?WEAPONS.find(w=>w.id===id)||null:null;}
-function isEquipped(id){return G.loadout.chassis===id||G.loadout.aux===id||G.loadout.shield===id||G.loadout.weapons.includes(id);}
+function isEquipped(id){return G.loadout.chassis===id||G.loadout.battery===id||G.loadout.reactor===id||G.loadout.aux===id||G.loadout.shield===id||G.loadout.weapons.includes(id);}
 function hasLicense(id){return G.licenses.includes(id);}
 function slotMatchesWeapon(slot,wp){return wp.wpnType.startsWith(slot.type+' ');}
 function licensedWeaponsForSlot(slot){return WEAPONS.filter(w=>slotMatchesWeapon(slot,w)&&hasLicense(w.id));}
@@ -164,22 +169,21 @@ function reactorRechargeMultiplierForMode(mode){
 }
 function chassisDefForShip(s){return CHASSIS.find(c=>c.id===s?.chassisId)||activeChassisObj();}
 function batteryDefForShip(s){
-  return batteryDefById(s?.batteryId)||batteryDefForChassis(chassisDefForShip(s));
+  return batteryDefById(s?.batteryId)||activeBatteryObj()||batteryDefForChassis(chassisDefForShip(s));
 }
 function reactorDefForShip(s){
-  return reactorDefById(s?.reactorId)||reactorDefForChassis(chassisDefForShip(s));
+  return reactorDefById(s?.reactorId)||activeReactorObj()||reactorDefForChassis(chassisDefForShip(s));
 }
 function shipBatteryCapacity(s){
-  return batteryCapacityForDef(batteryDefForShip(s),s?.maxEnergy??chassisBatteryCapacity(chassisDefForShip(s)));
+  return batteryCapacityForDef(batteryDefForShip(s),s?.maxEnergy??loadoutBatteryCapacity());
 }
 function shipReactorRate(s){return reactorRateForDef(reactorDefForShip(s));}
 function syncShipEnergyProfile(s,opts={}){
   if(!s)return;
-  const ch=chassisDefForShip(s);
   const bat=batteryDefForShip(s);
   const rx=reactorDefForShip(s);
-  s.batteryId=bat?.id??ch?.batteryId??null;
-  s.reactorId=rx?.id??ch?.reactorId??null;
+  s.batteryId=bat?.id??null;
+  s.reactorId=rx?.id??null;
   s.maxEnergy=shipBatteryCapacity(s);
   if(opts.fillEnergy||!Number.isFinite(s.energy))s.energy=s.maxEnergy;
   else s.energy=Math.max(0,Math.min(s.maxEnergy,s.energy));
@@ -361,8 +365,8 @@ function shipDamageTone(hit,hullFreq=380,hullDur=.08,hullType='square',hullVol=.
   if(hit?.hullDamage>0)tone(hullFreq,hullDur,hullType,hullVol);
 }
 function mkShip(x,y){
-  const ch=activeChassisObj(),sh=activeShieldObj();
-  const s={x,y,chassisId:ch.id,batteryId:ch.batteryId??null,reactorId:ch.reactorId??null,vx:0,vy:0,va:0,a:0,energy:0,maxEnergy:0,alive:true,inv:120,scd:0,scd2:0,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};
+  const ch=activeChassisObj(),sh=activeShieldObj(),bat=activeBatteryObj(),rx=activeReactorObj();
+  const s={x,y,chassisId:ch.id,batteryId:bat?.id??null,reactorId:rx?.id??null,vx:0,vy:0,va:0,a:0,energy:0,maxEnergy:0,alive:true,inv:120,scd:0,scd2:0,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};
   fillShipEnergy(s);
   resetShipShield(s,sh);
   return s;
@@ -444,8 +448,17 @@ function spawnPointForLastLocation(loc){
 function startFromSave(){
   const sv=loadSave(),def=defaultSave();
   const hadCustomSeed=G.customSeed!==null;
+  const savedLoadout=sv?.loadout??def.loadout;
+  const savedPower=defaultPowerForChassisId(savedLoadout.chassis??def.loadout.chassis);
   G.licenses=sv?[...(sv.licenses??def.licenses)]:[...def.licenses];
-  G.loadout=sv?{chassis:sv.loadout?.chassis??def.loadout.chassis,weapons:[...(sv.loadout?.weapons??def.loadout.weapons)],aux:sv.loadout?.aux??def.loadout.aux,shield:sv.loadout&&('shield' in sv.loadout)?sv.loadout.shield:def.loadout.shield}:{...def.loadout,weapons:[...def.loadout.weapons]};
+  G.loadout={
+    chassis:savedLoadout.chassis??def.loadout.chassis,
+    battery:savedLoadout.battery??savedPower.battery??def.loadout.battery,
+    reactor:savedLoadout.reactor??savedPower.reactor??def.loadout.reactor,
+    weapons:[...(savedLoadout.weapons??def.loadout.weapons)],
+    aux:savedLoadout.aux??def.loadout.aux,
+    shield:('shield' in savedLoadout)?savedLoadout.shield:def.loadout.shield
+  };
   G.visitedSeeds=sv?[...(sv.visitedSeeds??[])]:[];
   G.credits=sv?.credits??0;
   G.stake=0;
@@ -466,8 +479,7 @@ function startFromSave(){
   else if(sv?.seed){G.seed=sv.seed;}
   else{G.seed=TUTORIAL_SEED;}
   genWorld(G.seed);
-  const ch=activeChassisObj();
-  const maxEnergy=chassisBatteryCapacity(ch);
+  const maxEnergy=loadoutBatteryCapacity();
   const energy=sv?.currentEnergy!=null?Math.min(sv.currentEnergy,maxEnergy):maxEnergy;
   const fallbackKind=(sv&&G.seed!==TUTORIAL_SEED)?'slipgate':'base';
   const fallback=fallbackKind==='slipgate'?owPos(SLIPGATE):owPos(BASE);

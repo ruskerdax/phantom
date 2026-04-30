@@ -227,15 +227,18 @@ function updEquipFlow(up,dn,lt,rt,ok,bk){
     if(!hasWeapon&&!ef.warnShown){ef.warnShown=true;return;}
     if(G.credits<ef.buildPrice){tone(80,.1,'square',.06);return;}
     // apply
+    const power=defaultPowerForChassisId(ch.id);
     G.credits-=ef.buildPrice;
     G.loadout.chassis=ef.chassisId;
+    G.loadout.battery=power.battery;
+    G.loadout.reactor=power.reactor;
     G.loadout.weapons=[...ef.slots];
     G.loadout.shield=ef.shieldId;
     // resize weapons array to chassis slot count
     while(G.loadout.weapons.length<ch.slots.length)G.loadout.weapons.push(null);
     G.loadout.weapons=G.loadout.weapons.slice(0,ch.slots.length);
     // update ship stats in-flight
-    const s=G.OW?.s;if(s){s.chassisId=ch.id;s.batteryId=ch.batteryId??null;s.reactorId=ch.reactorId??null;s.maxHp=ch.maxHp;s.hp=s.maxHp;fillShipEnergy(s);resetShipShield(s);}
+    const s=G.OW?.s;if(s){s.chassisId=ch.id;s.batteryId=power.battery;s.reactorId=power.reactor;s.maxHp=ch.maxHp;s.hp=s.maxHp;fillShipEnergy(s);resetShipShield(s);}
     G.equipFlow=null;G.shopActionId=null;
     saveGame();tone(660,.2,'sine',.08);
   }else if(row===ch.slots.length+2&&ok){

@@ -14,21 +14,35 @@ const REACTORS = [
   {id:'rx_viper', name:'RUNNER REACTOR', energyPerSec:1.8},
 ];
 
+const DEFAULT_POWER_BY_CHASSIS = {
+  kestrel: {battery:'bat_kestrel', reactor:'rx_kestrel'},
+  sparrow: {battery:'bat_sparrow', reactor:'rx_sparrow'},
+  ironclad: {battery:'bat_ironclad', reactor:'rx_ironclad'},
+  viper: {battery:'bat_viper', reactor:'rx_viper'},
+};
+
+function defaultPowerForChassisId(chassisId){
+  const firstId=CHASSIS[0]?.id;
+  const p=DEFAULT_POWER_BY_CHASSIS[chassisId]||DEFAULT_POWER_BY_CHASSIS[firstId]||{};
+  return {
+    battery:p.battery??BATTERIES[0]?.id??null,
+    reactor:p.reactor??REACTORS[0]?.id??null,
+  };
+}
+
 const CHASSIS = [
   {
     id: 'kestrel',
     name: 'KESTREL LIGHT',
     desc: 'Balanced starter hull.',
     maxHp: 15,
-    batteryId: 'bat_kestrel',
-    reactorId: 'rx_kestrel',
     hitRadius: 12,
     thrust: {
       fwd:      0.04,
       rev:      0.018,
       strafeL:  0.014,
       strafeR:  0.014,
-      rotAccel: 0.0035,
+      rotAccel: 0.0015,
       rotMax:   0.080,
     },
     slots: [{type:'kinetic'},{type:'beam'}],
@@ -41,15 +55,13 @@ const CHASSIS = [
     name: 'SPARROW SCOUT',
     desc: 'Fast and energy-rich. Light armor.',
     maxHp: 10,
-    batteryId: 'bat_sparrow',
-    reactorId: 'rx_sparrow',
     hitRadius: 12,
     thrust: {
       fwd:      0.08,
       rev:      0.036,
       strafeL:  0.028,
       strafeR:  0.028,
-      rotAccel: 0.0045,
+      rotAccel: 0.0015,
       rotMax:   0.095,
     },
     slots: [{type:'kinetic'}],
@@ -62,15 +74,13 @@ const CHASSIS = [
     name: 'IRONCLAD HEAVY',
     desc: 'Heavy armor and firepower. Reduced speed.',
     maxHp: 28,
-    batteryId: 'bat_ironclad',
-    reactorId: 'rx_ironclad',
     hitRadius: 12,
     thrust: {
       fwd:      0.025,
       rev:      0.01125,
       strafeL:  0.00875,
       strafeR:  0.00875,
-      rotAccel: 0.0025,
+      rotAccel: 0.0008,
       rotMax:   0.065,
     },
     slots: [{type:'kinetic'},{type:'missile'}],
@@ -83,15 +93,13 @@ const CHASSIS = [
     name: 'VIPER RUNNER',
     desc: 'Agile hull with stronger reverse thrusters.',
     maxHp: 12,
-    batteryId: 'bat_viper',
-    reactorId: 'rx_viper',
     hitRadius: 12,
     thrust: {
       fwd:      0.05,
       rev:      0.035,
       strafeL:  0.0175,
       strafeR:  0.0175,
-      rotAccel: 0.0035,
+      rotAccel: 0.0015,
       rotMax:   0.090,
     },
     slots: [{type:'kinetic'},{type:'beam'}],

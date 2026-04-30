@@ -39,7 +39,10 @@ function finalizeRebuild(rf,ch){
   const totalCost=rebuildTotalCost(rf.chassisId,rf.shieldId);
   if(G.credits<totalCost){tone(80,.1,'square',.06);return false;}
   G.credits-=totalCost;
+  const power=defaultPowerForChassisId(rf.chassisId);
   G.loadout.chassis=rf.chassisId;
+  G.loadout.battery=power.battery;
+  G.loadout.reactor=power.reactor;
   G.loadout.weapons=[...rf.slots];
   while(G.loadout.weapons.length<ch.slots.length)G.loadout.weapons.push(null);
   G.loadout.weapons=G.loadout.weapons.slice(0,ch.slots.length);

@@ -155,7 +155,7 @@ function siteBounce(s){
 }
 function enterLv(){
   const d=LV[G.lv],ow=G.OW,ls=G.lvState[G.lv];
-  const ship={...mkShip(d.ent.x,d.ent.y),energy:Math.max(25,ow?ow.s.energy:chassisBatteryCapacity(activeChassisObj())),
+  const ship={...mkShip(d.ent.x,d.ent.y),energy:Math.max(25,ow?ow.s.energy:loadoutBatteryCapacity()),
              hp:ow?ow.s.hp:activeChassisObj().maxHp,maxHp:ow?ow.s.maxHp:activeChassisObj().maxHp};
   if(ow){copyShipEnergyState(ow.s,ship);setShipEnergy(ship,Math.max(25,ow.s.energy));}
   else setShipEnergy(ship,ship.energy);

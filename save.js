@@ -5,11 +5,12 @@ const SETTINGS_VERSION = 1;
 const DEFAULT_VOLUME = 7;
 
 function defaultSave() {
+  const power = defaultPowerForChassisId('kestrel');
   return {
     credits: 0,
     stake: 0,
     licenses: ['kestrel', 'shield_std', 'mass driver', 'pulse laser'],
-    loadout: {chassis:'kestrel', weapons:['mass driver','pulse laser'], aux:null, shield:'shield_std'},
+    loadout: {chassis:'kestrel', battery:power.battery, reactor:power.reactor, weapons:['mass driver','pulse laser'], aux:null, shield:'shield_std'},
     cleared: [false, false, false],
     hbCleared: false,
     hbState: null,
@@ -55,6 +56,12 @@ function normalizeLastLocation(loc) {
 function isShieldId(id) {
   return typeof id === 'string' && SHIELDS.some(s => s.id === id);
 }
+function isBatteryId(id) {
+  return typeof id === 'string' && BATTERIES.some(b => b.id === id);
+}
+function isReactorId(id) {
+  return typeof id === 'string' && REACTORS.some(r => r.id === id);
+}
 
 function loadSave() {
   try {
@@ -70,6 +77,9 @@ function loadSave() {
     if (isShieldId(d.loadout.aux))           d.loadout.aux = null;
     if (d.loadout.aux !== null && !AUX_ITEMS.some(a => a.id === d.loadout.aux)) d.loadout.aux = def.loadout.aux;
     if (typeof d.loadout.chassis !== 'string') d.loadout.chassis = def.loadout.chassis;
+    const power = defaultPowerForChassisId(d.loadout.chassis);
+    if (!isBatteryId(d.loadout.battery))     d.loadout.battery = isBatteryId(power.battery) ? power.battery : def.loadout.battery;
+    if (!isReactorId(d.loadout.reactor))     d.loadout.reactor = isReactorId(power.reactor) ? power.reactor : def.loadout.reactor;
     d.licenses = d.licenses.map(id => id === 'laser cannon' ? 'pulse laser' : id);
     d.loadout.weapons = d.loadout.weapons.map(id => id === 'laser cannon' ? 'pulse laser' : id);
     d.licenses = [...new Set(d.licenses)];
@@ -107,11 +117,15 @@ function resetSave() {
 function buildSaveData() {
   const s = G.ENC?.s ?? G.site?.s ?? G.OW?.s;
   if (s) syncShipEnergyProfile(s);
+  const power = defaultPowerForChassisId(G.loadout.chassis);
+  const fallbackPower = defaultPowerForChassisId('kestrel');
+  const battery = isBatteryId(G.loadout.battery) ? G.loadout.battery : (isBatteryId(power.battery) ? power.battery : fallbackPower.battery);
+  const reactor = isReactorId(G.loadout.reactor) ? G.loadout.reactor : (isReactorId(power.reactor) ? power.reactor : fallbackPower.reactor);
   return {
     credits: G.credits,
     stake: G.stake,
     licenses: [...G.licenses],
-    loadout: {chassis:G.loadout.chassis, weapons:[...G.loadout.weapons], aux:G.loadout.aux??null, shield:G.loadout.shield},
+    loadout: {chassis:G.loadout.chassis, battery, reactor, weapons:[...G.loadout.weapons], aux:G.loadout.aux??null, shield:G.loadout.shield},
     cleared: [...G.cleared],
     hbCleared: G.hbCleared,
     hbState: G.hbState,
