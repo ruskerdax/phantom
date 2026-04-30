@@ -116,7 +116,7 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=8;cx.lineWidth=1.2;
-      cx.beginPath();cx.moveTo(0,-ec.r);cx.lineTo(ec.r,0);cx.lineTo(0,ec.r);cx.lineTo(-ec.r,0);cx.closePath();cx.stroke();
+      cx.beginPath();cx.arc(0,0,5,0,Math.PI*2);cx.stroke();for(let k=0;k<3;k++){const a=k*Math.PI*2/3;cx.beginPath();cx.moveTo(Math.cos(a)*5,Math.sin(a)*5);cx.lineTo(Math.cos(a)*8,Math.sin(a)*8);cx.stroke();}
       if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-7,ec.r*2,3);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-7,ec.r*2*(e.hp/e.mhp),3);cx.restore();}
       cx.restore();
     }
