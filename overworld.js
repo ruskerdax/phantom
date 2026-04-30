@@ -297,7 +297,7 @@ function updOW(){
   const thrustIn=iThrustInput();
   if(thrustIn.activeAxes>0){
     applyShipThrust(s, thrustIn, s.energy<=0);
-    drainEnergy(s, THRUST_ENERGY_DRAIN.overworld*thrustEnergyScale(thrustIn));
+    drainEnergy(s, thrustEnergyDrainForMode('overworld')*thrustEnergyScale(thrustIn));
   }
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   const maxSpd=sdist<220?7:4.2;
@@ -362,7 +362,7 @@ function updOW(){
       }
     }
   }
-  tickShipReactor(s);
+  tickShipReactor(s,'overworld');
 }
 function updFleet(f,fi,s){
   const F=fleetDef(f.id);

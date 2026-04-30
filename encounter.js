@@ -163,7 +163,7 @@ function updEnc(){
   const thrustIn=iThrustInput();
   if(thrustIn.activeAxes>0){
     applyShipThrust(s, thrustIn, s.energy<=0);
-    drainEnergy(s, THRUST_ENERGY_DRAIN.encounter*thrustEnergyScale(thrustIn));
+    drainEnergy(s, thrustEnergyDrainForMode('encounter')*thrustEnergyScale(thrustIn));
   }
   const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}

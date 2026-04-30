@@ -181,7 +181,7 @@ function updSite(){
   const thrustIn=iThrustInput();
   if(thrustIn.activeAxes>0){
     applyShipThrust(s, thrustIn, s.energy<=0);
-    drainEnergy(s, THRUST_ENERGY_DRAIN.site*thrustEnergyScale(thrustIn));
+    drainEnergy(s, thrustEnergyDrainForMode('site')*thrustEnergyScale(thrustIn));
   }
   s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;const sp=Math.hypot(s.vx,s.vy);if(sp>5.5){s.vx=s.vx/sp*5.5;s.vy=s.vy/sp*5.5;}
   s.x+=s.vx;s.y+=s.vy;

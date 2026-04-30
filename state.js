@@ -37,6 +37,7 @@ function openBaseMenu(){
   G.shopActionId=null;
   G.shopActionSel=0;
   G.equipFlow=null;
+  fillShipEnergy(G.OW?.s);
   G.st='base';
 }
 function openSlipgateMenu(){
@@ -142,10 +143,25 @@ function shieldLoadoutText(sh){
   return parts.join('  ');
 }
 const ENERGY_PICKUP=38;
-const THRUST_ENERGY_DRAIN={overworld:.035,encounter:.01,site:.012};
+const ENERGY_BALANCE={
+  thrustDrainPerFrame:{overworld:.035,encounter:.01,site:.012},
+  thrustDrainMultiplier:{overworld:4,encounter:1,site:1},
+  reactorRechargeMultiplier:{overworld:1.5,encounter:1,site:1},
+};
 const SHIELD_EMPTY_ENERGY_DRAIN=.5/60;
 const SHIELD_FLASH_FRAMES=10;
 const FALLBACK_SHIP_HIT_RADIUS=12;
+function energyBalanceValue(group,mode,fallback=1){
+  const v=ENERGY_BALANCE[group]?.[mode];
+  return Number.isFinite(v)?v:fallback;
+}
+function thrustEnergyDrainForMode(mode){
+  const base=energyBalanceValue('thrustDrainPerFrame',mode,0);
+  return base*energyBalanceValue('thrustDrainMultiplier',mode,1);
+}
+function reactorRechargeMultiplierForMode(mode){
+  return energyBalanceValue('reactorRechargeMultiplier',mode,1);
+}
 function chassisDefForShip(s){return CHASSIS.find(c=>c.id===s?.chassisId)||activeChassisObj();}
 function batteryDefForShip(s){
   return batteryDefById(s?.batteryId)||batteryDefForChassis(chassisDefForShip(s));
@@ -181,11 +197,11 @@ function copyShipEnergyState(from,to){
     setShipEnergy(to,from.energy);
   }else syncShipEnergyProfile(to);
 }
-function tickShipReactor(s){
+function tickShipReactor(s,mode=null){
   if(!s||!s.alive)return 0;
   syncShipEnergyProfile(s);
   if(s.energy>=s.maxEnergy)return 0;
-  const add=Math.min(s.maxEnergy-s.energy,shipReactorRate(s)/60);
+  const add=Math.min(s.maxEnergy-s.energy,(shipReactorRate(s)/60)*reactorRechargeMultiplierForMode(mode));
   if(add<=0)return 0;
   s.energy+=add;
   return add;

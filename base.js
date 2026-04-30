@@ -47,11 +47,11 @@ function drawBaseServices(){
   const{pw,ph,px,py}=basePanel();
   const s=G.OW.s;
   syncShipEnergyProfile(s);
-  const repairCost=(s.maxHp-s.hp)*100,rechargeCost=Math.ceil((s.maxEnergy-s.energy)*10);
-  const costs=[repairCost,rechargeCost],maxed=[s.hp>=s.maxHp,s.energy>=s.maxEnergy];
-  const items=['REPAIR HULL','RECHARGE ENERGY'];
+  const repairCost=(s.maxHp-s.hp)*100;
+  const costs=[repairCost],maxed=[s.hp>=s.maxHp];
+  const items=['REPAIR HULL'];
   cx.font='13px monospace';
-  for(let i=0;i<2;i++){
+  for(let i=0;i<items.length;i++){
     const iy=py+88+i*44,sel=i===G.baseSel;
     const disabled=maxed[i]||G.credits<costs[i];
     cx.fillStyle=sel?'#0f8':disabled?'#445':'#668';
@@ -297,11 +297,10 @@ function updBase(){
   }
   if(lt||rt){G.baseTab=moveTabSelection(G.baseTab,baseTabs(),lt,rt);G.shopSel=0;G.baseSel=0;}
   if(baseTabId()==='services'){
-    G.baseSel=moveSelection(G.baseSel,1,up,dn);
+    G.baseSel=moveSelection(G.baseSel,0,up,dn);
     if(ok){
       const s=G.OW.s;
       if(G.baseSel===0){const cost=(s.maxHp-s.hp)*100;if(s.hp>=s.maxHp||G.credits<cost)tone(80,.1,'square',.06);else{G.credits-=cost;s.hp=s.maxHp;tone(660,.2,'sine',.08);saveGame();}}
-      else{syncShipEnergyProfile(s);const cost=Math.ceil((s.maxEnergy-s.energy)*10);if(s.energy>=s.maxEnergy||G.credits<cost)tone(80,.1,'square',.06);else{G.credits-=cost;fillShipEnergy(s);tone(660,.2,'sine',.08);saveGame();}}
     }
   }else{
     const items=shopItemsForTab(G.baseTab);
