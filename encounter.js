@@ -15,7 +15,6 @@ function encWin(){
   const keepVelocity=enc.fleetIdx!=null;
   rechargeShieldFromEnergy(enc.s,true);
   if(enc.isHBase){G.hbCleared=true;G.hbState=null;}
-  if(enc.owIdx!=null)ow.en[enc.owIdx].alive=false;
   if(enc.fleetIdx!=null)ow.fleets[enc.fleetIdx].alive=false;
   copyShipEnergyState(enc.s,ow.s);
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;

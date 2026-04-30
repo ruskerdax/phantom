@@ -1,14 +1,14 @@
 'use strict';
 
 // ===================== OVERWORLD =====================
-function owEnemyPos(t,px,py,minDist=600){
+function owSpawnPos(px,py,minDist=600){
   let x,y,attempts=0;
   do{const a=Math.random()*Math.PI*2,d=480+Math.random()*360;
     x=Math.max(40,Math.min(OW_W-40,OW_W/2+Math.cos(a)*d));
     y=Math.max(40,Math.min(OW_H-40,OW_H/2+Math.sin(a)*d));
     attempts++;
   }while(px!=null&&Math.hypot(x-px,y-py)<minDist&&attempts<30);
-  return{t,x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
+  return{x,y};
 }
 function encSpawnPos(ew,eh,placed,minPlayer,minPeer,sx,sy){
   let x,y,att=0;
@@ -52,9 +52,9 @@ function mkFleet(id,x,y,opts){
 function seedSystemFleets(px,py){
   const ow=G.OW;
   // 2 Hunters orbiting at mid-system range
-  for(let i=0;i<2;i++){const p=owEnemyPos(0,px,py);ow.fleets.push(mkFleet('HUNTER',p.x,p.y));}
+  for(let i=0;i<2;i++){const p=owSpawnPos(px,py);ow.fleets.push(mkFleet('HUNTER',p.x,p.y));}
   // 1 Patrol
-  {const p=owEnemyPos(0,px,py);ow.fleets.push(mkFleet('PATROL',p.x,p.y));}
+  {const p=owSpawnPos(px,py);ow.fleets.push(mkFleet('PATROL',p.x,p.y));}
   // 1 Swarm per uncleared cave level
   for(let i=0;i<PP.length;i++){
     if(G.cleared[i])continue;
@@ -75,7 +75,7 @@ function seedSystemFleets(px,py){
 function initOW(energy,sx,sy){
   const bp=owPos(BASE);
   const px=sx??bp.x,py=sy??bp.y;
-  G.OW={s:mkShip(px,py),en:[],fleets:[],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1,
+  G.OW={s:mkShip(px,py),fleets:[],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1,
     slipgateSpawnTimer:1800,convoySpawnTimer:5400,cam:{x:Math.max(0,Math.min(OW_W-W,px-W/2)),y:Math.max(0,Math.min(OW_H-H,py-H/2)),z:1}};
   setShipEnergy(G.OW.s,energy);G.OW.s.inv=120;
   seedSystemFleets(px,py);
@@ -89,7 +89,7 @@ function doRebuildFinalize(){
   G.needsRebuild=false;
   if(!G.OW){initOW(chassisBatteryCapacity(activeChassisObj()));recordLastLocation('base');saveGame();return;}
   G.OW.s=mkShip(bp.x,bp.y);G.OW.s.inv=180;
-  G.OW.en=[];G.OW.fleets=[];
+  G.OW.fleets=[];
   G.OW.slipgateSpawnTimer=1800;G.OW.convoySpawnTimer=5400;
   seedSystemFleets(bp.x,bp.y);
   recordLastLocation('base');
@@ -119,58 +119,6 @@ function slipNeighborList(){
   if(G.prevSeed!=null&&G.prevSeed!==TUTORIAL_SEED&&!list.includes(G.prevSeed))list[0]=G.prevSeed;
   return list;
 }
-function owStartEnc(idx,contactA,playerA){
-  const ow=G.OW,e=ow.en[idx],et=enemyDef(e.t),ec=et.enc;
-  const ens=[];
-  const spawnX=EW/2,spawnY=EH/2;
-  if(ec.groups){
-    const spawns=[];
-    for(const grp of ec.groups){
-      if(grp.chance!==undefined&&Math.random()>grp.chance)continue;
-      spawns.push(grp);
-    }
-    const total=spawns.reduce((s,g)=>s+g.cnt,0);
-    let ei=0;
-    const placed=[];
-    for(const sp of spawns){
-      for(let i=0;i<sp.cnt;i++){
-        const def=enemySpawnDef(sp.t),gec=def.enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
-        const{x,y}=encClusterPos(EW,EH,placed,140,contactA,ei,total);
-        ens.push(mkEncEnemy(def.id,x,y,initCd+ei*18));
-        ei++;
-      }
-    }
-  } else {
-    const placed=[];
-    const total=ec.cnt;
-    for(let i=0;i<total;i++){
-      const def=enemySpawnDef(e.t),dec=def.enc,initCd=Math.round(WEAPON_MAP[dec.fire.wpn].cd*60);
-      const{x,y}=encClusterPos(EW,EH,placed,140,contactA,i,total);
-      ens.push(mkEncEnemy(def.id,x,y,initCd+i*18));
-    }
-  }
-  const rng=mkRNG(seedChild(G.seed,200+idx));
-  const rocks=[];
-  let rockCount=0;for(let i=0;i<8;i++)if(rng.fl(0,1)<.25)rockCount++;
-  const minSpawnDist=120;
-  const tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
-  for(let i=0;i<rockCount;i++){
-    let rx,ry,attempts=0;
-    do{rx=rng.fl(60,EW-60);ry=rng.fl(60,EH-60);attempts++;}
-    while(Math.hypot(rx-spawnX,ry-spawnY)<minSpawnDist&&attempts<30);
-    const tier=rng.int(0,2);const td=tierDefs[tier];
-    rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:td.r[0]+rng.fl(0,td.r[1]),hp:td.hp,maxHp:td.hp,tier});
-  }
-  const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
-  encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
-  copyShieldState(ow.s,encShip);
-  const label=ec.groups?et.name+' ENCOUNTER':(ec.cnt>1?'SWARM ATTACK':et.name+' ENCOUNTER');
-  G.ENC={owIdx:idx,et:e.t,label,
-    s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
-    ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2)),z:1}};
-  G.st='enc_in';
-  tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
-}
 function startAstEnc(){
   const ow=G.OW;
   const tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
@@ -195,7 +143,7 @@ function startAstEnc(){
   const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   copyShieldState(ow.s,encShip);
-  G.ENC={owIdx:null,isAst:true,et:astEnemy,label:'ASTEROID FIELD',
+  G.ENC={isAst:true,et:astEnemy,label:'ASTEROID FIELD',
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:ens.length?70:0,cleared:!ens.length,
     ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2),z:1}};
   G.st=ens.length?'enc_in':'encounter';
@@ -219,7 +167,7 @@ function startHBaseEnc(){
   const encShip=mkShip(ew*.08,eh/2);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   copyShieldState(ow.s,encShip);
-  G.ENC={owIdx:null,isHBase:true,et:ENEMY_TYPES.BATTLESHIP,label:'HOSTILE BASE',
+  G.ENC={isHBase:true,et:ENEMY_TYPES.BATTLESHIP,label:'HOSTILE BASE',
     s:encShip,en:[],rocks:[],bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew,eh,hbase:{HEX_R,hx,hy,softpts,turrets,hexPoly},
     cam:{x:Math.max(0,hx-W/2),y:Math.max(0,hy-H/2),z:1}};
@@ -258,27 +206,11 @@ function owStartFleetEnc(fi,contactA,playerA){
   // Use the first comp role/type as the representative for encounter color.
   if(!f.comp.length)throw new Error(`Fleet ${f.id} has no enemy composition`);
   const repType=f.comp[0].t;
-  G.ENC={owIdx:null,fleetIdx:fi,et:repType,label:f.id+' FLEET',
+  G.ENC={fleetIdx:fi,et:repType,label:f.id+' FLEET',
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2)),z:1}};
   G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
-}
-function owEdgePos(t){
-  const m=60,edge=Math.floor(Math.random()*4);
-  let x,y;
-  if(edge===0){x=m+Math.random()*(OW_W-m*2);y=m;}
-  else if(edge===1){x=m+Math.random()*(OW_W-m*2);y=OW_H-m;}
-  else if(edge===2){x=m;y=m+Math.random()*(OW_H-m*2);}
-  else{x=OW_W-m;y=m+Math.random()*(OW_H-m*2);}
-  return{t,x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
-}
-function owHBaseSwarmPos(){
-  const hbp=owPos(HBASE);
-  const a=Math.random()*Math.PI*2,d=200+Math.random()*150;
-  const x=Math.max(40,Math.min(OW_W-40,hbp.x+Math.cos(a)*d));
-  const y=Math.max(40,Math.min(OW_H-40,hbp.y+Math.sin(a)*d));
-  return{t:enemyClassIdForType(ENEMY_TYPES.DRONE),x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
 }
 function updOW(){
   G.owFr++;if(G.slipMsg>0)G.slipMsg--;const ow=G.OW;updPts(ow.pts);
@@ -331,20 +263,6 @@ function updOW(){
   if(owFired&&ow.nearAst>=0){startAstEnc();return;}
   if(owFired&&ow.nearHBase){startHBaseEnc();return;}
   if(owFired&&ow.nearSlipgate){suppressMenuInput();recordLastLocation('slipgate');openSlipgateMenu();saveGame();return;}
-  for(let i=0;i<ow.en.length;i++){
-    const e=ow.en[i];if(!e.alive)continue;
-    const et=enemyDef(e.t);e.spin+=.04+enemyTypeIndex(e.t)*.015;
-    const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1;
-    const ta=Math.atan2(dx,-dy);
-    e.a+=angDiff(e.a,ta)*.07;
-    e.vx+=Math.sin(e.a)*et.owSpd*.05;e.vy-=Math.cos(e.a)*et.owSpd*.05;
-    e.vx*=.970;e.vy*=.970;const es=Math.hypot(e.vx,e.vy);if(es>et.owSpd){e.vx=e.vx/es*et.owSpd;e.vy=e.vy/es*et.owSpd;}
-    e.x=wrap(e.x+e.vx,OW_W);e.y=wrap(e.y+e.vy,OW_H);
-    if(e.flash>0)e.flash--;
-    if(s.inv<=0&&dist<et.trigR){
-      const cdx=e.x-s.x,cdy=e.y-s.y;const contactA=Math.atan2(cdx,-cdy);owStartEnc(i,contactA,s.a);return;
-    }
-  }
   for(let fi=0;fi<ow.fleets.length;fi++){
     const f=ow.fleets[fi];if(!f.alive)continue;
     if(updFleet(f,fi,s))return;
@@ -475,11 +393,6 @@ const FLEET_COLS={HUNTER:'#ff6655',SWARM:'#00ddff',PATROL:'#ffaa44',CONVOY:'#ddc
 function fleetColor(id){return FLEET_COLS[id]||'#fff';}
 function owIndicatorTargets(ow){
   const out=[];
-  for(const e of ow.en){
-    if(!e.alive)continue;
-    const et=enemyDef(e.t);
-    out.push({x:e.x,y:e.y,r:et.enc?.r||14,col:et.col,alive:true});
-  }
   for(const f of ow.fleets){
     if(!f.alive)continue;
     const F=fleetDef(f.id);
@@ -673,7 +586,6 @@ function drawOW(){
   {const hbp=owPos(HBASE),HEX_R_OW=20;
   if(G.hbCleared){cx.save();cx.strokeStyle='#334';cx.lineWidth=1;cx.setLineDash([3,5]);cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;i?cx.lineTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW):cx.moveTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW);}cx.closePath();cx.stroke();cx.fillStyle='#446';cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText('CLEARED',hbp.x,hbp.y+3);cx.setLineDash([]);cx.restore();}
   else{const pu=.5+.5*Math.sin(G.fr*.07);cx.save();cx.strokeStyle='#e05109';cx.shadowColor='#e05109';cx.shadowBlur=6+pu*8;cx.lineWidth=1.5;cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;i?cx.lineTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW):cx.moveTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW);}cx.closePath();cx.stroke();cx.shadowBlur=0;cx.fillStyle='#e05109';cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText('HOSTILE BASE',hbp.x,hbp.y-HEX_R_OW-8);if(ow.nearHBase){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.fillText('[ FIRE TO ENTER ]',hbp.x,hbp.y+HEX_R_OW+16);}cx.restore();}}
-  for(const e of ow.en)if(e.alive)enemyDef(e.t).drawOW(e);
   for(const f of ow.fleets)if(f.alive)drFleet(f);
   for(const f of ow.fu)drEnergy(f.x,f.y,'#0f8');
   drPts(ow.pts);

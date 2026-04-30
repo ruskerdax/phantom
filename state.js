@@ -222,11 +222,19 @@ function drainEnergy(s,amount){syncShipEnergyProfile(s);if(s.energy>0)s.energy=M
 function boomAt(pts,x,y,c,n=14){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=.7+Math.random()*3;pts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:22+Math.random()*28,ml:50,c});}}
 function updPts(pts,gy=0){for(let i=pts.length-1;i>=0;i--){const p=pts[i];p.x+=p.vx;p.y+=p.vy;p.vy+=gy;p.l--;if(p.l<=0)pts.splice(i,1);}}
 function shieldDefForShip(s){return SHIELDS.find(sh=>sh.id===s?.shieldId)||activeShieldObj();}
+function wholeShieldHp(hp,maxHp){
+  const max=Math.max(0,Math.floor(maxHp||0));
+  const value=Number.isFinite(hp)?hp:max;
+  return Math.max(0,Math.min(max,Math.floor(value)));
+}
+function shieldProgress(value){return Number.isFinite(value)?Math.max(0,value):0;}
 function resetShipShield(s, def=activeShieldObj()){
   if(!s)return;
   s.shieldId=def?.id??null;
-  s.shieldMaxHp=def?.hp??0;
+  s.shieldMaxHp=wholeShieldHp(def?.hp??0,def?.hp??0);
   s.shieldHp=s.shieldMaxHp;
+  s.shieldRechargeProgress=0;
+  s.shieldDrainProgress=0;
   s.shieldRechargeTimer=0;
   s.shieldEnabled=true;
   s.shieldOffline=false;
@@ -235,8 +243,10 @@ function resetShipShield(s, def=activeShieldObj()){
 function copyShieldState(from,to){
   if(!from||!to){return;}
   to.shieldId=('shieldId' in from)?from.shieldId:(activeShieldObj()?.id??null);
-  to.shieldMaxHp=from.shieldMaxHp??shieldDefForShip(from)?.hp??0;
-  to.shieldHp=Math.max(0,Math.min(to.shieldMaxHp,from.shieldHp??to.shieldMaxHp));
+  to.shieldMaxHp=wholeShieldHp(from.shieldMaxHp??shieldDefForShip(from)?.hp??0,from.shieldMaxHp??shieldDefForShip(from)?.hp??0);
+  to.shieldHp=wholeShieldHp(from.shieldHp??to.shieldMaxHp,to.shieldMaxHp);
+  to.shieldRechargeProgress=shieldProgress(from.shieldRechargeProgress);
+  to.shieldDrainProgress=shieldProgress(from.shieldDrainProgress);
   to.shieldRechargeTimer=from.shieldRechargeTimer??0;
   to.shieldEnabled=from.shieldEnabled!==false;
   to.shieldOffline=!!from.shieldOffline;
@@ -246,8 +256,12 @@ function copyShieldState(from,to){
 function refreshShieldOffline(s){
   const def=shieldDefForShip(s);
   if(!def||!s.shieldId){s.shieldOffline=false;return;}
-  s.shieldMaxHp=def.hp;
-  s.shieldHp=Math.max(0,Math.min(s.shieldMaxHp,s.shieldHp??s.shieldMaxHp));
+  s.shieldMaxHp=wholeShieldHp(def.hp,def.hp);
+  s.shieldHp=wholeShieldHp(s.shieldHp??s.shieldMaxHp,s.shieldMaxHp);
+  s.shieldRechargeProgress=shieldProgress(s.shieldRechargeProgress);
+  s.shieldDrainProgress=shieldProgress(s.shieldDrainProgress);
+  if(s.shieldHp>=s.shieldMaxHp)s.shieldRechargeProgress=0;
+  if(s.shieldHp<=0)s.shieldDrainProgress=0;
   if(s.shieldHp<=0)s.shieldOffline=true;
   const threshold=s.shieldMaxHp*(def.reactivateAt??0.5);
   if(s.shieldOffline&&s.shieldHp>=threshold)s.shieldOffline=false;
@@ -257,19 +271,29 @@ function rechargeShieldFromEnergy(s,force=false){
   if(!def||s.shieldEnabled===false||!s.shieldId)return 0;
   refreshShieldOffline(s);
   if(s.shieldHp>=s.shieldMaxHp||s.energy<=0)return 0;
-  const want=force?s.shieldMaxHp-s.shieldHp:Math.min(def.rechargeRate??0,s.shieldMaxHp-s.shieldHp);
+  const missing=s.shieldMaxHp-s.shieldHp;
+  const room=Math.max(0,missing-s.shieldRechargeProgress);
+  const want=force?room:Math.min(def.rechargeRate??0,room);
   const cost=Math.max(0.0001,def.energyPerHp??5);
-  const add=Math.max(0,Math.min(want,s.energy/cost));
-  if(add<=0)return 0;
-  s.shieldHp=Math.min(s.shieldMaxHp,s.shieldHp+add);
-  s.energy=Math.max(0,s.energy-add*cost);
+  const progress=Math.max(0,Math.min(want,s.energy/cost));
+  if(progress<=0)return 0;
+  s.shieldRechargeProgress+=progress;
+  s.energy=Math.max(0,s.energy-progress*cost);
+  const add=Math.min(missing,Math.floor(s.shieldRechargeProgress+1e-9));
+  if(add>0){
+    s.shieldHp=Math.min(s.shieldMaxHp,s.shieldHp+add);
+    s.shieldRechargeProgress=Math.max(0,s.shieldRechargeProgress-add);
+  }
   refreshShieldOffline(s);
   return add;
 }
 function drainShieldWithoutEnergy(s){
   if(s.energy>0||s.shieldHp<=0)return 0;
-  const drain=Math.min(s.shieldHp,SHIELD_EMPTY_ENERGY_DRAIN);
+  s.shieldDrainProgress+=SHIELD_EMPTY_ENERGY_DRAIN;
+  const drain=Math.min(s.shieldHp,Math.floor(s.shieldDrainProgress+1e-9));
+  if(drain<=0)return 0;
   s.shieldHp-=drain;
+  s.shieldDrainProgress=Math.max(0,s.shieldDrainProgress-drain);
   refreshShieldOffline(s);
   return drain;
 }
@@ -311,9 +335,12 @@ function applyShipShieldDamage(s,amount,opts={}){
   let passthroughDamage=dmg,shieldDamage=0,shieldBroken=false;
   const def=shieldDefForShip(s);
   if(shipShieldCanTakeHit(s,opts)){
-    const shieldHp=s.shieldHp;
+    const shieldHp=wholeShieldHp(s.shieldHp,def?.hp??0);
+    s.shieldHp=shieldHp;
     shieldDamage=Math.min(shieldHp,dmg);
     s.shieldHp=Math.max(0,s.shieldHp-shieldDamage);
+    s.shieldRechargeProgress=0;
+    s.shieldDrainProgress=0;
     s.shieldFlash=SHIELD_FLASH_FRAMES;
     s.shieldRechargeTimer=def.rechargeDelay??300;
     passthroughDamage=dmg-shieldDamage;
@@ -451,7 +478,9 @@ function startFromSave(){
   else recordLastLocation(fallbackKind);
   initOW(energy,sp.x,sp.y);
   if(sv?.currentHp!=null)G.OW.s.hp=Math.min(sv.currentHp,G.OW.s.maxHp);
-  if(sv?.currentShieldHp!=null)G.OW.s.shieldHp=Math.max(0,Math.min(G.OW.s.shieldMaxHp,sv.currentShieldHp));
+  if(sv?.currentShieldHp!=null)G.OW.s.shieldHp=wholeShieldHp(sv.currentShieldHp,G.OW.s.shieldMaxHp);
+  G.OW.s.shieldRechargeProgress=shieldProgress(sv?.currentShieldRechargeProgress);
+  G.OW.s.shieldDrainProgress=shieldProgress(sv?.currentShieldDrainProgress);
   if(typeof sv?.currentShieldEnabled==='boolean')G.OW.s.shieldEnabled=sv.currentShieldEnabled;
   if(typeof sv?.currentShieldOffline==='boolean')G.OW.s.shieldOffline=sv.currentShieldOffline;
   refreshShieldOffline(G.OW.s);
