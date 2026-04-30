@@ -1,6 +1,6 @@
 'use strict';
 
-const SAVE_KEY = 'phantom_save';
+const SAVE_KEY = 'phantom_save_v2';
 const SETTINGS_VERSION = 1;
 const DEFAULT_VOLUME = 7;
 
@@ -115,6 +115,7 @@ function resetSave() {
 }
 
 function buildSaveData() {
+  if (typeof saveActiveSiteState === 'function') saveActiveSiteState();
   const s = G.ENC?.s ?? G.site?.s ?? G.OW?.s;
   if (s) syncShipEnergyProfile(s);
   const power = defaultPowerForChassisId(G.loadout.chassis);

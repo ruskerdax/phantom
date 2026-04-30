@@ -123,7 +123,7 @@ function genSlipgateBody(rng,allBodies){
 // ---- Master world-generation entry point ----
 function genWorld(seed){
   if(typeof genBackground==='function')genBackground(seed);
-  LV=LV_TMPL.map((tmpl,i)=>genLevel(tmpl,seedChild(seed,i)));
+  LV=LV_TMPL.map((tmpl,i)=>genPlanet(tmpl,seedChild(seed,i),i));
   const bodies=genOWBodies(mkRNG(seedChild(seed,99)));
   BASE={...bodies[0],r:22};
   PP=bodies.slice(1);

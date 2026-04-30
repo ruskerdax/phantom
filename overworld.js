@@ -259,7 +259,7 @@ function updOW(){
   {const sgp=owPos(SLIPGATE);ow.nearSlipgate=Math.hypot(s.x-sgp.x,s.y-sgp.y)<SLIPGATE.r+28;}
   const owFired=iFir();
   if(owFired&&ow.nearBase){G.credits+=G.stake;G.stake=0;suppressMenuInput();recordLastLocation('base');openBaseMenu();saveGame();return;}
-  if(owFired&&ow.nearP>=0){G.lv=ow.nearP;enterLv();return;}
+  if(owFired&&ow.nearP>=0){G.lv=ow.nearP;enterPlanet();return;}
   if(owFired&&ow.nearAst>=0){startAstEnc();return;}
   if(owFired&&ow.nearHBase){startHBaseEnc();return;}
   if(owFired&&ow.nearSlipgate){suppressMenuInput();recordLastLocation('slipgate');openSlipgateMenu();saveGame();return;}
