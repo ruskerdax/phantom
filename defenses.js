@@ -8,7 +8,7 @@ const TURRET = {
     t.a += angDiff(t.a, Math.atan2(s.x-t.x, -(s.y-t.y))) * .04;
     if(--t.timer <= 0) {
       const ewp=WEAPON_MAP['mass driver'];
-      t.timer = 100 + Math.floor(Math.random()*40-20);
+      t.timer = weaponCooldownFrames(ewp);
       const ba=t.a;
       ebu.push({x:t.x+Math.sin(ba)*15, y:t.y-Math.cos(ba)*15, vx:Math.sin(ba)*ewp.spd, vy:-Math.cos(ba)*ewp.spd, l:ewp.life*ewp.spd, dmg:ewp.dmg, col:this.col});
       tone(550,.04,'square',.03);

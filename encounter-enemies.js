@@ -9,7 +9,7 @@ function mkEncEnemy(typeOrClass, x, y, timer) {
 
 function enemyInitialCooldown(typeOrClass, stagger=0) {
   const ec=enemyDef(typeOrClass).enc,wp=WEAPON_MAP[ec.fire.wpn];
-  return Math.round(wp.cd*60)+stagger;
+  return weaponCooldownFrames(wp)+stagger;
 }
 
 function enemyAimAngle(e, s, ew, eh, fw, ewp) {
@@ -26,7 +26,7 @@ function enemyAimAngle(e, s, ew, eh, fw, ewp) {
 }
 
 function enemyCanStartFire(e, dist, aimAngle, fw, ewp) {
-  const maxRange=fw.maxRange??ewp.range??(ewp.life&&ewp.spd?ewp.life*ewp.spd:Infinity);
+  const maxRange=weaponEffectiveRange(ewp);
   const minRange=fw.minRange??0;
   if(dist<minRange||dist>maxRange)return false;
   if(fw.passOnly&&e.pass!==0&&e.pass!==1)return false;
@@ -102,7 +102,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
       }
     }
     e.pulsesLeft--;
-    if(e.pulsesLeft>0)e.pulseTimer=ewp.pulseCd;else e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
+    if(e.pulsesLeft>0)e.pulseTimer=ewp.pulseCd;else e.timer=weaponCooldownFrames(ewp);
   } else if(e.pulsesLeft===0&&--e.timer<=0){
     if(!enemyCanStartFire(e,dist,ta,fw,ewp)){
       e.timer=8+Math.floor(Math.random()*12);
@@ -112,7 +112,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
       e.pulseTimer=1;
     }
     else if(ewp.wpnType==='missile launcher'){
-      e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
+      e.timer=weaponCooldownFrames(ewp);
       const cnt=fw.count||1;
       const bas=Array.from({length:cnt},(_,k)=>ta+(k-(cnt-1)/2)*(fw.spread||0));
       const md=MISSILE_TYPES[ewp.missileType]||MISSILE_TYPES['standard'];
@@ -130,7 +130,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
       tone(360,.10,'square',.06);
     }
     else{
-      e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
+      e.timer=weaponCooldownFrames(ewp);
       const cnt=fw.count||1,spread=fw.spread||0;
       const bas=fw.mode==='spin'?Array.from({length:cnt},(_,k)=>e.spin+k*Math.PI*2/cnt):Array.from({length:cnt},(_,k)=>ta+(k-(cnt-1)/2)*spread);
       for(const ba of bas)enc.ebu.push({x:e.x+Math.sin(ba)*fw.offset,y:e.y-Math.cos(ba)*fw.offset,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,dmg:ewp.dmg,col:ecDef.col});

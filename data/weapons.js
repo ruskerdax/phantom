@@ -86,6 +86,14 @@ const WEAPONS = [
 
 const WEAPON_MAP = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
 
+function weaponEffectiveRange(wp) {
+  return wp.range??(wp.life&&wp.spd?wp.life*wp.spd:Infinity);
+}
+
+function weaponCooldownFrames(wp) {
+  return Math.round(wp.cd*60);
+}
+
 // Fire a weapon, deducting energyCost if defined and the ship tracks energy.
 // Returns false if the ship lacks energy, true otherwise.
 // Enemies (no s.energy) ignore energyCost and always fire.
