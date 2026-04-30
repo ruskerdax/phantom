@@ -299,6 +299,7 @@ function updOW(){
     applyShipThrust(s, thrustIn, s.energy<=0);
     drainEnergy(s, thrustEnergyDrainForMode('overworld')*thrustEnergyScale(thrustIn));
   }
+  thrusterSound(thrustIn,'overworld',s.energy<=0);
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   const maxSpd=sdist<220?7:4.2;
   // Normalize velocity vector then scale to maxSpd — the standard way to cap speed without distorting direction.

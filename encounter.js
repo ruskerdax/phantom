@@ -165,6 +165,7 @@ function updEnc(){
     applyShipThrust(s, thrustIn, s.energy<=0);
     drainEnergy(s, thrustEnergyDrainForMode('encounter')*thrustEnergyScale(thrustIn));
   }
+  thrusterSound(thrustIn,'encounter',s.energy<=0);
   const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}
   else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;rechargeShieldFromEnergy(s,true);copyShipEnergyState(s,ow.s);ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;copyShieldState(s,ow.s);ow.s.inv=80;G.ENC=null;returnToOverworld();return;}}

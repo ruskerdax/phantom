@@ -40,6 +40,15 @@ const MUSIC={
   currentContext:null,
 };
 
+const THRUSTER={
+  source:null,
+  gain:null,
+  bandpass:null,
+  lowpass:null,
+  buffer:null,
+  stopTimer:null,
+};
+
 function clampAudio(v,min=0,max=1){
   v=Number(v);
   return Number.isFinite(v)?Math.max(min,Math.min(max,v)):min;
@@ -167,6 +176,92 @@ function toneRise(f0,f1,d,t='sine',v=.07){
     o.start();
     o.stop(now+d+.05);
   }catch(e){}
+}
+
+function thrusterNoiseBuffer(){
+  if(!AC)return null;
+  if(THRUSTER.buffer&&THRUSTER.buffer.sampleRate===AC.sampleRate)return THRUSTER.buffer;
+  const len=Math.max(1,Math.floor(AC.sampleRate*.5));
+  const buf=AC.createBuffer(1,len,AC.sampleRate),data=buf.getChannelData(0);
+  for(let i=0;i<len;i++)data[i]=Math.random()*2-1;
+  THRUSTER.buffer=buf;
+  return buf;
+}
+function thrusterStart(){
+  if(!AC)return false;
+  initAudioGraph();
+  if(THRUSTER.stopTimer){clearTimeout(THRUSTER.stopTimer);THRUSTER.stopTimer=null;}
+  if(THRUSTER.source)return true;
+  const buf=thrusterNoiseBuffer();
+  if(!buf)return false;
+  try{
+    const src=AC.createBufferSource(),bp=AC.createBiquadFilter(),lp=AC.createBiquadFilter(),g=AC.createGain();
+    src.buffer=buf;src.loop=true;
+    bp.type='bandpass';bp.frequency.value=180;bp.Q.value=.75;
+    lp.type='lowpass';lp.frequency.value=950;lp.Q.value=.5;
+    g.gain.value=0;
+    src.connect(bp);bp.connect(lp);lp.connect(g);g.connect(AUDIO.sfxMaster||AC.destination);
+    src.start();
+    THRUSTER.source=src;THRUSTER.bandpass=bp;THRUSTER.lowpass=lp;THRUSTER.gain=g;
+    return true;
+  }catch(e){
+    THRUSTER.source=THRUSTER.bandpass=THRUSTER.lowpass=THRUSTER.gain=null;
+    return false;
+  }
+}
+function thrusterStopNow(){
+  const src=THRUSTER.source,bp=THRUSTER.bandpass,lp=THRUSTER.lowpass,g=THRUSTER.gain;
+  if(THRUSTER.stopTimer){clearTimeout(THRUSTER.stopTimer);THRUSTER.stopTimer=null;}
+  THRUSTER.source=THRUSTER.bandpass=THRUSTER.lowpass=THRUSTER.gain=null;
+  try{if(src)src.stop();}catch(e){}
+  try{if(src)src.disconnect();}catch(e){}
+  try{if(bp)bp.disconnect();}catch(e){}
+  try{if(lp)lp.disconnect();}catch(e){}
+  try{if(g)g.disconnect();}catch(e){}
+}
+function thrusterSilence(fadeSec=.08){
+  if(!THRUSTER.source)return;
+  if(THRUSTER.stopTimer)return;
+  if(THRUSTER.gain)audioRamp(THRUSTER.gain.gain,0,fadeSec);
+  THRUSTER.stopTimer=setTimeout(thrusterStopNow,Math.max(20,(fadeSec+.06)*1000));
+}
+function thrusterFlightStateActive(mode){
+  if(typeof G==='undefined'||G.paused)return false;
+  if(mode==='overworld')return G.st==='overworld';
+  if(mode==='encounter')return G.st==='encounter';
+  if(mode==='site')return G.st==='play'||G.st==='esc';
+  return false;
+}
+function thrusterSound(thrustIn,mode,energyEmpty){
+  if(!AC)return;
+  initAudioGraph();
+  audioSyncSfxVolume();
+  const axes=Math.max(0,Math.min(2,thrustIn?.activeAxes||0));
+  if(axes<=0||sfxVolumeTarget()===0||!thrusterFlightStateActive(mode)){
+    thrusterSilence();
+    return;
+  }
+  if(!thrusterStart())return;
+  const now=AC.currentTime;
+  const axisBoost=axes>1 ? .012 : 0;
+  const modeBoost=mode==='overworld' ? .004 : (mode==='site' ? .002 : 0);
+  const targetGain=(energyEmpty ? .012 : .026)+axisBoost+modeBoost;
+  const bpFreq=energyEmpty?95:160+axes*45+(mode==='overworld'?35:0);
+  const lpFreq=energyEmpty?520:850+axes*180+(mode==='overworld'?120:0);
+  try{
+    THRUSTER.bandpass.frequency.cancelScheduledValues(now);
+    THRUSTER.bandpass.frequency.setTargetAtTime(bpFreq,now,.035);
+    THRUSTER.lowpass.frequency.cancelScheduledValues(now);
+    THRUSTER.lowpass.frequency.setTargetAtTime(lpFreq,now,.035);
+  }catch(e){
+    try{THRUSTER.bandpass.frequency.value=bpFreq;THRUSTER.lowpass.frequency.value=lpFreq;}catch(_){}
+  }
+  audioRamp(THRUSTER.gain.gain,targetGain,.05);
+}
+function thrusterSyncState(){
+  if(!THRUSTER.source||typeof G==='undefined')return;
+  const flight=G.st==='overworld'||G.st==='encounter'||G.st==='play'||G.st==='esc';
+  if(!flight||G.paused||sfxVolumeTarget()===0)thrusterSilence();
 }
 
 function musicWarnOnce(key,msg){
@@ -412,6 +507,7 @@ function musicSetLayerGain(layer,gain,fadeSec=.5){
 function musicUpdate(){
   if(!AC||!AUDIO.ready)return;
   audioSyncSfxVolume();
+  thrusterSyncState();
   musicSyncVolume();
   musicSyncPauseFilter();
   const ctx=musicDesiredContext();

@@ -183,6 +183,7 @@ function updSite(){
     applyShipThrust(s, thrustIn, s.energy<=0);
     drainEnergy(s, thrustEnergyDrainForMode('site')*thrustEnergyScale(thrustIn));
   }
+  thrusterSound(thrustIn,'site',s.energy<=0);
   s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;const sp=Math.hypot(s.vx,s.vy);if(sp>5.5){s.vx=s.vx/sp*5.5;s.vy=s.vy/sp*5.5;}
   s.x+=s.vx;s.y+=s.vy;
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
