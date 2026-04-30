@@ -281,7 +281,8 @@ function drShip(x,y,a,ship,thr,energy,inv,fr){
     const shieldR=shipShieldHitRadius(ship,def);
     const half=(def.coverageDeg*Math.PI/180)/2;
     const flashEase=shieldFlash*shieldFlash;
-    cx.strokeStyle=`rgba(130,220,255,${.34+.56*flashEase})`;cx.shadowColor='#9df';cx.shadowBlur=7+18*flashEase;cx.lineWidth=1+2*flashEase;cx.beginPath();
+    const shieldWidth=.8+2.4*shieldFrac;
+    cx.strokeStyle=`rgba(130,220,255,${.34+.56*flashEase})`;cx.shadowColor='#9df';cx.shadowBlur=7+18*flashEase;cx.lineWidth=shieldWidth;cx.beginPath();
     if((def.coverageDeg??360)>=359.9)cx.arc(0,0,shieldR,0,Math.PI*2);
     else cx.arc(0,0,shieldR,-Math.PI/2-half,-Math.PI/2+half);
     cx.stroke();
