@@ -25,6 +25,61 @@ const ENEMY_CLASS_IDS = {
   ROBINSON: 'robinson',
 };
 
+function enemyHullDef(def) {
+  return def.hull || {angle:'spin', boundsR:def.enc.r, parts:[{kind:'circle', x:0, y:0, r:def.enc.r}]};
+}
+
+function enemyHullAngle(e, def) {
+  const mode=enemyHullDef(def).angle;
+  if(mode==='flight')return flightAngle(e);
+  if(mode==='combat')return combatFacingAngle(e);
+  if(mode==='none')return 0;
+  return e.spin||0;
+}
+
+function enemyHullScale(e, def) {
+  return actorScale(e,def,enemyHullDef(def));
+}
+
+function enemyHullWorld(e, def=enemyDef(e.t)) {
+  const h=enemyHullDef(def),scale=enemyHullScale(e,def);
+  return {x:e.x, y:e.y, a:enemyHullAngle(e,def), scale, parts:h.parts, boundsR:(h.boundsR??def.enc.r)*scale};
+}
+
+function enemyCollisionRadius(e) {
+  return enemyHullWorld(e).boundsR;
+}
+
+function enemyDisplayRadius(typeOrClass) {
+  const def=enemyDisplayDef(typeOrClass),h=enemyHullDef(def),scale=def.enc.scale??h.scale??1;
+  return (h.boundsR??def.enc.r)*scale;
+}
+
+function enemyPointHit(e, x, y, pad=0) {
+  const h=enemyHullWorld(e);
+  if(Math.hypot(x-e.x,y-e.y)>h.boundsR+pad)return false;
+  return hullPointHit(h,x,y,pad);
+}
+
+function enemyCircleHit(e, x, y, r) {
+  const h=enemyHullWorld(e);
+  if(Math.hypot(x-e.x,y-e.y)>h.boundsR+r)return false;
+  return hullCircleHit(h,x,y,r);
+}
+
+function enemyBeamTarget(e, idx) {
+  const h=enemyHullWorld(e);
+  return {x:e.x, y:e.y, r:h.boundsR, hull:h, beamPad:beamMotionPadding(e), kind:'enemy', idx};
+}
+
+function withEnemyBodyScale(def, e, drawFn) {
+  return withActorBodyScale(e,def,enemyHullDef(def),drawFn);
+}
+
+function drawEnemyHull(def) {
+  drawHullParts(enemyHullDef(def));
+}
+
 const ENEMY_CLASSES = [
   {
     id: ENEMY_CLASS_IDS.MORRIGAN,
@@ -32,6 +87,7 @@ const ENEMY_CLASSES = [
     name:'MORRIGAN-CLASS DESTROYER',
     col:'#ffaa33', col2:'#ff7700',
     sc:300, energy:true, spinRate:0,
+    hull:{angle:'combat', boundsR:19, parts:[{kind:'poly', pts:[[0,-18],[-14,2],[-10,12],[10,12],[14,2]]}]},
     enc:{cnt:1, hp:7, spd:2.5, turn:.05, r:13, col:'#ffaa33', col2:'#ff7700',
       ai:{preferred:150, band:34, strafe:.018,
         pursuit:{lead:.25, offset:85, weave:.7, flipFrames:110, thrust:.052, turnMult:1}},
@@ -40,7 +96,7 @@ const ENEMY_CLASSES = [
       const ec=this.enc,a=combatFacingAngle(e);
       cx.save();cx.translate(e.x,e.y);cx.rotate(a);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.beginPath();cx.moveTo(0,-18);cx.lineTo(-14,2);cx.lineTo(-10,12);cx.lineTo(10,12);cx.lineTo(14,2);cx.closePath();cx.stroke();cx.beginPath();cx.moveTo(-6,-6);cx.lineTo(-6,-14);cx.moveTo(0,-8);cx.lineTo(0,-16);cx.moveTo(6,-6);cx.lineTo(6,-14);cx.stroke();
+      drawEnemyHull(this,e);cx.beginPath();cx.moveTo(-6,-6);cx.lineTo(-6,-14);cx.moveTo(0,-8);cx.lineTo(0,-16);cx.moveTo(6,-6);cx.lineTo(6,-14);cx.stroke();
       if(e.hp<e.mhp){cx.save();cx.rotate(-a);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
       cx.restore();
     }
@@ -51,6 +107,7 @@ const ENEMY_CLASSES = [
     name:'CALYPSO-CLASS CRUISER',
     col:'#aaccff', col2:'#5588dd',
     sc:280, energy:true, spinRate:0,
+    hull:{angle:'spin', boundsR:15, parts:[{kind:'rect', x:0, y:0, w:26, h:10.4}]},
     enc:{cnt:1, hp:12, spd:1.5, turn:.04, r:13, col:'#aaccff', col2:'#5588dd',
       ai:{preferred:330, band:48, strafe:.01,
         pursuit:{lead:.35, offset:140, weave:.45, flipFrames:170, thrust:.035, turnMult:.9, tangent:.012}},
@@ -59,7 +116,7 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.strokeRect(-ec.r,-ec.r*.4,ec.r*2,ec.r*.8);
+      drawEnemyHull(this,e);
       if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
       cx.restore();
     }
@@ -70,6 +127,7 @@ const ENEMY_CLASSES = [
     name:'LANCER-CLASS INTERCEPTOR',
     col:'#ff66cc', col2:'#aa3399',
     sc:160, energy:false, spinRate:.05,
+    hull:{angle:'spin', boundsR:11, parts:[{kind:'poly', pts:[[0,-9],[-7.2,5.4],[7.2,5.4]]}]},
     enc:{cnt:1, hp:2, spd:3.5, turn:.09, r:9, col:'#ff66cc', col2:'#aa3399',
       ai:{orbit:118, approach:150, tangential:.078, radial:.056,
         pursuit:{lead:.45, offset:105, weave:.9, flipFrames:80, thrust:.056, turnMult:1.05, tangent:.03}},
@@ -78,7 +136,7 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.beginPath();cx.moveTo(0,-ec.r);cx.lineTo(-ec.r*.8,ec.r*.6);cx.lineTo(ec.r*.8,ec.r*.6);cx.closePath();cx.stroke();
+      drawEnemyHull(this,e);
       if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
       cx.restore();
     }
@@ -88,7 +146,8 @@ const ENEMY_CLASSES = [
     className:'Arrow', type:ENEMY_TYPES.FIGHTER, typeName:'Fighter',
     name:'ARROW-CLASS FIGHTER',
     col:'#ffdd33', col2:'#ff8800',
-    sc:110, energy:false, spinRate:0,
+    sc:160, energy:false, spinRate:0,
+    hull:{angle:'flight', boundsR:16, parts:[{kind:'poly', pts:[[0,-12],[-4,-2],[-14,4],[-10,8],[-4,6],[0,10],[4,6],[10,8],[14,4],[4,-2]]}]},
     enc:{cnt:1, hp:2, spd:3.5, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
       ai:{passRange:58, commitRange:170, flybyRange:125, resetRange:430, reengageRange:330, minExtendFrames:48, lead:.45, attackSpd:5.2, extendSpd:5.7, turnSpd:3.9, attackThrust:.13, extendThrust:.15, turnThrust:.04, avoidRange:210, passClearance:70, avoidThrust:.04,
         pursuit:{lead:.65, offset:150, weave:.55, flipFrames:140, thrust:.13, turnMult:1, speed:5.2}},
@@ -97,7 +156,7 @@ const ENEMY_CLASSES = [
       const ec=this.enc,a=flightAngle(e);
       cx.save();cx.translate(e.x,e.y);cx.rotate(a);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.beginPath();cx.moveTo(0,-12);cx.lineTo(-4,-2);cx.lineTo(-14,4);cx.lineTo(-10,8);cx.lineTo(-4,6);cx.lineTo(0,10);cx.lineTo(4,6);cx.lineTo(10,8);cx.lineTo(14,4);cx.lineTo(4,-2);cx.closePath();cx.stroke();
+      drawEnemyHull(this,e);
       if(e.hp<e.mhp){cx.save();cx.rotate(-a);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
       cx.restore();
     }
@@ -108,6 +167,7 @@ const ENEMY_CLASSES = [
     name:'SPARK-CLASS DRONE',
     col:'#88ffaa', col2:'#22aa55',
     sc:60, energy:false, spinRate:.1,
+    hull:{angle:'spin', boundsR:8, parts:[{kind:'circle', x:0, y:0, r:5}]},
     enc:{cnt:1, hp:1, spd:2.0, turn:.12, r:7, col:'#88ffaa', col2:'#22aa55',
       ai:{orbit:86, approach:126, tangential:.09, radial:.065, jitter:.55,
         pursuit:{lead:.25, offset:75, weave:1, flipFrames:70, thrust:.065, turnMult:1.05, tangent:.035}},
@@ -116,7 +176,7 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=8;cx.lineWidth=1.2;
-      cx.beginPath();cx.arc(0,0,5,0,Math.PI*2);cx.stroke();for(let k=0;k<3;k++){const a=k*Math.PI*2/3;cx.beginPath();cx.moveTo(Math.cos(a)*5,Math.sin(a)*5);cx.lineTo(Math.cos(a)*8,Math.sin(a)*8);cx.stroke();}
+      drawEnemyHull(this,e);for(let k=0;k<3;k++){const a=k*Math.PI*2/3;cx.beginPath();cx.moveTo(Math.cos(a)*5,Math.sin(a)*5);cx.lineTo(Math.cos(a)*8,Math.sin(a)*8);cx.stroke();}
       if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-7,ec.r*2,3);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-7,ec.r*2*(e.hp/e.mhp),3);cx.restore();}
       cx.restore();
     }
@@ -127,6 +187,12 @@ const ENEMY_CLASSES = [
     name:'ATLAS-CLASS CARRIER',
     col:'#ddccaa', col2:'#998866',
     sc:600, energy:true, spinRate:0,
+    hull:{angle:'spin', boundsR:24, parts:[
+      {kind:'rect', x:0, y:0, w:48, h:19.2},
+      {kind:'poly', pts:[[0,-22],[-7,-16],[-7,16],[0,20],[7,16],[7,-16]]},
+      {kind:'poly', pts:[[-7,-10],[-19,-4],[-19,10],[-7,14]]},
+      {kind:'poly', pts:[[7,-10],[19,-4],[19,10],[7,14]]}
+    ]},
     enc:{cnt:1, hp:48, spd:1.8, turn:.03, r:24, col:'#ddccaa', col2:'#998866',
       ai:{preferred:345, band:64, strafe:.006,
         pursuit:{lead:.2, offset:110, weave:.35, flipFrames:210, thrust:.028, turnMult:.85, tangent:.008}},
@@ -136,10 +202,7 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=12;cx.lineWidth=2;
-      cx.strokeRect(-ec.r,-ec.r*.4,ec.r*2,ec.r*.8);
-      cx.beginPath();cx.moveTo(0,-22);cx.lineTo(-7,-16);cx.lineTo(-7,16);cx.lineTo(0,20);cx.lineTo(7,16);cx.lineTo(7,-16);cx.closePath();cx.stroke();
-      cx.beginPath();cx.moveTo(-7,-10);cx.lineTo(-19,-4);cx.lineTo(-19,10);cx.lineTo(-7,14);cx.stroke();
-      cx.beginPath();cx.moveTo(7,-10);cx.lineTo(19,-4);cx.lineTo(19,10);cx.lineTo(7,14);cx.stroke();      
+      drawEnemyHull(this,e);
       cx.save();cx.rotate(-e.spin);
       cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);
       cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);
@@ -153,6 +216,11 @@ const ENEMY_CLASSES = [
     name:'ROBINSON-CLASS BATTLESHIP',
     col:'#ff5544', col2:'#aa1100',
     sc:1000, energy:true, spinRate:0,
+    hull:{angle:'spin', boundsR:29, parts:[
+      {kind:'rect', x:0, y:0, w:26, h:26},
+      {kind:'rect', x:-20.8, y:0, w:10.4, h:15.6},
+      {kind:'rect', x:20.8, y:0, w:10.4, h:15.6}
+    ]},
     enc:{cnt:1, hp:80, spd:1.4, turn:.03, r:26, col:'#ff5544', col2:'#aa1100',
       ai:{preferred:390, band:70, strafe:.004,
         pursuit:{lead:.3, offset:130, weave:.25, flipFrames:240, thrust:.021, turnMult:.8, tangent:.006}},
@@ -161,9 +229,7 @@ const ENEMY_CLASSES = [
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=14;cx.lineWidth=2;
-      cx.strokeRect(-ec.r*.5,-ec.r*.5,ec.r,ec.r);
-      cx.strokeRect(-ec.r,-ec.r*.3,ec.r*.4,ec.r*.6);
-      cx.strokeRect(ec.r*.6,-ec.r*.3,ec.r*.4,ec.r*.6);
+      drawEnemyHull(this,e);
       cx.save();cx.rotate(-e.spin);
       cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);
       cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);

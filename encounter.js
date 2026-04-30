@@ -5,6 +5,8 @@ function encToroidalActive(enc){return !!(enc&&!enc.isHBase&&!enc.cleared);}
 function encDist(enc,ax,ay,bx,by){return encToroidalActive(enc)?toroidalDistance(ax,ay,bx,by,enc.ew,enc.eh):Math.hypot(ax-bx,ay-by);}
 function encDelta(enc,ax,ay,bx,by){return encToroidalActive(enc)?wrapDelta(ax,ay,bx,by,enc.ew,enc.eh):{dx:ax-bx,dy:ay-by};}
 function encPointNear(enc,x,y,refX,refY){return encToroidalActive(enc)?toroidalPointNear(x,y,refX,refY,enc.ew,enc.eh):{x,y};}
+function encEnemyPointHit(enc,e,x,y,pad=0){const p=encPointNear(enc,x,y,e.x,e.y);return enemyPointHit(e,p.x,p.y,pad);}
+function encEnemyCircleHit(enc,e,x,y,r){const p=encPointNear(enc,x,y,e.x,e.y);return enemyCircleHit(e,p.x,p.y,r);}
 function updEncPts(enc){if(encToroidalActive(enc)){for(let i=enc.pts.length-1;i>=0;i--){const p=enc.pts[i];p.x=wrap(p.x+p.vx,enc.ew);p.y=wrap(p.y+p.vy,enc.eh);p.l--;if(p.l<=0)enc.pts.splice(i,1);}}else updPts(enc.pts);}
 function clampEncCameraForExit(enc){enc.cam=updateWorldCamera(enc.cam,enc.s.x,enc.s.y,enc.ew,enc.eh,encounterZoomTarget(enc),.5,.5,1);}
 function encKillShip(){
@@ -55,7 +57,7 @@ function encExplodeMissile(enc, m, isEnemy){
   }
   if(!isEnemy){
     for(const e of enc.en){if(!e.alive)continue;
-      if(encDist(enc,m.x,m.y,e.x,e.y)<r+enemyDef(e.t).enc.r){
+      if(encEnemyCircleHit(enc,e,m.x,m.y,r)){
         e.hp-=d;boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,5);
         if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}
       }
@@ -109,7 +111,7 @@ function updEncMissiles(enc, mis, isEnemy, ew, eh){
     if(!det){
       if(!isEnemy){
         for(const e of enc.en){if(!e.alive)continue;
-          if(encDist(enc,m.x,m.y,e.x,e.y)<enemyDef(e.t).enc.r){
+          if(encEnemyPointHit(enc,e,m.x,m.y)){
             e.hp-=m.dmg;boomAt(enc.pts,m.x,m.y,enemyDef(e.t).enc.col,5);
             if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}
             det=true;break;
@@ -189,11 +191,11 @@ function updEnc(){
   const encWalls=enc.isHBase?enc.hbase.hexPoly.map((p,i,hp)=>{const j=(i+1)%hp.length;return[p[0],p[1],hp[j][0],hp[j][1]];}):[];
   const beamSpace=encToroidalActive(enc)?{toroidal:true,worldW:ew,worldH:eh}:null;
   {const wp=wpSlot(0);if(wp){const wt=WEAPON_TYPES[wp.wpnType];
-  if(s.pulsesLeft>0&&wt.tick){const tgts=[];enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));enc.en.forEach((e,i)=>{if(e.alive)tgts.push({x:e.x,y:e.y,r:enemyDef(e.t).enc.r,beamPad:beamMotionPadding(e),kind:'enemy',idx:i});});enc.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));if(enc.isHBase){enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push({x:t.x,y:t.y,r:10,kind:'turret',idx:i});});enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});}const res=wt.tick(wp,s,0,tgts,enc.lsb,encWalls,beamSpace);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='rock'){const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);if(rk.hp<=0)splitRock(enc,tg.idx);}else if(tg.kind==='enemy'){const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,enemyDef(e.t).enc.col,3);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}}else if(tg.kind==='missile'){const m=enc.emi[tg.idx];m.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(tg.idx,1);if(s.hp<=0){encKillShip();return;}}}else if(tg.kind==='turret'){const t=enc.hbase.turrets[tg.idx];t.alive=false;addStake(250);boomAt(enc.pts,t.x,t.y,'#f44',10);boomAt(enc.pts,t.x,t.y,'#ff8800',6);tone(300,.2,'sawtooth',.1);}else if(tg.kind==='softpt'){enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);}}}
+  if(s.pulsesLeft>0&&wt.tick){const tgts=[];enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));enc.en.forEach((e,i)=>{if(e.alive)tgts.push(enemyBeamTarget(e,i));});enc.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));if(enc.isHBase){enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push({x:t.x,y:t.y,r:10,kind:'turret',idx:i});});enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});}const res=wt.tick(wp,s,0,tgts,enc.lsb,encWalls,beamSpace);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='rock'){const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);if(rk.hp<=0)splitRock(enc,tg.idx);}else if(tg.kind==='enemy'){const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,enemyDef(e.t).enc.col,3);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}}else if(tg.kind==='missile'){const m=enc.emi[tg.idx];m.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(tg.idx,1);if(s.hp<=0){encKillShip();return;}}}else if(tg.kind==='turret'){const t=enc.hbase.turrets[tg.idx];t.alive=false;addStake(250);boomAt(enc.pts,t.x,t.y,'#f44',10);boomAt(enc.pts,t.x,t.y,'#ff8800',6);tone(300,.2,'sawtooth',.1);}else if(tg.kind==='softpt'){enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);}}}
   if(s.misLeft>0&&wt.tick&&wp.wpnType==='missile launcher') wt.tick(wp,s,0,enc.mis);
   if(iFir()&&!s.scd&&!s.pulsesLeft&&!s.misLeft) tryFire(wp,wt,s,0,enc.bul);}}
   {const wp=wpSlot(1);if(wp){const wt=WEAPON_TYPES[wp.wpnType];
-  if(s.pulsesLeft2>0&&wt.tick){const tgts=[];enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));enc.en.forEach((e,i)=>{if(e.alive)tgts.push({x:e.x,y:e.y,r:enemyDef(e.t).enc.r,beamPad:beamMotionPadding(e),kind:'enemy',idx:i});});enc.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));if(enc.isHBase){enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push({x:t.x,y:t.y,r:10,kind:'turret',idx:i});});enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});}const res=wt.tick(wp,s,1,tgts,enc.lsb,encWalls,beamSpace);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='rock'){const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);if(rk.hp<=0)splitRock(enc,tg.idx);}else if(tg.kind==='enemy'){const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,enemyDef(e.t).enc.col,3);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}}else if(tg.kind==='missile'){const m=enc.emi[tg.idx];m.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(tg.idx,1);if(s.hp<=0){encKillShip();return;}}}else if(tg.kind==='turret'){const t=enc.hbase.turrets[tg.idx];t.alive=false;addStake(250);boomAt(enc.pts,t.x,t.y,'#f44',10);boomAt(enc.pts,t.x,t.y,'#ff8800',6);tone(300,.2,'sawtooth',.1);}else if(tg.kind==='softpt'){enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);}}}
+  if(s.pulsesLeft2>0&&wt.tick){const tgts=[];enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));enc.en.forEach((e,i)=>{if(e.alive)tgts.push(enemyBeamTarget(e,i));});enc.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));if(enc.isHBase){enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push({x:t.x,y:t.y,r:10,kind:'turret',idx:i});});enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});}const res=wt.tick(wp,s,1,tgts,enc.lsb,encWalls,beamSpace);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='rock'){const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);if(rk.hp<=0)splitRock(enc,tg.idx);}else if(tg.kind==='enemy'){const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,enemyDef(e.t).enc.col,3);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}}else if(tg.kind==='missile'){const m=enc.emi[tg.idx];m.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(tg.idx,1);if(s.hp<=0){encKillShip();return;}}}else if(tg.kind==='turret'){const t=enc.hbase.turrets[tg.idx];t.alive=false;addStake(250);boomAt(enc.pts,t.x,t.y,'#f44',10);boomAt(enc.pts,t.x,t.y,'#ff8800',6);tone(300,.2,'sawtooth',.1);}else if(tg.kind==='softpt'){enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);}}}
   if(s.misLeft2>0&&wt.tick&&wp.wpnType==='missile launcher') wt.tick(wp,s,1,enc.mis);
   if(iFireSec()&&!s.scd2&&!s.pulsesLeft2&&!s.misLeft2) tryFire(wp,wt,s,1,enc.bul);}}
   for(let i=enc.bul.length-1;i>=0;i--){
@@ -208,7 +210,7 @@ function updEnc(){
       }
     }
     if(hit){enc.bul.splice(i,1);continue;}
-    for(const e of enc.en){if(!e.alive)continue;if(encDist(enc,b.x,b.y,e.x,e.y)<enemyDef(e.t).enc.r){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,enemyDef(e.t).enc.col,5);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}hit=true;break;}}
+    for(const e of enc.en){if(!e.alive)continue;if(encEnemyPointHit(enc,e,b.x,b.y)){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,enemyDef(e.t).enc.col,5);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}hit=true;break;}}
     if(hit){enc.bul.splice(i,1);continue;}
     for(let mi=enc.emi.length-1;mi>=0;mi--){const m=enc.emi[mi];if(encDist(enc,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(mi,1);if(s.hp<=0){encKillShip();return;}}hit=true;break;}}
     if(hit){enc.bul.splice(i,1);continue;}
@@ -273,7 +275,7 @@ function drawEnc(){
     cx.restore();
   }
   for(const rk of enc.rocks)drawAt(rk.x,rk.y,rk.r+12,(x,y)=>drawRockAt(rk,x,y));
-  for(const e of enc.en)if(e.alive)drawAt(e.x,e.y,(enemyDef(e.t).enc.r||12)+16,(x,y)=>enemyDef(e.t).drawEnc({...e,x,y}));
+  for(const e of enc.en)if(e.alive)drawAt(e.x,e.y,(enemyCollisionRadius(e)||12)+16,(x,y)=>enemyDef(e.t).drawEnc({...e,x,y}));
   if(enc.isHBase){
     const{HEX_R,hx,hy,softpts,turrets}=enc.hbase,pu=.5+.5*Math.sin(G.fr*.06);
     cx.save();cx.strokeStyle='#cc2200';cx.shadowColor='#cc2200';cx.shadowBlur=8+pu*8;cx.lineWidth=2;
@@ -300,7 +302,7 @@ function drawEnc(){
     drawOffscreenIndicators(collectOffscreenIndicators({
       cam:enc.cam||{x:camX,y:camY,z:1},player:enc.s,worldW:enc.ew,worldH:enc.eh,toroidal:tor,
       targets:[
-        ...enc.en.map(e=>({x:e.x,y:e.y,r:enemyDef(e.t).enc.r,col:enemyDef(e.t).enc.col,alive:e.alive})),
+        ...enc.en.map(e=>({x:e.x,y:e.y,r:enemyCollisionRadius(e),col:enemyDef(e.t).enc.col,alive:e.alive})),
         ...enc.fu.map(f=>({x:f.x,y:f.y,r:12,col:'#0f8',kind:'energy'}))
       ]
     }));
