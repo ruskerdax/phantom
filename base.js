@@ -15,8 +15,9 @@ function shopItemsForTab(tab){
   if(id==='shields')return SHIELDS.filter(s=>s.buyable);
   return [];
 }
-function itemLicensePrice(item){return item.licensePrice??0;}
-function itemBuildPrice(item){return item.buildPrice??0;}
+function itemLicensePrice(item){return Math.max(0,item.licensePrice??0);}
+function itemBuildPrice(item){return Math.max(0,item.buildPrice??0);}
+function creditLabel(cost){return cost===0?'FREE':cost+' CR';}
 function itemTypeLabel(item){
   if(CHASSIS.includes(item))return 'CHASSIS';
   if(AUX_ITEMS.includes(item))return 'AUX';
@@ -87,7 +88,7 @@ function drawBaseShop(){
     else{
       const lp=itemLicensePrice(item);
       cx.fillStyle=G.credits>=lp?'#668':'#445';
-      cx.fillText(lp===0?'FREE':lp+' CR',px+pw-20,iy);
+      cx.fillText(creditLabel(lp),px+pw-20,iy);
     }
   }
   // detail panel
@@ -136,21 +137,26 @@ function drawShopAction(){
 function shopActionOpts(item){
   const owned=hasLicense(item.id),eq=isEquipped(item.id);
   const lp=itemLicensePrice(item),bp=itemBuildPrice(item);
-  const ch=activeChassisObj();
   const opts=[];
   if(!owned){
-    opts.push({label:`BUY LICENSE  ${lp===0?'FREE':lp+' CR'}`,act:'buy_license',disabled:lp>0&&G.credits<lp});
+    opts.push({label:`BUY LICENSE  ${creditLabel(lp)}`,act:'buy_license',disabled:lp>0&&G.credits<lp});
     // can we equip on this chassis?
     const canEquip=CHASSIS.includes(item)||AUX_ITEMS.includes(item)||SHIELDS.includes(item)||(WEAPONS.includes(item)&&compatibleSlots(item).length>0);
-    if(canEquip)opts.push({label:`BUY + EQUIP  ${lp+bp===0?'FREE':(lp+bp)+' CR'}`,act:'buy_equip',disabled:G.credits<lp+bp});
+    if(canEquip){
+      if(WEAPONS.includes(item)){
+        const cslots=compatibleSlots(item),price=lp+bp;
+        if(cslots.length===1){opts.push({label:`BUY + EQUIP SLOT ${cslots[0].i+1}  ${creditLabel(price)}`,act:'buy_equip',slotIdx:cslots[0].i,disabled:G.credits<price});}
+        else{for(const{i}of cslots)opts.push({label:`BUY + EQUIP ${UI_GLYPH.arrow} SLOT ${i+1}  ${creditLabel(price)}`,act:'buy_equip',slotIdx:i,disabled:G.credits<price});}
+      }else{opts.push({label:`BUY + EQUIP  ${creditLabel(lp+bp)}`,act:'buy_equip',disabled:G.credits<lp+bp});}
+    }
   }else if(!eq){
     const canEquip=CHASSIS.includes(item)||AUX_ITEMS.includes(item)||SHIELDS.includes(item)||(WEAPONS.includes(item)&&compatibleSlots(item).length>0);
     if(canEquip){
       if(WEAPONS.includes(item)){
         const cslots=compatibleSlots(item);
-        if(cslots.length===1){opts.push({label:`EQUIP SLOT ${cslots[0].i+1}  ${bp===0?'FREE':bp+' CR'}`,act:'equip_weapon',slotIdx:cslots[0].i,disabled:G.credits<bp});}
-        else{for(const{i}of cslots)opts.push({label:`EQUIP ${UI_GLYPH.arrow} SLOT ${i+1}  ${bp===0?'FREE':bp+' CR'}`,act:'equip_weapon',slotIdx:i,disabled:G.credits<bp});}
-      }else{opts.push({label:`EQUIP  ${bp===0?'FREE':bp+' CR'}`,act:'equip',disabled:G.credits<bp});}
+        if(cslots.length===1){opts.push({label:`EQUIP SLOT ${cslots[0].i+1}  ${creditLabel(bp)}`,act:'equip_weapon',slotIdx:cslots[0].i,disabled:G.credits<bp});}
+        else{for(const{i}of cslots)opts.push({label:`EQUIP ${UI_GLYPH.arrow} SLOT ${i+1}  ${creditLabel(bp)}`,act:'equip_weapon',slotIdx:i,disabled:G.credits<bp});}
+      }else{opts.push({label:`EQUIP  ${creditLabel(bp)}`,act:'equip',disabled:G.credits<bp});}
     }else{opts.push({label:'NO COMPATIBLE SLOT',act:'none',disabled:true});}
   }else{opts.push({label:'ALREADY EQUIPPED',act:'none',disabled:true});}
   opts.push({label:'CANCEL',act:'cancel',disabled:false});
@@ -167,7 +173,7 @@ function drawEquipFlow(){
   cx.fillStyle='#aaccff';cx.font='bold 15px monospace';cx.textAlign='center';
   cx.fillText('CONFIGURE: '+ch.name,W/2,py+28);
   cx.fillStyle='#446';cx.font='11px monospace';
-  cx.fillText('BUILD COST: '+ch.buildPrice+' CR   '+UI_GLYPH.left+UI_GLYPH.right+' CYCLE   ENTER CONFIRM   '+pausePrompt('TO CANCEL'),W/2,py+44);
+  cx.fillText('BUILD COST: '+ef.buildPrice+' CR   '+UI_GLYPH.left+UI_GLYPH.right+' CYCLE   ENTER CONFIRM   '+pausePrompt('TO CANCEL'),W/2,py+44);
   cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+54);cx.lineTo(px+pw-10,py+54);cx.stroke();
   // weapon slots
   const rows=[];
@@ -219,6 +225,7 @@ function updEquipFlow(up,dn,lt,rt,ok,bk){
     // confirm
     const hasWeapon=ef.slots.some(s=>s!==null);
     if(!hasWeapon&&!ef.warnShown){ef.warnShown=true;return;}
+    if(G.credits<ef.buildPrice){tone(80,.1,'square',.06);return;}
     // apply
     G.credits-=ef.buildPrice;
     G.loadout.chassis=ef.chassisId;
@@ -242,6 +249,17 @@ function openShopAction(item){
   G.shopActionSel=0;
 }
 
+function canEquipWeaponInSlot(item,slotIdx){
+  return WEAPONS.includes(item)&&compatibleSlots(item).some(({i})=>i===slotIdx);
+}
+function equipWeaponInSlot(item,slotIdx){
+  if(!canEquipWeaponInSlot(item,slotIdx))return false;
+  const slots=G.loadout.weapons;
+  while(slots.length<=slotIdx)slots.push(null);
+  slots[slotIdx]=item.id;
+  return true;
+}
+
 function execShopAction(opt){
   const items=shopItemsForTab(G.baseTab);
   const item=items.find(it=>it.id===G.shopActionId);
@@ -256,6 +274,7 @@ function execShopAction(opt){
   }else if(opt.act==='buy_equip'||opt.act==='equip'){
     // For chassis: pay license now (non-refundable), build cost deducted on confirm.
     // For equipment/weapon: pay total now.
+    if(opt.act==='buy_equip'&&WEAPONS.includes(item)&&!canEquipWeaponInSlot(item,opt.slotIdx)){tone(80,.1,'square',.06);return;}
     if(opt.act==='buy_equip'){
       if(G.credits<lp){tone(80,.1,'square',.06);return;}
       G.credits-=lp;if(!hasLicense(item.id))G.licenses.push(item.id);
@@ -270,13 +289,18 @@ function execShopAction(opt){
     }else if(SHIELDS.includes(item)){
       if(G.credits<bp){tone(80,.1,'square',.06);if(opt.act==='buy_equip')saveGame();return;}
       G.credits-=bp;G.loadout.shield=item.id;resetShipShield(G.OW?.s);tone(660,.15,'sine',.08);G.shopActionId=null;saveGame();
+    }else if(WEAPONS.includes(item)){
+      if(!canEquipWeaponInSlot(item,opt.slotIdx)){tone(80,.1,'square',.06);if(opt.act==='buy_equip')saveGame();return;}
+      if(G.credits<bp){tone(80,.1,'square',.06);if(opt.act==='buy_equip')saveGame();return;}
+      G.credits-=bp;
+      equipWeaponInSlot(item,opt.slotIdx);
+      tone(660,.15,'sine',.08);G.shopActionId=null;saveGame();
     }
   }else if(opt.act==='equip_weapon'){
+    if(!canEquipWeaponInSlot(item,opt.slotIdx)){tone(80,.1,'square',.06);return;}
     if(G.credits<bp){tone(80,.1,'square',.06);return;}
     G.credits-=bp;
-    const slots=G.loadout.weapons;
-    while(slots.length<=opt.slotIdx)slots.push(null);
-    slots[opt.slotIdx]=item.id;
+    equipWeaponInSlot(item,opt.slotIdx);
     tone(660,.15,'sine',.08);G.shopActionId=null;saveGame();
   }
 }
