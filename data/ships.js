@@ -1,10 +1,10 @@
 'use strict';
 
 const BATTERIES = [
-  {id:'bat_kestrel', name:'KESTREL BATTERY', capacity:180},
-  {id:'bat_sparrow', name:'SCOUT BATTERY', capacity:150},
-  {id:'bat_ironclad', name:'HEAVY BATTERY', capacity:300},
-  {id:'bat_viper', name:'RUNNER BATTERY', capacity:200},
+  {id:'bat_kestrel', name:'KESTREL BATTERY', capacity:60},
+  {id:'bat_sparrow', name:'SCOUT BATTERY', capacity:50},
+  {id:'bat_ironclad', name:'HEAVY BATTERY', capacity:100},
+  {id:'bat_viper', name:'RUNNER BATTERY', capacity:70},
 ];
 
 const REACTORS = [
