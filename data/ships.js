@@ -1,12 +1,27 @@
 'use strict';
 
+const BATTERIES = [
+  {id:'bat_kestrel', name:'KESTREL BATTERY', capacity:180},
+  {id:'bat_sparrow', name:'SCOUT BATTERY', capacity:150},
+  {id:'bat_ironclad', name:'HEAVY BATTERY', capacity:300},
+  {id:'bat_viper', name:'RUNNER BATTERY', capacity:200},
+];
+
+const REACTORS = [
+  {id:'rx_kestrel', name:'KESTREL REACTOR', energyPerSec:1.4},
+  {id:'rx_sparrow', name:'SCOUT REACTOR', energyPerSec:2.4},
+  {id:'rx_ironclad', name:'HEAVY REACTOR', energyPerSec:0.9},
+  {id:'rx_viper', name:'RUNNER REACTOR', energyPerSec:1.8},
+];
+
 const CHASSIS = [
   {
     id: 'kestrel',
     name: 'KESTREL LIGHT',
     desc: 'Balanced starter hull.',
     maxHp: 15,
-    maxEnergy: 200,
+    batteryId: 'bat_kestrel',
+    reactorId: 'rx_kestrel',
     hitRadius: 12,
     thrust: {
       fwd:      0.04,
@@ -26,7 +41,8 @@ const CHASSIS = [
     name: 'SPARROW SCOUT',
     desc: 'Fast and energy-rich. Light armor.',
     maxHp: 10,
-    maxEnergy: 300,
+    batteryId: 'bat_sparrow',
+    reactorId: 'rx_sparrow',
     hitRadius: 12,
     thrust: {
       fwd:      0.08,
@@ -46,7 +62,8 @@ const CHASSIS = [
     name: 'IRONCLAD HEAVY',
     desc: 'Heavy armor and firepower. Reduced speed.',
     maxHp: 28,
-    maxEnergy: 250,
+    batteryId: 'bat_ironclad',
+    reactorId: 'rx_ironclad',
     hitRadius: 12,
     thrust: {
       fwd:      0.025,
@@ -66,7 +83,8 @@ const CHASSIS = [
     name: 'VIPER RUNNER',
     desc: 'Agile hull with stronger reverse thrusters.',
     maxHp: 12,
-    maxEnergy: 240,
+    batteryId: 'bat_viper',
+    reactorId: 'rx_viper',
     hitRadius: 12,
     thrust: {
       fwd:      0.05,

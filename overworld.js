@@ -77,7 +77,7 @@ function initOW(energy,sx,sy){
   const px=sx??bp.x,py=sy??bp.y;
   G.OW={s:mkShip(px,py),en:[],fleets:[],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1,
     slipgateSpawnTimer:1800,convoySpawnTimer:5400,cam:{x:Math.max(0,Math.min(OW_W-W,px-W/2)),y:Math.max(0,Math.min(OW_H-H,py-H/2)),z:1}};
-  G.OW.s.energy=energy??G.OW.s.maxEnergy;G.OW.s.inv=120;
+  setShipEnergy(G.OW.s,energy);G.OW.s.inv=120;
   seedSystemFleets(px,py);
   G.st='overworld';
 }
@@ -87,7 +87,7 @@ function owKillShip(){
 function doRebuildFinalize(){
   const bp=owPos(BASE);G.ENC=null;G.site=null;G.stake=0;
   G.needsRebuild=false;
-  if(!G.OW){initOW(activeChassisObj().maxEnergy);recordLastLocation('base');saveGame();return;}
+  if(!G.OW){initOW(chassisBatteryCapacity(activeChassisObj()));recordLastLocation('base');saveGame();return;}
   G.OW.s=mkShip(bp.x,bp.y);G.OW.s.inv=180;
   G.OW.en=[];G.OW.fleets=[];
   G.OW.slipgateSpawnTimer=1800;G.OW.convoySpawnTimer=5400;
@@ -161,7 +161,7 @@ function owStartEnc(idx,contactA,playerA){
     const tier=rng.int(0,2);const td=tierDefs[tier];
     rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:td.r[0]+rng.fl(0,td.r[1]),hp:td.hp,maxHp:td.hp,tier});
   }
-  const encShip=mkShip(spawnX,spawnY);encShip.energy=ow.s.energy;encShip.inv=90;
+  const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
   copyShieldState(ow.s,encShip);
   const label=ec.groups?et.name+' ENCOUNTER':(ec.cnt>1?'SWARM ATTACK':et.name+' ENCOUNTER');
@@ -192,7 +192,7 @@ function startAstEnc(){
       ens.push(mkEncEnemy(0,EW-200+Math.cos(a)*60,EH/2+Math.sin(a)*60,initCd+i*18));
     }
   }
-  const encShip=mkShip(spawnX,spawnY);encShip.energy=ow.s.energy;encShip.inv=90;
+  const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   copyShieldState(ow.s,encShip);
   G.ENC={owIdx:null,isAst:true,et:0,label:'ASTEROID FIELD',
@@ -216,7 +216,7 @@ function startHBaseEnc(){
     return{x:hx+Math.cos(a)*HEX_R,y:hy+Math.sin(a)*HEX_R,a:a,timer:initCd+i*22,alive:hbs?hbs.turrets[i]:true};
   });
   const hexPoly=Array.from({length:6},(_,i)=>{const a=i*Math.PI/3;return[hx+Math.cos(a)*HEX_R,hy+Math.sin(a)*HEX_R];});
-  const encShip=mkShip(ew*.08,eh/2);encShip.energy=ow.s.energy;encShip.inv=90;
+  const encShip=mkShip(ew*.08,eh/2);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   copyShieldState(ow.s,encShip);
   G.ENC={owIdx:null,isHBase:true,et:0,label:'HOSTILE BASE',
@@ -252,7 +252,7 @@ function owStartFleetEnc(fi,contactA,playerA){
     const tier=rng.int(0,2),td=tierDefs[tier];
     rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:td.r[0]+rng.fl(0,td.r[1]),hp:td.hp,maxHp:td.hp,tier});
   }
-  const encShip=mkShip(spawnX,spawnY);encShip.energy=ow.s.energy;encShip.inv=90;
+  const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
   copyShieldState(ow.s,encShip);
   // Use the first comp type as the representative for encounter color; fall back to index 4.
@@ -362,6 +362,7 @@ function updOW(){
       }
     }
   }
+  tickShipReactor(s);
 }
 function updFleet(f,fi,s){
   const F=fleetDef(f.id);

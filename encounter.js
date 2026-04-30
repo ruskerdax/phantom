@@ -17,7 +17,7 @@ function encWin(){
   if(enc.isHBase){G.hbCleared=true;G.hbState=null;}
   if(enc.owIdx!=null)ow.en[enc.owIdx].alive=false;
   if(enc.fleetIdx!=null)ow.fleets[enc.fleetIdx].alive=false;
-  ow.s.energy=enc.s.energy;
+  copyShipEnergyState(enc.s,ow.s);
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
   copyShieldState(enc.s,ow.s);
   if(keepVelocity){ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;}
@@ -167,7 +167,7 @@ function updEnc(){
   }
   const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}
-  else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;rechargeShieldFromEnergy(s,true);ow.s.energy=s.energy;ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;copyShieldState(s,ow.s);ow.s.inv=80;G.ENC=null;returnToOverworld();return;}}
+  else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;rechargeShieldFromEnergy(s,true);copyShipEnergyState(s,ow.s);ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;copyShieldState(s,ow.s);ow.s.inv=80;G.ENC=null;returnToOverworld();return;}}
   else{s.x=wrap(s.x+s.vx,ew);s.y=wrap(s.y+s.vy,eh);}
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
   // Lerp the camera toward the player (clamped to world bounds). The 0.12 multiplier controls follow speed —
@@ -247,6 +247,7 @@ function updEnc(){
   }
   if(updEncMissiles(enc,enc.mis,false,ew,eh)) return;
   if(updEncMissiles(enc,enc.emi,true ,ew,eh)) return;
+  tickShipReactor(s);
 }
 
 function drawEnc(){

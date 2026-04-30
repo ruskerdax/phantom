@@ -46,6 +46,7 @@ function drawBaseHeader(px,py,pw){
 function drawBaseServices(){
   const{pw,ph,px,py}=basePanel();
   const s=G.OW.s;
+  syncShipEnergyProfile(s);
   const repairCost=(s.maxHp-s.hp)*100,rechargeCost=Math.ceil((s.maxEnergy-s.energy)*10);
   const costs=[repairCost,rechargeCost],maxed=[s.hp>=s.maxHp,s.energy>=s.maxEnergy];
   const items=['REPAIR HULL','RECHARGE ENERGY'];
@@ -226,7 +227,7 @@ function updEquipFlow(up,dn,lt,rt,ok,bk){
     while(G.loadout.weapons.length<ch.slots.length)G.loadout.weapons.push(null);
     G.loadout.weapons=G.loadout.weapons.slice(0,ch.slots.length);
     // update ship stats in-flight
-    const s=G.OW?.s;if(s){s.maxHp=ch.maxHp;s.maxEnergy=ch.maxEnergy;s.hp=s.maxHp;s.energy=s.maxEnergy;resetShipShield(s);}
+    const s=G.OW?.s;if(s){s.chassisId=ch.id;s.batteryId=ch.batteryId??null;s.reactorId=ch.reactorId??null;s.maxHp=ch.maxHp;s.hp=s.maxHp;fillShipEnergy(s);resetShipShield(s);}
     G.equipFlow=null;G.shopActionId=null;
     saveGame();tone(660,.2,'sine',.08);
   }else if(row===ch.slots.length+2&&ok){
@@ -300,7 +301,7 @@ function updBase(){
     if(ok){
       const s=G.OW.s;
       if(G.baseSel===0){const cost=(s.maxHp-s.hp)*100;if(s.hp>=s.maxHp||G.credits<cost)tone(80,.1,'square',.06);else{G.credits-=cost;s.hp=s.maxHp;tone(660,.2,'sine',.08);saveGame();}}
-      else{const cost=Math.ceil((s.maxEnergy-s.energy)*10);if(s.energy>=s.maxEnergy||G.credits<cost)tone(80,.1,'square',.06);else{G.credits-=cost;s.energy=s.maxEnergy;tone(660,.2,'sine',.08);saveGame();}}
+      else{syncShipEnergyProfile(s);const cost=Math.ceil((s.maxEnergy-s.energy)*10);if(s.energy>=s.maxEnergy||G.credits<cost)tone(80,.1,'square',.06);else{G.credits-=cost;fillShipEnergy(s);tone(660,.2,'sine',.08);saveGame();}}
     }
   }else{
     const items=shopItemsForTab(G.baseTab);

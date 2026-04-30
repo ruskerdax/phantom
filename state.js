@@ -52,6 +52,24 @@ function addStake(n){G.stake+=n;}
 function activeChassisObj(){return CHASSIS.find(c=>c.id===G.loadout.chassis)||CHASSIS[0];}
 function activeAuxObj(){return AUX_ITEMS.find(a=>a.id===G.loadout.aux)||null;}
 function activeShieldObj(){return SHIELDS.find(s=>s.id===G.loadout.shield)||null;}
+function batteryDefById(id){return BATTERIES.find(b=>b.id===id)||null;}
+function reactorDefById(id){return REACTORS.find(r=>r.id===id)||null;}
+function batteryDefForChassis(ch){
+  return batteryDefById(ch?.batteryId)||batteryDefById(CHASSIS[0]?.batteryId)||BATTERIES[0]||null;
+}
+function reactorDefForChassis(ch){
+  return reactorDefById(ch?.reactorId)||reactorDefById(CHASSIS[0]?.reactorId)||REACTORS[0]||null;
+}
+function batteryCapacityForDef(def,fallback=100){
+  const cap=def?.capacity;
+  return Number.isFinite(cap)&&cap>0?cap:fallback;
+}
+function reactorRateForDef(def){
+  const rate=def?.energyPerSec;
+  return Number.isFinite(rate)&&rate>0?rate:0;
+}
+function chassisBatteryCapacity(ch){return batteryCapacityForDef(batteryDefForChassis(ch),ch?.maxEnergy??100);}
+function chassisReactorRate(ch){return reactorRateForDef(reactorDefForChassis(ch));}
 function wpSlot(n){const id=G.loadout.weapons[n];return id?WEAPONS.find(w=>w.id===id)||null:null;}
 function isEquipped(id){return G.loadout.chassis===id||G.loadout.aux===id||G.loadout.shield===id||G.loadout.weapons.includes(id);}
 function hasLicense(id){return G.licenses.includes(id);}
@@ -75,7 +93,7 @@ function chassisStatsText(ch,opts={}){
 }
 function chassisHullStatsText(ch){
   if(!ch)return '';
-  return `HP ${ch.maxHp}  NRG ${ch.maxEnergy}`;
+  return `HP ${ch.maxHp}  BAT ${chassisBatteryCapacity(ch)}  RCTR ${chassisReactorRate(ch)}/s`;
 }
 function chassisThrustStatsText(ch){
   if(!ch)return '';
@@ -129,6 +147,49 @@ const SHIELD_EMPTY_ENERGY_DRAIN=.5/60;
 const SHIELD_FLASH_FRAMES=10;
 const FALLBACK_SHIP_HIT_RADIUS=12;
 function chassisDefForShip(s){return CHASSIS.find(c=>c.id===s?.chassisId)||activeChassisObj();}
+function batteryDefForShip(s){
+  return batteryDefById(s?.batteryId)||batteryDefForChassis(chassisDefForShip(s));
+}
+function reactorDefForShip(s){
+  return reactorDefById(s?.reactorId)||reactorDefForChassis(chassisDefForShip(s));
+}
+function shipBatteryCapacity(s){
+  return batteryCapacityForDef(batteryDefForShip(s),s?.maxEnergy??chassisBatteryCapacity(chassisDefForShip(s)));
+}
+function shipReactorRate(s){return reactorRateForDef(reactorDefForShip(s));}
+function syncShipEnergyProfile(s,opts={}){
+  if(!s)return;
+  const ch=chassisDefForShip(s);
+  const bat=batteryDefForShip(s);
+  const rx=reactorDefForShip(s);
+  s.batteryId=bat?.id??ch?.batteryId??null;
+  s.reactorId=rx?.id??ch?.reactorId??null;
+  s.maxEnergy=shipBatteryCapacity(s);
+  if(opts.fillEnergy||!Number.isFinite(s.energy))s.energy=s.maxEnergy;
+  else s.energy=Math.max(0,Math.min(s.maxEnergy,s.energy));
+}
+function setShipEnergy(s,energy){
+  syncShipEnergyProfile(s);
+  s.energy=Number.isFinite(energy)?Math.max(0,Math.min(s.maxEnergy,energy)):s.maxEnergy;
+}
+function fillShipEnergy(s){syncShipEnergyProfile(s,{fillEnergy:true});}
+function copyShipEnergyState(from,to){
+  if(!to)return;
+  if(from){
+    to.batteryId=from.batteryId??to.batteryId;
+    to.reactorId=from.reactorId??to.reactorId;
+    setShipEnergy(to,from.energy);
+  }else syncShipEnergyProfile(to);
+}
+function tickShipReactor(s){
+  if(!s||!s.alive)return 0;
+  syncShipEnergyProfile(s);
+  if(s.energy>=s.maxEnergy)return 0;
+  const add=Math.min(s.maxEnergy-s.energy,shipReactorRate(s)/60);
+  if(add<=0)return 0;
+  s.energy+=add;
+  return add;
+}
 function shipHitRadius(s){
   const r=chassisDefForShip(s)?.hitRadius??FALLBACK_SHIP_HIT_RADIUS;
   return Number.isFinite(r)&&r>0?r:FALLBACK_SHIP_HIT_RADIUS;
@@ -138,8 +199,8 @@ function shipShieldHitRadius(s,def=shieldDefForShip(s)){
   const scale=def?.radiusScale??fallbackScale;
   return shipHitRadius(s)*(Number.isFinite(scale)&&scale>0?scale:fallbackScale);
 }
-function pickupEnergy(s,x,y,pts,col){s.energy=Math.min(s.maxEnergy,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
-function drainEnergy(s,amount){if(s.energy>0)s.energy=Math.max(0,s.energy-amount);}
+function pickupEnergy(s,x,y,pts,col){syncShipEnergyProfile(s);s.energy=Math.min(s.maxEnergy,s.energy+ENERGY_PICKUP);tone(660,.15,'sine',.08);boomAt(pts,x,y,col,8);}
+function drainEnergy(s,amount){syncShipEnergyProfile(s);if(s.energy>0)s.energy=Math.max(0,s.energy-amount);}
 // Particle system: boomAt() spawns n particles in random directions; updPts() advances and culls them each frame.
 // drPts() fades each particle using its remaining lifetime ratio (p.l / p.ml) as the alpha value.
 function boomAt(pts,x,y,c,n=14){for(let i=0;i<n;i++){const a=Math.random()*Math.PI*2,s=.7+Math.random()*3;pts.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,l:22+Math.random()*28,ml:50,c});}}
@@ -258,7 +319,8 @@ function shipDamageTone(hit,hullFreq=380,hullDur=.08,hullType='square',hullVol=.
 }
 function mkShip(x,y){
   const ch=activeChassisObj(),sh=activeShieldObj();
-  const s={x,y,chassisId:ch.id,vx:0,vy:0,va:0,a:0,energy:ch.maxEnergy,maxEnergy:ch.maxEnergy,alive:true,inv:120,scd:0,scd2:0,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};
+  const s={x,y,chassisId:ch.id,batteryId:ch.batteryId??null,reactorId:ch.reactorId??null,vx:0,vy:0,va:0,a:0,energy:0,maxEnergy:0,alive:true,inv:120,scd:0,scd2:0,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};
+  fillShipEnergy(s);
   resetShipShield(s,sh);
   return s;
 }
@@ -359,7 +421,8 @@ function startFromSave(){
   else{G.seed=TUTORIAL_SEED;}
   genWorld(G.seed);
   const ch=activeChassisObj();
-  const energy=sv?.currentEnergy!=null?Math.min(sv.currentEnergy,ch.maxEnergy):ch.maxEnergy;
+  const maxEnergy=chassisBatteryCapacity(ch);
+  const energy=sv?.currentEnergy!=null?Math.min(sv.currentEnergy,maxEnergy):maxEnergy;
   const fallbackKind=(sv&&G.seed!==TUTORIAL_SEED)?'slipgate':'base';
   const fallback=fallbackKind==='slipgate'?owPos(SLIPGATE):owPos(BASE);
   const savedLoc=!hadCustomSeed?normalizeLastLocation(sv?.lastLocation):null;
@@ -382,7 +445,7 @@ function startFromSave(){
 // rotIn: -1, 0, or 1 (or analog stick value in [-1, 1]).
 // energyEmpty: true when ship.energy <= 0.
 function applyRotation(s, rotIn, energyEmpty){
-  const ch = activeChassisObj();
+  const ch = chassisDefForShip(s);
   const accel = Math.max(0,(ch.thrust.rotAccel||0) * (energyEmpty ? 0.5 : 1));
   const maxV  = Math.max(0,ch.thrust.rotMax||0);
   const input = Number.isFinite(rotIn) ? Math.max(-1,Math.min(1,rotIn)) : 0;
@@ -402,7 +465,7 @@ function applyRotation(s, rotIn, energyEmpty){
 // thrust gives more acceleration and costs more energy in the callers.
 function applyShipThrust(s, thrustIn, energyEmpty){
   if(!thrustIn || thrustIn.activeAxes<=0) return;
-  const ch = activeChassisObj();
+  const ch = chassisDefForShip(s);
   const energyMul = energyEmpty ? 0.2 : 1;
   const linear = Number.isFinite(thrustIn.linear) ? Math.max(-1,Math.min(1,thrustIn.linear)) : 0;
   const strafe = Number.isFinite(thrustIn.strafe) ? Math.max(-1,Math.min(1,thrustIn.strafe)) : 0;

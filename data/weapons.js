@@ -90,6 +90,7 @@ const WEAPON_MAP = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
 // Enemies (no s.energy) ignore energyCost and always fire.
 function tryFire(wp, wt, s, slot, bul) {
   if (wp.energyCost !== undefined && s.energy !== undefined) {
+    if (typeof syncShipEnergyProfile === 'function') syncShipEnergyProfile(s);
     if (s.energy < wp.energyCost) return false;
     s.energy = Math.max(0, s.energy - wp.energyCost);
   }

@@ -104,6 +104,7 @@ function resetSave() {
 
 function buildSaveData() {
   const s = G.ENC?.s ?? G.site?.s ?? G.OW?.s;
+  if (s) syncShipEnergyProfile(s);
   return {
     credits: G.credits,
     stake: G.stake,

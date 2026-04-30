@@ -155,8 +155,10 @@ function siteBounce(s){
 }
 function enterLv(){
   const d=LV[G.lv],ow=G.OW,ls=G.lvState[G.lv];
-  const ship={...mkShip(d.ent.x,d.ent.y),energy:Math.max(25,ow?ow.s.energy:activeChassisObj().maxEnergy),
+  const ship={...mkShip(d.ent.x,d.ent.y),energy:Math.max(25,ow?ow.s.energy:chassisBatteryCapacity(activeChassisObj())),
              hp:ow?ow.s.hp:activeChassisObj().maxHp,maxHp:ow?ow.s.maxHp:activeChassisObj().maxHp};
+  if(ow){copyShipEnergyState(ow.s,ship);setShipEnergy(ship,Math.max(25,ow.s.energy));}
+  else setShipEnergy(ship,ship.energy);
   if(ow)copyShieldState(ow.s,ship);
   G.site={d,s:ship,
     en:d.en.map((e,i)=>({...e,alive:ls?ls.en[i]:true,timer:20+Math.floor(Math.random()*80)})),
@@ -192,7 +194,7 @@ function updSite(){
     else{G.lvState[G.lv]={en:site.en.map(e=>e.alive),fu:site.fu.map(f=>f.got),rx:{hp:site.rx.hp,alive:site.rx.alive}};}
     rechargeShieldFromEnergy(s,true);
     const pi=G.lv,pp=owPos(PP[pi]);initOW(s.energy,pp.x,Math.max(80,pp.y-LV[pi].pr-55));
-    G.OW.s.hp=s.hp;G.OW.s.maxHp=s.maxHp;copyShieldState(s,G.OW.s);returnToOverworld();return;
+    copyShipEnergyState(s,G.OW.s);G.OW.s.hp=s.hp;G.OW.s.maxHp=s.maxHp;copyShieldState(s,G.OW.s);returnToOverworld();return;
   }
   if(wHit(s.x,s.y,9,G.lv)){siteBounce(s);if(s.hp<=0){siteKillShip();return;}}
   for(const f of site.fu){if(!f.got&&Math.hypot(s.x-f.x,s.y-f.y)<22){f.got=true;pickupEnergy(s,f.x,f.y,site.pts,d.col);}}
@@ -239,6 +241,7 @@ function updSite(){
   }
   if(updSiteMissiles(site,site.mis,false)) return;
   if(updSiteMissiles(site,site.emi,true )) return;
+  tickShipReactor(s);
 }
 
 function drawSite(){
