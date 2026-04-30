@@ -36,6 +36,7 @@ function basePanel(){
   const pw=530,ph=360,px=W/2-pw/2,py=H/2-ph/2;
   return{pw,ph,px,py};
 }
+function baseRepairCost(s){return Math.max(0,(s.maxHp-s.hp)*25);}
 function drawBaseHeader(px,py,pw){
   drawMenuPanel(px,py,pw,360,{fill:'rgba(0,12,8,.95)',stroke:'#aaccff',glow:'#aaccff'});
   drawMenuTitle('FRIENDLY BASE',W/2,py+24,'#aaccff','bold 18px monospace',10);
@@ -47,7 +48,7 @@ function drawBaseServices(){
   const{pw,ph,px,py}=basePanel();
   const s=G.OW.s;
   syncShipEnergyProfile(s);
-  const repairCost=(s.maxHp-s.hp)*100;
+  const repairCost=baseRepairCost(s);
   const costs=[repairCost],maxed=[s.hp>=s.maxHp];
   const items=['REPAIR HULL'];
   cx.font='13px monospace';
@@ -300,7 +301,7 @@ function updBase(){
     G.baseSel=moveSelection(G.baseSel,0,up,dn);
     if(ok){
       const s=G.OW.s;
-      if(G.baseSel===0){const cost=(s.maxHp-s.hp)*100;if(s.hp>=s.maxHp||G.credits<cost)tone(80,.1,'square',.06);else{G.credits-=cost;s.hp=s.maxHp;tone(660,.2,'sine',.08);saveGame();}}
+      if(G.baseSel===0){const cost=baseRepairCost(s);if(s.hp>=s.maxHp||G.credits<cost)tone(80,.1,'square',.06);else{G.credits-=cost;s.hp=s.maxHp;tone(660,.2,'sine',.08);saveGame();}}
     }
   }else{
     const items=shopItemsForTab(G.baseTab);
