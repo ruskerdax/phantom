@@ -137,7 +137,9 @@ const ENEMY_CLASSES = [
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=12;cx.lineWidth=2;
       cx.strokeRect(-ec.r,-ec.r*.4,ec.r*2,ec.r*.8);
-      cx.beginPath();cx.moveTo(-ec.r*.6,-ec.r*.4);cx.lineTo(-ec.r*.6,ec.r*.4);cx.moveTo(0,-ec.r*.4);cx.lineTo(0,ec.r*.4);cx.moveTo(ec.r*.6,-ec.r*.4);cx.lineTo(ec.r*.6,ec.r*.4);cx.stroke();
+      cx.beginPath();cx.moveTo(0,-22);cx.lineTo(-7,-16);cx.lineTo(-7,16);cx.lineTo(0,20);cx.lineTo(7,16);cx.lineTo(7,-16);cx.closePath();cx.stroke();
+      cx.beginPath();cx.moveTo(-7,-10);cx.lineTo(-19,-4);cx.lineTo(-19,10);cx.lineTo(-7,14);cx.stroke();
+      cx.beginPath();cx.moveTo(7,-10);cx.lineTo(19,-4);cx.lineTo(19,10);cx.lineTo(7,14);cx.stroke();      
       cx.save();cx.rotate(-e.spin);
       cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);
       cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);
