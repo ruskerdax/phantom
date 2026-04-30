@@ -37,11 +37,11 @@ const ENEMY_CLASSES = [
         pursuit:{lead:.25, offset:85, weave:.7, flipFrames:110, thrust:.052, turnMult:1}},
       fire:{wpn:'mass driver', mode:'aim', count:2, spread:.18, offset:16, minRange:70, maxRange:240, arc:.8}},
     drawEnc(e){
-      const ec=this.enc;
-      cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
+      const ec=this.enc,a=combatFacingAngle(e);
+      cx.save();cx.translate(e.x,e.y);cx.rotate(a);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;i?cx.lineTo(Math.cos(a)*ec.r,Math.sin(a)*ec.r):cx.moveTo(Math.cos(a)*ec.r,Math.sin(a)*ec.r);}cx.closePath();cx.stroke();
-      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
+      cx.beginPath();cx.moveTo(0,-18);cx.lineTo(-14,2);cx.lineTo(-10,12);cx.lineTo(10,12);cx.lineTo(14,2);cx.closePath();cx.stroke();cx.beginPath();cx.moveTo(-6,-6);cx.lineTo(-6,-14);cx.moveTo(0,-8);cx.lineTo(0,-16);cx.moveTo(6,-6);cx.lineTo(6,-14);cx.stroke();
+      if(e.hp<e.mhp){cx.save();cx.rotate(-a);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
       cx.restore();
     }
   },

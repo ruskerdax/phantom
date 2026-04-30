@@ -15,6 +15,7 @@ function toroidalPointNear(x,y,refX,refY,ew,eh){return{x:wrapCoordNear(x,refX,ew
 function toroidalDistance(ax,ay,bx,by,ew,eh){return Math.hypot(wrapCoordNear(ax,bx,ew)-bx,wrapCoordNear(ay,by,eh)-by);}
 function angDiff(a,b){let d=b-a;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;return d;}
 function flightAngle(o,fallback=o?.a??0,minSpeed=.05){const vx=Number.isFinite(o?.vx)?o.vx:0,vy=Number.isFinite(o?.vy)?o.vy:0;return Math.hypot(vx,vy)>minSpeed?Math.atan2(vx,-vy):fallback;}
+function combatFacingAngle(o,fallback=o?.spin??0){return Number.isFinite(o?.a)?o.a:fallback;}
 function normalizeRenderQuality(v){return RENDER_QUALITY_VALUES.includes(v)?v:'full';}
 function renderQuality(){return normalizeRenderQuality(typeof G!=='undefined'?G.renderQuality:null);}
 function renderQualityLabel(v){return RENDER_QUALITY_LABELS[normalizeRenderQuality(v)]||RENDER_QUALITY_LABELS.full;}
