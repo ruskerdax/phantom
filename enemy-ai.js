@@ -17,6 +17,13 @@ function enemyLeadAngle(e, s, ew, eh, scale, projectileSpeed) {
   return Math.atan2(ld.dx,-ld.dy);
 }
 
+function enemyLeadPoint(e, s, ew, eh, scale, projectileSpeed) {
+  const d=enemyVecToPlayer(e,s,ew,eh);
+  const spd=projectileSpeed||6;
+  const frames=Math.min(42, d.dist/spd);
+  return {x:s.x+(s.vx||0)*frames*scale, y:s.y+(s.vy||0)*frames*scale};
+}
+
 function enemyTurnToward(e, angle, turn) {
   e.a+=angDiff(e.a,angle)*turn;
 }
@@ -29,6 +36,16 @@ function enemyThrustForward(e, ec, amount) {
 function enemyThrustVector(e, ec, x, y, amount) {
   e.vx+=x*ec.spd*amount;
   e.vy+=y*ec.spd*amount;
+}
+
+function enemySetSpeedLimit(e, speed) {
+  if(Number.isFinite(speed)&&speed>0)e.speedLimit=speed;
+}
+
+function enemyApplySpeedLimit(e, fallback) {
+  const speedLimit=Number.isFinite(e.speedLimit)&&e.speedLimit>0?e.speedLimit:fallback;
+  const es=Math.hypot(e.vx,e.vy);
+  if(es>speedLimit){e.vx=e.vx/es*speedLimit;e.vy=e.vy/es*speedLimit;}
 }
 
 function enemyRangeKeep(e, ec, s, ew, eh, opts) {
@@ -58,6 +75,18 @@ function enemyOrbit(e, ec, s, ew, eh, opts) {
   }
 }
 
+function enemyFighterAttackAim(e, ec, s, ew, eh, ai, lead, projectileSpeed) {
+  const target=enemyLeadPoint(e,s,ew,eh,lead,projectileSpeed);
+  const d=wrapDelta(target.x,target.y,e.x,e.y,ew,eh);
+  const dist=Math.hypot(d.dx,d.dy)||1;
+  const clearance=ai.passClearance??((typeof shipHitRadius==='function'?shipHitRadius(s):12)+ec.r+22);
+  const side=(e.passSide??=Math.random()<.5?-1:1);
+  const offset=clearance*Math.max(0,Math.min(1,(ai.avoidRange??170)/dist));
+  const tx=target.x+(-d.dy/dist)*side*offset,ty=target.y+(d.dx/dist)*side*offset;
+  const od=wrapDelta(tx,ty,e.x,e.y,ew,eh);
+  return Math.atan2(od.dx,-od.dy);
+}
+
 const ENEMY_TYPES = {
   destroyer: {
     update(e, ec, s, ew, eh) {
@@ -77,14 +106,36 @@ const ENEMY_TYPES = {
   fighter: {
     update(e, ec, s, ew, eh) {
       const d=enemyVecToPlayer(e,s,ew,eh),ai=ec.ai||{};
-      const passRange=ai.passRange??72,resetRange=ai.resetRange??185;
-      if(e.pass==null)e.pass=0;
-      if(e.pass===0&&d.dist<passRange)e.pass=1;
-      else if(e.pass===1&&d.dist>resetRange)e.pass=2;
-      else if(e.pass===2&&Math.abs(angDiff(e.a,d.ta))<.32)e.pass=0;
-      const aim=e.pass===0?enemyLeadAngle(e,s,ew,eh,ai.lead??.35,WEAPON_MAP[ec.fire.wpn]?.spd||7):d.ta;
-      enemyTurnToward(e,aim,(ec.turn??.06)*(e.pass===1?.16:1));
-      enemyThrustForward(e,ec,e.pass===2?.065:.085);
+      const passRange=ai.passRange??58,commitRange=ai.commitRange??160,flybyRange=ai.flybyRange??125,resetRange=ai.resetRange??430,reengageRange=ai.reengageRange??330,minExtend=ai.minExtendFrames??48;
+      const lead=ai.lead??.45,baseTurn=ec.turn??.06;
+      if(e.pass==null){e.pass=0;e.passTimer=0;e.passNear=Infinity;}
+      e.passTimer++;
+      const projectileSpeed=WEAPON_MAP[ec.fire.wpn]?.spd||7;
+      const attackAim=enemyFighterAttackAim(e,ec,s,ew,eh,ai,lead,projectileSpeed);
+      if(e.pass===0){
+        e.passNear=Math.min(e.passNear,d.dist);
+        const crossed=d.dist<passRange||(e.prevFighterDist!=null&&d.dist>e.prevFighterDist+8&&e.passNear<flybyRange);
+        if(d.dist<commitRange||crossed){e.pass=1;e.passTimer=0;e.passA=attackAim;}
+      }else if(e.pass===1){
+        if(d.dist>resetRange&&e.passTimer>minExtend){e.pass=2;e.passTimer=0;}
+      }else if(e.pass===2&&d.dist>reengageRange&&Math.abs(angDiff(e.a,attackAim))<.24){
+        e.pass=0;e.passTimer=0;e.passNear=d.dist;
+      }
+      if(e.pass===1){
+        enemySetSpeedLimit(e,ai.extendSpd??5.7);
+        enemyTurnToward(e,e.passA??e.a,baseTurn*(ai.extendTurn??.035));
+        enemyThrustForward(e,ec,ai.extendThrust??.15);
+      }else if(e.pass===2){
+        enemySetSpeedLimit(e,ai.turnSpd??3.9);
+        enemyTurnToward(e,attackAim,baseTurn*(ai.turnMult??1.45));
+        enemyThrustForward(e,ec,ai.turnThrust??.04);
+      }else{
+        enemySetSpeedLimit(e,ai.attackSpd??5.2);
+        enemyTurnToward(e,attackAim,baseTurn);
+        enemyThrustForward(e,ec,ai.attackThrust??.13);
+        if(d.dist<(ai.avoidRange??170))enemyThrustVector(e,ec,-d.ny*(e.passSide??1),d.nx*(e.passSide??1),ai.avoidThrust??.025);
+      }
+      e.prevFighterDist=d.dist;
     }
   },
   drone: {

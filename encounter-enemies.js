@@ -58,8 +58,9 @@ function enemyUpdate(e, s, enc, ew, eh) {
   const tor=encToroidalActive(enc);
   e.spin+=ecDef.spinRate;
   const ai=ENEMY_TYPES[ecDef.aiType]||ENEMY_TYPES.destroyer;
+  enemySetSpeedLimit(e,ec.spd);
   ai.update(e, ec, s, ew, eh);
-  e.vx*=.975;e.vy*=.975;const es=Math.hypot(e.vx,e.vy);if(es>ec.spd){e.vx=e.vx/es*ec.spd;e.vy=e.vy/es*ec.spd;}
+  e.vx*=.975;e.vy*=.975;enemyApplySpeedLimit(e,ec.spd);
   e.x=wrap(e.x+e.vx,ew);e.y=wrap(e.y+e.vy,eh);
   for(const rk of enc.rocks){const d=tor?wrapDelta(e.x,e.y,rk.x,rk.y,ew,eh):{dx:e.x-rk.x,dy:e.y-rk.y},rd=Math.hypot(d.dx,d.dy)||1;if(rd<rk.r+16){e.vx+=(d.dx/rd)*.3;e.vy+=(d.dy/rd)*.3;}}
   for(const oe of enc.en){if(oe===e||!oe.alive)continue;const oec=enemyDef(oe.t).enc,d=tor?wrapDelta(e.x,e.y,oe.x,oe.y,ew,eh):{dx:e.x-oe.x,dy:e.y-oe.y},od=Math.hypot(d.dx,d.dy)||1;const minD=ec.r+oec.r;if(od<minD){const nx=d.dx/od,ny=d.dy/od;const push=(minD-od)/minD*.5;e.vx+=nx*push;e.vy+=ny*push;}}

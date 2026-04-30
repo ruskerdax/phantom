@@ -68,7 +68,7 @@ const OET = [
     name:'INTERCEPTOR', aiType:'interceptor',
     col:'#ff66cc', col2:'#aa3399',
     owSpd:1.5, trigR:54, sc:160, energy:false, spinRate:.05,
-    enc:{cnt:1, hp:4, spd:3.5, turn:.09, r:9, col:'#ff66cc', col2:'#aa3399',
+    enc:{cnt:1, hp:2, spd:3.5, turn:.09, r:9, col:'#ff66cc', col2:'#aa3399',
       ai:{orbit:118, approach:150, tangential:.078, radial:.056},
       fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10, minRange:35, maxRange:180, arc:1.05}},
     drawOW(e){
@@ -92,8 +92,8 @@ const OET = [
     name:'FIGHTER', aiType:'fighter',
     col:'#ffdd33', col2:'#ff8800',
     owSpd:2.0, trigR:54, sc:170, energy:false, spinRate:.05,
-    enc:{cnt:1, hp:4, spd:3.5, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
-      ai:{passRange:72, resetRange:185, lead:.38},
+    enc:{cnt:1, hp:2, spd:3.5, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
+      ai:{passRange:58, commitRange:170, flybyRange:125, resetRange:430, reengageRange:330, minExtendFrames:48, lead:.45, attackSpd:5.2, extendSpd:5.7, turnSpd:3.9, attackThrust:.13, extendThrust:.15, turnThrust:.04, avoidRange:210, passClearance:70, avoidThrust:.04},
       fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10, minRange:20, maxRange:155, arc:1.15, lead:.42, passOnly:true}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
