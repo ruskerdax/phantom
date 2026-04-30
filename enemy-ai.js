@@ -1,6 +1,6 @@
 'use strict';
 
-// AI behavior per enemy type. Movement steers by role; firing discipline lives in encounter-enemies.js.
+// AI behavior per enemy role/type. Movement steers by role; firing discipline lives in encounter-enemies.js.
 function enemyVecToPlayer(e, s, ew, eh) {
   const d=wrapDelta(s.x,s.y,e.x,e.y,ew,eh);
   const dist=Math.hypot(d.dx,d.dy)||1;
@@ -87,7 +87,7 @@ function enemyFighterAttackAim(e, ec, s, ew, eh, ai, lead, projectileSpeed) {
   return Math.atan2(od.dx,-od.dy);
 }
 
-const ENEMY_TYPES = {
+const ENEMY_AI = {
   destroyer: {
     update(e, ec, s, ew, eh) {
       enemyRangeKeep(e,ec,s,ew,eh,{preferred:150,band:34,close:.055,backoff:.045,strafe:.018});

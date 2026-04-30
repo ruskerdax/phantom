@@ -2,13 +2,13 @@
 
 let NEXT_ENC_ENEMY_ID = 1;
 
-function mkEncEnemy(type, x, y, timer) {
-  const et=enemyDef(type),ec=et.enc;
+function mkEncEnemy(typeOrClass, x, y, timer) {
+  const et=enemySpawnDef(typeOrClass),ec=et.enc;
   return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, timer, alive:true, t:et.id, eid:NEXT_ENC_ENEMY_ID++, spin:0, pulsesLeft:0, pulseTimer:0, misLeft:0, misTimer:0};
 }
 
-function enemyInitialCooldown(type, stagger=0) {
-  const ec=enemyDef(type).enc,wp=WEAPON_MAP[ec.fire.wpn];
+function enemyInitialCooldown(typeOrClass, stagger=0) {
+  const ec=enemyDef(typeOrClass).enc,wp=WEAPON_MAP[ec.fire.wpn];
   return Math.round(wp.cd*60)+stagger;
 }
 
@@ -39,10 +39,11 @@ function enemyLaunchDrones(e, enc, ec, ew, eh) {
   if(!launch)return;
   if(e.launchTimer==null)e.launchTimer=120+Math.floor(Math.random()*90);
   if(--e.launchTimer>0)return;
-  const active=enc.en.filter(o=>o.alive&&o.spawnParent===e.eid&&o.t===launch.type).length;
+  const active=enc.en.filter(o=>o.alive&&o.spawnParent===e.eid&&enemyDef(o.t).type===launch.type).length;
   if(active<(launch.maxActive??3)){
     const a=e.a+Math.PI+(Math.random()-.5)*1.2,r=launch.radius??ec.r+18;
-    const child=mkEncEnemy(launch.type,wrap(e.x+Math.sin(a)*r,ew),wrap(e.y-Math.cos(a)*r,eh),enemyInitialCooldown(launch.type,Math.floor(Math.random()*40)));
+    const childDef=enemySpawnDef(launch.type);
+    const child=mkEncEnemy(childDef.id,wrap(e.x+Math.sin(a)*r,ew),wrap(e.y-Math.cos(a)*r,eh),enemyInitialCooldown(childDef.id,Math.floor(Math.random()*40)));
     child.spawnParent=e.eid;
     child.vx=e.vx+Math.sin(a)*.8;
     child.vy=e.vy-Math.cos(a)*.8;
@@ -57,7 +58,8 @@ function enemyUpdate(e, s, enc, ew, eh) {
   const ecDef=enemyDef(e.t),ec=ecDef.enc;
   const tor=encToroidalActive(enc);
   e.spin+=ecDef.spinRate;
-  const ai=ENEMY_TYPES[ecDef.aiType]||ENEMY_TYPES.destroyer;
+  const ai=ENEMY_AI[ecDef.type];
+  if(!ai)throw new Error(`Enemy type ${ecDef.type} has no AI behavior`);
   enemySetSpeedLimit(e,ec.spd);
   ai.update(e, ec, s, ew, eh);
   e.vx*=.975;e.vy*=.975;enemyApplySpeedLimit(e,ec.spd);

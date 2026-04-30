@@ -252,7 +252,7 @@ function updEnc(){
 }
 
 function drawEnc(){
-  const enc=G.ENC,et=enemyDef(enc.et);
+  const enc=G.ENC,et=enemyDisplayDef(enc.et);
   const camX=enc.cam?enc.cam.x:0,camY=enc.cam?enc.cam.y:0;
   cx.fillStyle='#030408';cx.fillRect(0,0,W,H);drStars();
   const dustV=dustVelocityForShip(enc.s,enc.cam);

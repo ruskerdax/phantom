@@ -133,20 +133,20 @@ function owStartEnc(idx,contactA,playerA){
     let ei=0;
     const placed=[];
     for(const sp of spawns){
-      const gec=enemyDef(sp.t).enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
       for(let i=0;i<sp.cnt;i++){
+        const def=enemySpawnDef(sp.t),gec=def.enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
         const{x,y}=encClusterPos(EW,EH,placed,140,contactA,ei,total);
-        ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));
+        ens.push(mkEncEnemy(def.id,x,y,initCd+ei*18));
         ei++;
       }
     }
   } else {
-    const initCd=Math.round(WEAPON_MAP[ec.fire.wpn].cd*60);
     const placed=[];
     const total=ec.cnt;
     for(let i=0;i<total;i++){
+      const def=enemySpawnDef(e.t),dec=def.enc,initCd=Math.round(WEAPON_MAP[dec.fire.wpn].cd*60);
       const{x,y}=encClusterPos(EW,EH,placed,140,contactA,i,total);
-      ens.push(mkEncEnemy(e.t,x,y,initCd+i*18));
+      ens.push(mkEncEnemy(def.id,x,y,initCd+i*18));
     }
   }
   const rng=mkRNG(seedChild(G.seed,200+idx));
@@ -184,12 +184,12 @@ function startAstEnc(){
     const tier=Math.floor(Math.random()*3);const td=tierDefs[tier];
     rocks.push({x:rx,y:ry,vx:(Math.random()-.5)*1.1,vy:(Math.random()-.5)*1.1,r:td.r[0]+Math.random()*td.r[1],hp:td.hp,maxHp:td.hp,tier});
   }
-  const ens=[],astEnemy=ENEMY_IDS.INTERCEPTOR;
-  const astEc=enemyDef(astEnemy).enc,initCd=Math.round(WEAPON_MAP[astEc.fire.wpn].cd*60);
+  const ens=[],astEnemy=ENEMY_TYPES.INTERCEPTOR;
   for(let i=0;i<3;i++){
     if(Math.random()<.35){
+      const def=enemySpawnDef(astEnemy),astEc=def.enc,initCd=Math.round(WEAPON_MAP[astEc.fire.wpn].cd*60);
       const a=(i/3)*Math.PI*2;
-      ens.push(mkEncEnemy(astEnemy,EW-200+Math.cos(a)*60,EH/2+Math.sin(a)*60,initCd+i*18));
+      ens.push(mkEncEnemy(def.id,EW-200+Math.cos(a)*60,EH/2+Math.sin(a)*60,initCd+i*18));
     }
   }
   const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
@@ -219,7 +219,7 @@ function startHBaseEnc(){
   const encShip=mkShip(ew*.08,eh/2);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   copyShieldState(ow.s,encShip);
-  G.ENC={owIdx:null,isHBase:true,et:DEFAULT_ENEMY_ID,label:'HOSTILE BASE',
+  G.ENC={owIdx:null,isHBase:true,et:ENEMY_TYPES.BATTLESHIP,label:'HOSTILE BASE',
     s:encShip,en:[],rocks:[],bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew,eh,hbase:{HEX_R,hx,hy,softpts,turrets,hexPoly},
     cam:{x:Math.max(0,hx-W/2),y:Math.max(0,hy-H/2),z:1}};
@@ -234,10 +234,10 @@ function owStartFleetEnc(fi,contactA,playerA){
   let ei=0;
   const placed=[],spawnX=EW/2,spawnY=EH/2;
   for(const sp of f.comp){
-    const gec=enemyDef(sp.t).enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
     for(let i=0;i<sp.cnt;i++){
+      const def=enemySpawnDef(sp.t),gec=def.enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
       const{x,y}=encClusterPos(EW,EH,placed,140,contactA,ei,total);
-      ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));
+      ens.push(mkEncEnemy(def.id,x,y,initCd+ei*18));
       ei++;
     }
   }
@@ -255,8 +255,9 @@ function owStartFleetEnc(fi,contactA,playerA){
   const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
   copyShieldState(ow.s,encShip);
-  // Use the first comp type as the representative for encounter color.
-  const repType=f.comp.length>0?f.comp[0].t:DEFAULT_ENEMY_ID;
+  // Use the first comp role/type as the representative for encounter color.
+  if(!f.comp.length)throw new Error(`Fleet ${f.id} has no enemy composition`);
+  const repType=f.comp[0].t;
   G.ENC={owIdx:null,fleetIdx:fi,et:repType,label:f.id+' FLEET',
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2)),z:1}};
@@ -277,7 +278,7 @@ function owHBaseSwarmPos(){
   const a=Math.random()*Math.PI*2,d=200+Math.random()*150;
   const x=Math.max(40,Math.min(OW_W-40,hbp.x+Math.cos(a)*d));
   const y=Math.max(40,Math.min(OW_H-40,hbp.y+Math.sin(a)*d));
-  return{t:ENEMY_IDS.DRONE,x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
+  return{t:enemyClassIdForType(ENEMY_TYPES.DRONE),x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
 }
 function updOW(){
   G.owFr++;if(G.slipMsg>0)G.slipMsg--;const ow=G.OW;updPts(ow.pts);

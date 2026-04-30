@@ -1,8 +1,9 @@
 'use strict';
 
-// Enemy type definitions. `id` is the stable spawn/runtime type; `aiType` selects behavior.
+// Enemy role/type IDs describe battlefield behavior and are used by fleet composition rolls.
+// Enemy class IDs describe concrete hull classes; spawned enemies store the class ID in `t`.
 // fire.mode: 'aim' = angles spread around target; 'spin' = angles evenly distributed from e.spin.
-const ENEMY_IDS = {
+const ENEMY_TYPES = {
   DESTROYER: 'destroyer',
   CRUISER: 'cruiser',
   INTERCEPTOR: 'interceptor',
@@ -12,12 +13,21 @@ const ENEMY_IDS = {
   BATTLESHIP: 'battleship',
 };
 
-const DEFAULT_ENEMY_ID = ENEMY_IDS.DESTROYER;
+const ENEMY_CLASS_IDS = {
+  MORRIGAN: 'morrigan',
+  CALYPSO: 'calypso',
+  LANCER: 'lancer',
+  ARROW: 'arrow',
+  SPARK: 'spark',
+  ATLAS: 'atlas',
+  ROBINSON: 'robinson',
+};
 
-const OET = [
+const ENEMY_CLASSES = [
   {
-    id: ENEMY_IDS.DESTROYER,
-    name:'DESTROYER', aiType:'destroyer',
+    id: ENEMY_CLASS_IDS.MORRIGAN,
+    className:'Morrigan', type:ENEMY_TYPES.DESTROYER, typeName:'Destroyer',
+    name:'MORRIGAN-CLASS DESTROYER',
     col:'#ffaa33', col2:'#ff7700',
     owSpd:.9, trigR:62, sc:300, energy:true, spinRate:0,
     enc:{cnt:1, hp:7, spd:2.5, turn:.05, r:13, col:'#ffaa33', col2:'#ff7700',
@@ -40,8 +50,9 @@ const OET = [
     }
   },
   {
-    id: ENEMY_IDS.CRUISER,
-    name:'CRUISER', aiType:'cruiser',
+    id: ENEMY_CLASS_IDS.CALYPSO,
+    className:'Calypso', type:ENEMY_TYPES.CRUISER, typeName:'Cruiser',
+    name:'CALYPSO-CLASS CRUISER',
     col:'#aaccff', col2:'#5588dd',
     owSpd:.7, trigR:62, sc:280, energy:true, spinRate:0,
     enc:{cnt:1, hp:12, spd:1.5, turn:.04, r:13, col:'#aaccff', col2:'#5588dd',
@@ -64,8 +75,9 @@ const OET = [
     }
   },
   {
-    id: ENEMY_IDS.INTERCEPTOR,
-    name:'INTERCEPTOR', aiType:'interceptor',
+    id: ENEMY_CLASS_IDS.LANCER,
+    className:'Lancer', type:ENEMY_TYPES.INTERCEPTOR, typeName:'Interceptor',
+    name:'LANCER-CLASS INTERCEPTOR',
     col:'#ff66cc', col2:'#aa3399',
     owSpd:1.5, trigR:54, sc:160, energy:false, spinRate:.05,
     enc:{cnt:1, hp:2, spd:3.5, turn:.09, r:9, col:'#ff66cc', col2:'#aa3399',
@@ -88,8 +100,9 @@ const OET = [
     }
   },
   {
-    id: ENEMY_IDS.FIGHTER,
-    name:'FIGHTER', aiType:'fighter',
+    id: ENEMY_CLASS_IDS.ARROW,
+    className:'Arrow', type:ENEMY_TYPES.FIGHTER, typeName:'Fighter',
+    name:'ARROW-CLASS FIGHTER',
     col:'#ffdd33', col2:'#ff8800',
     owSpd:2.0, trigR:54, sc:170, energy:false, spinRate:.05,
     enc:{cnt:1, hp:2, spd:3.5, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
@@ -112,8 +125,9 @@ const OET = [
     }
   },
   {
-    id: ENEMY_IDS.DRONE,
-    name:'DRONE', aiType:'drone',
+    id: ENEMY_CLASS_IDS.SPARK,
+    className:'Spark', type:ENEMY_TYPES.DRONE, typeName:'Drone',
+    name:'SPARK-CLASS DRONE',
     col:'#88ffaa', col2:'#22aa55',
     owSpd:1.0, trigR:50, sc:60, energy:false, spinRate:.1,
     enc:{cnt:1, hp:1, spd:2.0, turn:.12, r:7, col:'#88ffaa', col2:'#22aa55',
@@ -136,14 +150,15 @@ const OET = [
     }
   },
   {
-    id: ENEMY_IDS.CARRIER,
-    name:'CARRIER', aiType:'carrier',
+    id: ENEMY_CLASS_IDS.ATLAS,
+    className:'Atlas', type:ENEMY_TYPES.CARRIER, typeName:'Carrier',
+    name:'ATLAS-CLASS CARRIER',
     col:'#ddccaa', col2:'#998866',
     owSpd:.5, trigR:80, sc:600, energy:true, spinRate:0,
     enc:{cnt:1, hp:48, spd:1.8, turn:.03, r:24, col:'#ddccaa', col2:'#998866',
       ai:{preferred:345, band:64, strafe:.006},
       fire:{wpn:'railgun', mode:'aim', count:1, spread:0, offset:28, minRange:0, maxRange:260, arc:.85},
-      launch:{type:ENEMY_IDS.DRONE, cd:360, maxActive:3, radius:38}},
+      launch:{type:ENEMY_TYPES.DRONE, cd:360, maxActive:3, radius:38}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -166,8 +181,9 @@ const OET = [
     }
   },
   {
-    id: ENEMY_IDS.BATTLESHIP,
-    name:'BATTLESHIP', aiType:'battleship',
+    id: ENEMY_CLASS_IDS.ROBINSON,
+    className:'Robinson', type:ENEMY_TYPES.BATTLESHIP, typeName:'Battleship',
+    name:'ROBINSON-CLASS BATTLESHIP',
     col:'#ff5544', col2:'#aa1100',
     owSpd:.35, trigR:80, sc:1000, energy:true, spinRate:0,
     enc:{cnt:1, hp:80, spd:1.4, turn:.03, r:26, col:'#ff5544', col2:'#aa1100',
@@ -197,13 +213,56 @@ const OET = [
   }
 ];
 
-const ENEMY_MAP = Object.fromEntries(OET.map(e => [e.id, e]));
-Object.assign(OET, ENEMY_MAP);
+const ENEMY_CLASS_MAP = Object.fromEntries(ENEMY_CLASSES.map(e => [e.id, e]));
+const ENEMY_CLASSES_BY_TYPE = ENEMY_CLASSES.reduce((out, e) => {
+  (out[e.type] ??= []).push(e);
+  return out;
+}, {});
+Object.assign(ENEMY_CLASSES, ENEMY_CLASS_MAP);
 
-function enemyDef(type) {
-  return ENEMY_MAP[type] || (typeof type === 'number' ? OET[type] : null) || ENEMY_MAP[DEFAULT_ENEMY_ID];
+function assertEnemyRegistry() {
+  const typeIds=new Set(Object.values(ENEMY_TYPES));
+  const classIds=new Set(Object.values(ENEMY_CLASS_IDS));
+  if(Object.keys(ENEMY_CLASS_MAP).length!==ENEMY_CLASSES.length)throw new Error('Duplicate enemy class id in ENEMY_CLASSES');
+  for(const e of ENEMY_CLASSES){
+    if(!classIds.has(e.id))throw new Error(`Enemy class ${e.id} is missing from ENEMY_CLASS_IDS`);
+    if(!typeIds.has(e.type))throw new Error(`Enemy class ${e.id} has unknown type ${e.type}`);
+    if(typeof ENEMY_AI!=='undefined'&&!ENEMY_AI[e.type])throw new Error(`Enemy type ${e.type} has no AI behavior`);
+  }
+  for(const type of typeIds)if(!ENEMY_CLASSES_BY_TYPE[type]?.length)throw new Error(`Enemy type ${type} has no classes`);
+}
+assertEnemyRegistry();
+
+function enemyClassForType(type) {
+  const classes=ENEMY_CLASSES_BY_TYPE[type];
+  if(!classes?.length)throw new Error(`Unknown enemy type: ${type}`);
+  return classes[0];
 }
 
-function enemyTypeIndex(type) {
-  return Math.max(0, OET.indexOf(enemyDef(type)));
+function enemyClassIdForType(type) {
+  return enemyClassForType(type).id;
+}
+
+function enemySpawnDef(typeOrClass) {
+  if(ENEMY_CLASS_MAP[typeOrClass])return ENEMY_CLASS_MAP[typeOrClass];
+  if(typeof typeOrClass==='number'&&ENEMY_CLASSES[typeOrClass])return ENEMY_CLASSES[typeOrClass];
+  const classes=ENEMY_CLASSES_BY_TYPE[typeOrClass];
+  if(!classes?.length)throw new Error(`Unknown enemy type/class for spawn: ${typeOrClass}`);
+  return classes[Math.floor(Math.random()*classes.length)];
+}
+
+function enemyDef(classId) {
+  const def=ENEMY_CLASS_MAP[classId] || (typeof classId==='number' ? ENEMY_CLASSES[classId] : null);
+  if(!def)throw new Error(`Unknown enemy class: ${classId}`);
+  return def;
+}
+
+function enemyDisplayDef(typeOrClass) {
+  if(ENEMY_CLASS_MAP[typeOrClass])return ENEMY_CLASS_MAP[typeOrClass];
+  if(typeof typeOrClass==='number'&&ENEMY_CLASSES[typeOrClass])return ENEMY_CLASSES[typeOrClass];
+  return enemyClassForType(typeOrClass);
+}
+
+function enemyTypeIndex(typeOrClass) {
+  return ENEMY_CLASSES.indexOf(enemyDisplayDef(typeOrClass));
 }
