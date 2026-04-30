@@ -1,117 +1,28 @@
 'use strict';
 
-// Enemy class definitions
-// fire.mode: 'aim' = angles spread around target; 'spin' = angles evenly distributed from e.spin
+// Enemy type definitions. `id` is the stable spawn/runtime type; `aiType` selects behavior.
+// fire.mode: 'aim' = angles spread around target; 'spin' = angles evenly distributed from e.spin.
+const ENEMY_IDS = {
+  DESTROYER: 'destroyer',
+  CRUISER: 'cruiser',
+  INTERCEPTOR: 'interceptor',
+  FIGHTER: 'fighter',
+  DRONE: 'drone',
+  CARRIER: 'carrier',
+  BATTLESHIP: 'battleship',
+};
+
+const DEFAULT_ENEMY_ID = ENEMY_IDS.DESTROYER;
+
 const OET = [
   {
-    name:'SAUCER', aiType:'interceptor',
-    col:'#ff4444', col2:'#ff9900',
-    owSpd:1.4, trigR:58, sc:150, energy:false, spinRate:.05,
-    enc:{cnt:1, hp:6, spd:2.2, r:13, col:'#ff4444', col2:'#ff9900',
-      fire:{wpn:'railgun', mode:'aim', count:1, spread:0, offset:14},
-      groups:[{t:0,cnt:1},{t:0,cnt:2,chance:.33},{t:1,cnt:3,chance:.33}]},
-    drawOW(e){
-      cx.save();cx.translate(e.x,e.y);
-      if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
-      cx.strokeStyle=this.col;cx.shadowColor=this.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.beginPath();cx.ellipse(0,2,16,6,0,0,Math.PI*2);cx.stroke();
-      cx.beginPath();cx.arc(0,-1,8,Math.PI,0);cx.stroke();
-      cx.globalAlpha=1;cx.restore();
-    },
-    drawEnc(e){
-      const ec=this.enc;
-      cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.beginPath();cx.ellipse(0,2,13,5,0,0,Math.PI*2);cx.stroke();
-      cx.beginPath();cx.arc(0,-1,7,Math.PI,0);cx.stroke();
-      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
-      cx.restore();
-    }
-  },
-  {
-    name:'SWARM', aiType:'swarmer',
-    col:'#00ddff', col2:'#cc00ff',
-    owSpd:.95, trigR:54, sc:80, energy:false, spinRate:.07,
-    enc:{cnt:5, hp:3, spd:2.8, r:9, col:'#00ddff', col2:'#cc00ff',
-      fire:{wpn:'mass driver', mode:'spin', count:3, offset:10}},
-    drawOW(e){
-      cx.save();cx.translate(e.x,e.y);
-      if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
-      cx.strokeStyle=this.col;cx.shadowColor=this.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      for(let k=0;k<3;k++){const a=e.spin+k*Math.PI*2/3;cx.beginPath();cx.arc(Math.cos(a)*9,Math.sin(a)*9,5,0,Math.PI*2);cx.stroke();}
-      cx.globalAlpha=1;cx.restore();
-    },
-    drawEnc(e){
-      const ec=this.enc;
-      cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.beginPath();cx.moveTo(0,-ec.r);cx.lineTo(-ec.r*.86,ec.r*.5);cx.lineTo(ec.r*.86,ec.r*.5);cx.closePath();cx.stroke();
-      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
-      cx.restore();
-    }
-  },
-  {
-    name:'DREADNOUGHT', aiType:'capital',
-    col:'#ffee00', col2:'#ff6600',
-    owSpd:.55, trigR:68, sc:350, energy:true, spinRate:0,
-    enc:{cnt:1, hp:18, spd:.75, r:20, col:'#ffee00', col2:'#ff6600',
-      fire:{wpn:'mass driver', mode:'aim', count:3, spread:.2, offset:22}},
-    drawOW(e){
-      cx.save();cx.translate(e.x,e.y);
-      if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
-      cx.strokeStyle=this.col;cx.shadowColor=this.col;cx.shadowBlur=12;cx.lineWidth=2;
-      cx.rotate(e.a);
-      cx.beginPath();cx.moveTo(0,-20);cx.lineTo(-14,8);cx.lineTo(-8,14);cx.lineTo(0,10);cx.lineTo(8,14);cx.lineTo(14,8);cx.closePath();cx.stroke();
-      cx.beginPath();cx.moveTo(-14,8);cx.lineTo(-20,0);cx.moveTo(14,8);cx.lineTo(20,0);cx.stroke();
-      cx.globalAlpha=1;cx.restore();
-    },
-    drawEnc(e){
-      const ec=this.enc;
-      cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.save();cx.rotate(e.a);
-      cx.beginPath();cx.moveTo(0,-ec.r);cx.lineTo(-ec.r*.7,ec.r*.4);cx.lineTo(-ec.r*.4,ec.r*.7);cx.lineTo(0,ec.r*.5);cx.lineTo(ec.r*.4,ec.r*.7);cx.lineTo(ec.r*.7,ec.r*.4);cx.closePath();cx.stroke();
-      cx.beginPath();cx.moveTo(-ec.r*.7,ec.r*.4);cx.lineTo(-ec.r,0);cx.moveTo(ec.r*.7,ec.r*.4);cx.lineTo(ec.r,0);cx.stroke();
-      cx.restore();
-      cx.save();cx.rotate(-e.spin);
-      cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);
-      cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);
-      cx.restore();
-      cx.restore();
-    }
-  },
-  {
-    name:'FIEND', aiType:'interceptor',
-    col:'#39ff14', col2:'#aaff00',
-    owSpd:1.4, trigR:58, sc:200, energy:false, spinRate:.05,
-    enc:{cnt:1, hp:6, spd:2.2, r:13, col:'#39ff14', col2:'#aaff00',
-      fire:{wpn:'pulse laser', offset:14},
-      groups:[{t:3,cnt:1},{t:3,cnt:2,chance:.33},{t:1,cnt:3,chance:.33}]},
-    drawOW(e){
-      cx.save();cx.translate(e.x,e.y);
-      if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
-      cx.strokeStyle=this.col;cx.shadowColor=this.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.beginPath();cx.ellipse(0,2,16,6,0,0,Math.PI*2);cx.stroke();
-      cx.beginPath();cx.arc(0,-1,8,Math.PI,0);cx.stroke();
-      cx.globalAlpha=1;cx.restore();
-    },
-    drawEnc(e){
-      const ec=this.enc;
-      cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.beginPath();cx.ellipse(0,2,13,5,0,0,Math.PI*2);cx.stroke();
-      cx.beginPath();cx.arc(0,-1,7,Math.PI,0);cx.stroke();
-      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
-      cx.restore();
-    }
-  },
-  // ------- New typed enemy classes (placeholder visuals/stats) -------
-  {
+    id: ENEMY_IDS.DESTROYER,
     name:'DESTROYER', aiType:'destroyer',
     col:'#ffaa33', col2:'#ff7700',
     owSpd:.9, trigR:62, sc:300, energy:true, spinRate:0,
-    enc:{cnt:1, hp:14, spd:1.7, turn:.05, r:13, col:'#ffaa33', col2:'#ff7700',
-      fire:{wpn:'mass driver', mode:'aim', count:2, spread:.18, offset:16}},
+    enc:{cnt:1, hp:7, spd:2.5, turn:.05, r:13, col:'#ffaa33', col2:'#ff7700',
+      ai:{preferred:150, band:34, strafe:.018},
+      fire:{wpn:'mass driver', mode:'aim', count:2, spread:.18, offset:16, minRange:70, maxRange:240, arc:.8}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -129,11 +40,13 @@ const OET = [
     }
   },
   {
+    id: ENEMY_IDS.CRUISER,
     name:'CRUISER', aiType:'cruiser',
     col:'#aaccff', col2:'#5588dd',
     owSpd:.7, trigR:62, sc:280, energy:true, spinRate:0,
-    enc:{cnt:1, hp:12, spd:1.2, turn:.04, r:13, col:'#aaccff', col2:'#5588dd',
-      fire:{wpn:'railgun', mode:'aim', count:1, spread:0, offset:16}},
+    enc:{cnt:1, hp:12, spd:1.5, turn:.04, r:13, col:'#aaccff', col2:'#5588dd',
+      ai:{preferred:330, band:48, strafe:.01},
+      fire:{wpn:'railgun', mode:'aim', count:1, spread:0, offset:16, minRange:210, maxRange:560, arc:.45}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -151,11 +64,13 @@ const OET = [
     }
   },
   {
-    name:'INTERCEPTOR', aiType:'interceptorShip',
+    id: ENEMY_IDS.INTERCEPTOR,
+    name:'INTERCEPTOR', aiType:'interceptor',
     col:'#ff66cc', col2:'#aa3399',
     owSpd:1.5, trigR:54, sc:160, energy:false, spinRate:.05,
-    enc:{cnt:1, hp:5, spd:1.7, turn:.09, r:9, col:'#ff66cc', col2:'#aa3399',
-      fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10}},
+    enc:{cnt:1, hp:4, spd:3.5, turn:.09, r:9, col:'#ff66cc', col2:'#aa3399',
+      ai:{orbit:118, approach:150, tangential:.078, radial:.056},
+      fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10, minRange:35, maxRange:180, arc:1.05}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -173,11 +88,13 @@ const OET = [
     }
   },
   {
+    id: ENEMY_IDS.FIGHTER,
     name:'FIGHTER', aiType:'fighter',
     col:'#ffdd33', col2:'#ff8800',
     owSpd:2.0, trigR:54, sc:170, energy:false, spinRate:.05,
-    enc:{cnt:1, hp:5, spd:2.2, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
-      fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10}},
+    enc:{cnt:1, hp:4, spd:3.5, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
+      ai:{passRange:72, resetRange:185, lead:.38},
+      fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10, minRange:20, maxRange:155, arc:1.15, lead:.42, passOnly:true}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -195,11 +112,13 @@ const OET = [
     }
   },
   {
+    id: ENEMY_IDS.DRONE,
     name:'DRONE', aiType:'drone',
     col:'#88ffaa', col2:'#22aa55',
     owSpd:1.0, trigR:50, sc:60, energy:false, spinRate:.1,
-    enc:{cnt:1, hp:1, spd:1.7, turn:.12, r:7, col:'#88ffaa', col2:'#22aa55',
-      fire:{wpn:'mining laser', mode:'aim', count:1, spread:0, offset:8}},
+    enc:{cnt:1, hp:1, spd:2.0, turn:.12, r:7, col:'#88ffaa', col2:'#22aa55',
+      ai:{orbit:86, approach:126, tangential:.09, radial:.065, jitter:.55},
+      fire:{wpn:'mining laser', mode:'aim', count:1, spread:0, offset:8, minRange:10, maxRange:145, arc:1.45}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -217,11 +136,14 @@ const OET = [
     }
   },
   {
+    id: ENEMY_IDS.CARRIER,
     name:'CARRIER', aiType:'carrier',
     col:'#ddccaa', col2:'#998866',
     owSpd:.5, trigR:80, sc:600, energy:true, spinRate:0,
-    enc:{cnt:1, hp:48, spd:1.2, turn:.03, r:24, col:'#ddccaa', col2:'#998866',
-      fire:{wpn:'railgun', mode:'aim', count:1, spread:0, offset:28}},
+    enc:{cnt:1, hp:48, spd:1.8, turn:.03, r:24, col:'#ddccaa', col2:'#998866',
+      ai:{preferred:345, band:64, strafe:.006},
+      fire:{wpn:'railgun', mode:'aim', count:1, spread:0, offset:28, minRange:0, maxRange:260, arc:.85},
+      launch:{type:ENEMY_IDS.DRONE, cd:360, maxActive:3, radius:38}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -244,11 +166,13 @@ const OET = [
     }
   },
   {
+    id: ENEMY_IDS.BATTLESHIP,
     name:'BATTLESHIP', aiType:'battleship',
     col:'#ff5544', col2:'#aa1100',
     owSpd:.35, trigR:80, sc:1000, energy:true, spinRate:0,
-    enc:{cnt:1, hp:80, spd:.8, turn:.03, r:26, col:'#ff5544', col2:'#aa1100',
-      fire:{wpn:'particle accelerator', mode:'aim', count:1, spread:0, offset:30}},
+    enc:{cnt:1, hp:80, spd:1.4, turn:.03, r:26, col:'#ff5544', col2:'#aa1100',
+      ai:{preferred:390, band:70, strafe:.004},
+      fire:{wpn:'particle accelerator', mode:'aim', count:1, spread:0, offset:30, minRange:230, maxRange:425, arc:.32}},
     drawOW(e){
       cx.save();cx.translate(e.x,e.y);
       if(e.flash>0)cx.globalAlpha=e.flash%4<2?1:.3;
@@ -272,3 +196,14 @@ const OET = [
     }
   }
 ];
+
+const ENEMY_MAP = Object.fromEntries(OET.map(e => [e.id, e]));
+Object.assign(OET, ENEMY_MAP);
+
+function enemyDef(type) {
+  return ENEMY_MAP[type] || (typeof type === 'number' ? OET[type] : null) || ENEMY_MAP[DEFAULT_ENEMY_ID];
+}
+
+function enemyTypeIndex(type) {
+  return Math.max(0, OET.indexOf(enemyDef(type)));
+}

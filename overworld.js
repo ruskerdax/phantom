@@ -120,7 +120,7 @@ function slipNeighborList(){
   return list;
 }
 function owStartEnc(idx,contactA,playerA){
-  const ow=G.OW,e=ow.en[idx],et=OET[e.t],ec=et.enc;
+  const ow=G.OW,e=ow.en[idx],et=enemyDef(e.t),ec=et.enc;
   const ens=[];
   const spawnX=EW/2,spawnY=EH/2;
   if(ec.groups){
@@ -133,7 +133,7 @@ function owStartEnc(idx,contactA,playerA){
     let ei=0;
     const placed=[];
     for(const sp of spawns){
-      const gec=OET[sp.t].enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
+      const gec=enemyDef(sp.t).enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
       for(let i=0;i<sp.cnt;i++){
         const{x,y}=encClusterPos(EW,EH,placed,140,contactA,ei,total);
         ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));
@@ -184,18 +184,18 @@ function startAstEnc(){
     const tier=Math.floor(Math.random()*3);const td=tierDefs[tier];
     rocks.push({x:rx,y:ry,vx:(Math.random()-.5)*1.1,vy:(Math.random()-.5)*1.1,r:td.r[0]+Math.random()*td.r[1],hp:td.hp,maxHp:td.hp,tier});
   }
-  const ens=[];
-  const saucerEc=OET[0].enc,initCd=Math.round(WEAPON_MAP[saucerEc.fire.wpn].cd*60);
+  const ens=[],astEnemy=ENEMY_IDS.INTERCEPTOR;
+  const astEc=enemyDef(astEnemy).enc,initCd=Math.round(WEAPON_MAP[astEc.fire.wpn].cd*60);
   for(let i=0;i<3;i++){
     if(Math.random()<.35){
       const a=(i/3)*Math.PI*2;
-      ens.push(mkEncEnemy(0,EW-200+Math.cos(a)*60,EH/2+Math.sin(a)*60,initCd+i*18));
+      ens.push(mkEncEnemy(astEnemy,EW-200+Math.cos(a)*60,EH/2+Math.sin(a)*60,initCd+i*18));
     }
   }
   const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   copyShieldState(ow.s,encShip);
-  G.ENC={owIdx:null,isAst:true,et:0,label:'ASTEROID FIELD',
+  G.ENC={owIdx:null,isAst:true,et:astEnemy,label:'ASTEROID FIELD',
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:ens.length?70:0,cleared:!ens.length,
     ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2),z:1}};
   G.st=ens.length?'enc_in':'encounter';
@@ -219,7 +219,7 @@ function startHBaseEnc(){
   const encShip=mkShip(ew*.08,eh/2);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   copyShieldState(ow.s,encShip);
-  G.ENC={owIdx:null,isHBase:true,et:0,label:'HOSTILE BASE',
+  G.ENC={owIdx:null,isHBase:true,et:DEFAULT_ENEMY_ID,label:'HOSTILE BASE',
     s:encShip,en:[],rocks:[],bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew,eh,hbase:{HEX_R,hx,hy,softpts,turrets,hexPoly},
     cam:{x:Math.max(0,hx-W/2),y:Math.max(0,hy-H/2),z:1}};
@@ -234,7 +234,7 @@ function owStartFleetEnc(fi,contactA,playerA){
   let ei=0;
   const placed=[],spawnX=EW/2,spawnY=EH/2;
   for(const sp of f.comp){
-    const gec=OET[sp.t].enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
+    const gec=enemyDef(sp.t).enc,initCd=Math.round(WEAPON_MAP[gec.fire.wpn].cd*60);
     for(let i=0;i<sp.cnt;i++){
       const{x,y}=encClusterPos(EW,EH,placed,140,contactA,ei,total);
       ens.push(mkEncEnemy(sp.t,x,y,initCd+ei*18));
@@ -255,8 +255,8 @@ function owStartFleetEnc(fi,contactA,playerA){
   const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
   copyShieldState(ow.s,encShip);
-  // Use the first comp type as the representative for encounter color; fall back to index 4.
-  const repType=f.comp.length>0?f.comp[0].t:4;
+  // Use the first comp type as the representative for encounter color.
+  const repType=f.comp.length>0?f.comp[0].t:DEFAULT_ENEMY_ID;
   G.ENC={owIdx:null,fleetIdx:fi,et:repType,label:f.id+' FLEET',
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2)),z:1}};
@@ -277,7 +277,7 @@ function owHBaseSwarmPos(){
   const a=Math.random()*Math.PI*2,d=200+Math.random()*150;
   const x=Math.max(40,Math.min(OW_W-40,hbp.x+Math.cos(a)*d));
   const y=Math.max(40,Math.min(OW_H-40,hbp.y+Math.sin(a)*d));
-  return{t:1,x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
+  return{t:ENEMY_IDS.DRONE,x,y,vx:0,vy:0,a:0,alive:true,spin:0,flash:0};
 }
 function updOW(){
   G.owFr++;if(G.slipMsg>0)G.slipMsg--;const ow=G.OW;updPts(ow.pts);
@@ -332,7 +332,7 @@ function updOW(){
   if(owFired&&ow.nearSlipgate){suppressMenuInput();recordLastLocation('slipgate');openSlipgateMenu();saveGame();return;}
   for(let i=0;i<ow.en.length;i++){
     const e=ow.en[i];if(!e.alive)continue;
-    const et=OET[e.t];e.spin+=.04+e.t*.015;
+    const et=enemyDef(e.t);e.spin+=.04+enemyTypeIndex(e.t)*.015;
     const dx=s.x-e.x,dy=s.y-e.y,dist=Math.hypot(dx,dy)||1;
     const ta=Math.atan2(dx,-dy);
     e.a+=angDiff(e.a,ta)*.07;
@@ -476,7 +476,7 @@ function owIndicatorTargets(ow){
   const out=[];
   for(const e of ow.en){
     if(!e.alive)continue;
-    const et=OET[e.t];
+    const et=enemyDef(e.t);
     out.push({x:e.x,y:e.y,r:et.enc?.r||14,col:et.col,alive:true});
   }
   for(const f of ow.fleets){
@@ -672,7 +672,7 @@ function drawOW(){
   {const hbp=owPos(HBASE),HEX_R_OW=20;
   if(G.hbCleared){cx.save();cx.strokeStyle='#334';cx.lineWidth=1;cx.setLineDash([3,5]);cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;i?cx.lineTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW):cx.moveTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW);}cx.closePath();cx.stroke();cx.fillStyle='#446';cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText('CLEARED',hbp.x,hbp.y+3);cx.setLineDash([]);cx.restore();}
   else{const pu=.5+.5*Math.sin(G.fr*.07);cx.save();cx.strokeStyle='#e05109';cx.shadowColor='#e05109';cx.shadowBlur=6+pu*8;cx.lineWidth=1.5;cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;i?cx.lineTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW):cx.moveTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW);}cx.closePath();cx.stroke();cx.shadowBlur=0;cx.fillStyle='#e05109';cx.font='bold 10px monospace';cx.textAlign='center';cx.fillText('HOSTILE BASE',hbp.x,hbp.y-HEX_R_OW-8);if(ow.nearHBase){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=10;cx.font='bold 12px monospace';cx.fillText('[ FIRE TO ENTER ]',hbp.x,hbp.y+HEX_R_OW+16);}cx.restore();}}
-  for(const e of ow.en)if(e.alive)OET[e.t].drawOW(e);
+  for(const e of ow.en)if(e.alive)enemyDef(e.t).drawOW(e);
   for(const f of ow.fleets)if(f.alive)drFleet(f);
   for(const f of ow.fu)drEnergy(f.x,f.y,'#0f8');
   drPts(ow.pts);

@@ -1,22 +1,72 @@
 'use strict';
 
+let NEXT_ENC_ENEMY_ID = 1;
+
 function mkEncEnemy(type, x, y, timer) {
-  const ec=OET[type].enc;
-  return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, timer, alive:true, t:type, spin:0, pulsesLeft:0, pulseTimer:0, misLeft:0, misTimer:0};
+  const et=enemyDef(type),ec=et.enc;
+  return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, timer, alive:true, t:et.id, eid:NEXT_ENC_ENEMY_ID++, spin:0, pulsesLeft:0, pulseTimer:0, misLeft:0, misTimer:0};
+}
+
+function enemyInitialCooldown(type, stagger=0) {
+  const ec=enemyDef(type).enc,wp=WEAPON_MAP[ec.fire.wpn];
+  return Math.round(wp.cd*60)+stagger;
+}
+
+function enemyAimAngle(e, s, ew, eh, fw, ewp) {
+  const lead=fw.lead??0;
+  if(lead>0&&ewp.spd){
+    const d=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(d.dx,d.dy)||1;
+    const frames=Math.min(42,dist/ewp.spd);
+    const tx=s.x+(s.vx||0)*frames*lead,ty=s.y+(s.vy||0)*frames*lead;
+    const ld=wrapDelta(tx,ty,e.x,e.y,ew,eh);
+    return Math.atan2(ld.dx,-ld.dy);
+  }
+  const d=wrapDelta(s.x,s.y,e.x,e.y,ew,eh);
+  return Math.atan2(d.dx,-d.dy);
+}
+
+function enemyCanStartFire(e, dist, aimAngle, fw, ewp) {
+  const maxRange=fw.maxRange??ewp.range??(ewp.life&&ewp.spd?ewp.life*ewp.spd:Infinity);
+  const minRange=fw.minRange??0;
+  if(dist<minRange||dist>maxRange)return false;
+  if(fw.passOnly&&e.pass!==0&&e.pass!==1)return false;
+  const arc=fw.arc??Math.PI;
+  return Math.abs(angDiff(e.a,aimAngle))<=arc;
+}
+
+function enemyLaunchDrones(e, enc, ec, ew, eh) {
+  const launch=ec.launch;
+  if(!launch)return;
+  if(e.launchTimer==null)e.launchTimer=120+Math.floor(Math.random()*90);
+  if(--e.launchTimer>0)return;
+  const active=enc.en.filter(o=>o.alive&&o.spawnParent===e.eid&&o.t===launch.type).length;
+  if(active<(launch.maxActive??3)){
+    const a=e.a+Math.PI+(Math.random()-.5)*1.2,r=launch.radius??ec.r+18;
+    const child=mkEncEnemy(launch.type,wrap(e.x+Math.sin(a)*r,ew),wrap(e.y-Math.cos(a)*r,eh),enemyInitialCooldown(launch.type,Math.floor(Math.random()*40)));
+    child.spawnParent=e.eid;
+    child.vx=e.vx+Math.sin(a)*.8;
+    child.vy=e.vy-Math.cos(a)*.8;
+    enc.en.push(child);
+    tone(260,.08,'square',.04);
+  }
+  e.launchTimer=(launch.cd??360)+Math.floor(Math.random()*80-40);
 }
 
 // Returns true if the player ship was killed (caller should return from updEnc).
 function enemyUpdate(e, s, enc, ew, eh) {
-  const ecDef=OET[e.t],ec=ecDef.enc;
+  const ecDef=enemyDef(e.t),ec=ecDef.enc;
   const tor=encToroidalActive(enc);
   e.spin+=ecDef.spinRate;
-  ENEMY_TYPES[ecDef.aiType].update(e, ec, s, ew, eh);
+  const ai=ENEMY_TYPES[ecDef.aiType]||ENEMY_TYPES.destroyer;
+  ai.update(e, ec, s, ew, eh);
   e.vx*=.975;e.vy*=.975;const es=Math.hypot(e.vx,e.vy);if(es>ec.spd){e.vx=e.vx/es*ec.spd;e.vy=e.vy/es*ec.spd;}
   e.x=wrap(e.x+e.vx,ew);e.y=wrap(e.y+e.vy,eh);
   for(const rk of enc.rocks){const d=tor?wrapDelta(e.x,e.y,rk.x,rk.y,ew,eh):{dx:e.x-rk.x,dy:e.y-rk.y},rd=Math.hypot(d.dx,d.dy)||1;if(rd<rk.r+16){e.vx+=(d.dx/rd)*.3;e.vy+=(d.dy/rd)*.3;}}
-  for(const oe of enc.en){if(oe===e||!oe.alive)continue;const d=tor?wrapDelta(e.x,e.y,oe.x,oe.y,ew,eh):{dx:e.x-oe.x,dy:e.y-oe.y},od=Math.hypot(d.dx,d.dy)||1;const minD=ec.r+OET[oe.t].enc.r;if(od<minD){const nx=d.dx/od,ny=d.dy/od;const push=(minD-od)/minD*.5;e.vx+=nx*push;e.vy+=ny*push;}}
-  const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1,ta=Math.atan2(dx,-dy);
-  const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn];
+  for(const oe of enc.en){if(oe===e||!oe.alive)continue;const oec=enemyDef(oe.t).enc,d=tor?wrapDelta(e.x,e.y,oe.x,oe.y,ew,eh):{dx:e.x-oe.x,dy:e.y-oe.y},od=Math.hypot(d.dx,d.dy)||1;const minD=ec.r+oec.r;if(od<minD){const nx=d.dx/od,ny=d.dy/od;const push=(minD-od)/minD*.5;e.vx+=nx*push;e.vy+=ny*push;}}
+  enemyLaunchDrones(e,enc,ec,ew,eh);
+
+  const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1;
+  const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn],ta=enemyAimAngle(e,s,ew,eh,fw,ewp);
   if(ewp.wpnType==='beam gun'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
     const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;
     const src=tor?toroidalPointNear(ox,oy,s.x,s.y,ew,eh):{x:ox,y:oy};
@@ -26,8 +76,8 @@ function enemyUpdate(e, s, enc, ew, eh) {
     tgts.push({x:s.x,y:s.y,r:shipHitRadius(s),kind:'ship'});
     for(let mi=0;mi<enc.mis.length;mi++)tgts.push({x:enc.mis[mi].x,y:enc.mis[mi].y,r:5,kind:'missile',idx:mi});
     const res=castLaserForSpace(ox,oy,e.a,ewp.range,tgts,[],tor?{toroidal:true,worldW:ew,worldH:eh}:null);
-    enc.lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ec.col});
-    tone(550+e.t*80,.08,'sine',.04);
+    enc.lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ec.col,w:ewp.beamWidth});
+    tone(550+enemyTypeIndex(e.t)*80,.08,'sine',.04);
     if(res.hitIdx>=0){
       const tg=tgts[res.hitIdx];
       if(tg.kind==='shield'){
@@ -51,7 +101,13 @@ function enemyUpdate(e, s, enc, ew, eh) {
     e.pulsesLeft--;
     if(e.pulsesLeft>0)e.pulseTimer=ewp.pulseCd;else e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
   } else if(e.pulsesLeft===0&&--e.timer<=0){
-    if(ewp.wpnType==='beam gun'){e.pulsesLeft=ewp.pulses;e.pulseTimer=1;}
+    if(!enemyCanStartFire(e,dist,ta,fw,ewp)){
+      e.timer=8+Math.floor(Math.random()*12);
+    } else if(ewp.wpnType==='beam gun'){
+      e.a=ta;
+      e.pulsesLeft=ewp.pulses;
+      e.pulseTimer=1;
+    }
     else if(ewp.wpnType==='missile launcher'){
       e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
       const cnt=fw.count||1;
@@ -72,9 +128,10 @@ function enemyUpdate(e, s, enc, ew, eh) {
     }
     else{
       e.timer=Math.round(ewp.cd*60)+Math.floor(Math.random()*40-20);
-      const bas=fw.mode==='spin'?Array.from({length:fw.count},(_,k)=>e.spin+k*Math.PI*2/fw.count):Array.from({length:fw.count},(_,k)=>ta+(k-(fw.count-1)/2)*fw.spread);
+      const cnt=fw.count||1,spread=fw.spread||0;
+      const bas=fw.mode==='spin'?Array.from({length:cnt},(_,k)=>e.spin+k*Math.PI*2/cnt):Array.from({length:cnt},(_,k)=>ta+(k-(cnt-1)/2)*spread);
       for(const ba of bas)enc.ebu.push({x:e.x+Math.sin(ba)*fw.offset,y:e.y-Math.cos(ba)*fw.offset,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,dmg:ewp.dmg,col:ecDef.col});
-      tone(550+e.t*80,.04,'square',.03);
+      tone(550+enemyTypeIndex(e.t)*80,.04,'square',.03);
     }
   }
   if(dist<ec.r+9){
