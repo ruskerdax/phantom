@@ -88,17 +88,17 @@ const ENEMY_CLASSES = [
     className:'Arrow', type:ENEMY_TYPES.FIGHTER, typeName:'Fighter',
     name:'ARROW-CLASS FIGHTER',
     col:'#ffdd33', col2:'#ff8800',
-    sc:170, energy:false, spinRate:.05,
+    sc:110, energy:false, spinRate:0,
     enc:{cnt:1, hp:2, spd:3.5, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
       ai:{passRange:58, commitRange:170, flybyRange:125, resetRange:430, reengageRange:330, minExtendFrames:48, lead:.45, attackSpd:5.2, extendSpd:5.7, turnSpd:3.9, attackThrust:.13, extendThrust:.15, turnThrust:.04, avoidRange:210, passClearance:70, avoidThrust:.04,
         pursuit:{lead:.65, offset:150, weave:.55, flipFrames:140, thrust:.13, turnMult:1, speed:5.2}},
       fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10, minRange:20, maxRange:155, arc:1.15, lead:.42, passOnly:true}},
     drawEnc(e){
-      const ec=this.enc;
-      cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
+      const ec=this.enc,a=flightAngle(e);
+      cx.save();cx.translate(e.x,e.y);cx.rotate(a);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
-      cx.beginPath();cx.moveTo(-ec.r,-ec.r);cx.lineTo(ec.r,ec.r);cx.moveTo(-ec.r,ec.r);cx.lineTo(ec.r,-ec.r);cx.stroke();
-      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
+      cx.beginPath();cx.moveTo(0,-12);cx.lineTo(-4,-2);cx.lineTo(-14,4);cx.lineTo(-10,8);cx.lineTo(-4,6);cx.lineTo(0,10);cx.lineTo(4,6);cx.lineTo(10,8);cx.lineTo(14,4);cx.lineTo(4,-2);cx.closePath();cx.stroke();
+      if(e.hp<e.mhp){cx.save();cx.rotate(-a);cx.fillStyle='#333';cx.fillRect(-ec.r,-ec.r-8,ec.r*2,4);cx.fillStyle=ec.col;cx.fillRect(-ec.r,-ec.r-8,ec.r*2*(e.hp/e.mhp),4);cx.restore();}
       cx.restore();
     }
   },
