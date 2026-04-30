@@ -17,7 +17,7 @@ function drawTitle(){
     if(sel){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=12;cx.fillText(UI_GLYPH.pointer+' '+TITEMS[i].label,W/2,iy);}
     else{cx.fillStyle='#446';cx.shadowBlur=0;cx.fillText(TITEMS[i].label,W/2,iy);}
   }
-  cx.restore();drGPI(8,H-8,'left');scanlines();
+  cx.restore();drGPI(8,H-8,'left');
 }
 
 function drawScreen(title,sub,tc,prompt){
@@ -28,7 +28,7 @@ function drawScreen(title,sub,tc,prompt){
   if(Math.floor(G.fr/28)%2===0){cx.fillStyle='#668';cx.font='14px monospace';cx.fillText(prompt,W/2,H/2+65);}
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
   cx.fillText('SEED  '+seedText(G.seed),W/2,H/2+95);
-  cx.restore();drGPI();scanlines();
+  cx.restore();drGPI();
 }
 function titleItems(){return[
   {id:'play',label:'PLAY GAME'},
@@ -226,7 +226,7 @@ function drawOptions(){
   }
   cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
   cx.fillText(UI_GLYPH.up+UI_GLYPH.down+' SELECT   '+UI_GLYPH.left+UI_GLYPH.right+' ADJUST / OPEN   '+pausePrompt('BACK'),W/2,H-18);
-  cx.restore();drGPI(8,H-8,'left');scanlines();
+  cx.restore();drGPI(8,H-8,'left');
 }
 
 function drawClearDataDialog(){
@@ -308,7 +308,7 @@ function drawControls(){
   cx.shadowBlur=0;
   cx.fillStyle='#334';cx.font='11px monospace';
   cx.fillText(UI_GLYPH.up+UI_GLYPH.down+' SELECT ROW   '+UI_GLYPH.left+UI_GLYPH.right+' SWITCH COLUMN   ENTER REMAP   DEL CLEAR   '+pausePrompt('BACK'),W/2,H-18);
-  cx.restore();drGPI(8,H-8,'left');scanlines();
+  cx.restore();drGPI(8,H-8,'left');
 }
 
 function returnFromOptions(){

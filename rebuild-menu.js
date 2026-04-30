@@ -59,7 +59,7 @@ function drawRebuild(){
   cx.shadowColor='#f40';cx.shadowBlur=28;cx.fillStyle='#f40';
   cx.font='bold 46px monospace';cx.fillText('SHIP DESTROYED',W/2,90);cx.shadowBlur=0;
   if(rf.phase==='chassis')drawRebuildChassis(rf);else drawRebuildConfig(rf);
-  cx.restore();drGPI();scanlines();
+  cx.restore();drGPI();
 }
 function drawRebuildChassis(rf){
   const lch=licensedRebuildChassis(),items=rebuildChassisItems();

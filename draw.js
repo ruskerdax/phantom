@@ -4,11 +4,11 @@
 let STARS=[],DUST=[];
 const SCOLS=['#ffffff','#aaaaff','#ffeebb','#aaffee','#ffaaaa'];
 const RENDER_PROFILES={
-  full:{starCount:220,twinkleCount:72,dustCount:140,scanlines:true,scanlineAlpha:.035,particleAlphaStep:0},
-  reduced:{starCount:130,twinkleCount:28,dustCount:80,scanlines:true,scanlineAlpha:.022,particleAlphaStep:.12},
-  minimal:{starCount:70,twinkleCount:0,dustCount:40,scanlines:false,scanlineAlpha:0,particleAlphaStep:.18},
+  full:{starCount:220,twinkleCount:72,dustCount:140,particleAlphaStep:0},
+  reduced:{starCount:130,twinkleCount:28,dustCount:80,particleAlphaStep:.12},
+  minimal:{starCount:70,twinkleCount:0,dustCount:40,particleAlphaStep:.18},
 };
-const STAR_LAYERS={},SCANLINE_LAYERS={};
+const STAR_LAYERS={};
 
 function renderProfile(){return RENDER_PROFILES[renderQuality()]||RENDER_PROFILES.full;}
 function mkLayer(w=W,h=H){const c=document.createElement('canvas');c.width=w;c.height=h;return c;}
@@ -30,15 +30,6 @@ function getStarLayer(){
     g.beginPath();g.arc(s.x,s.y,s.r,0,Math.PI*2);g.fill();
   }
   g.globalAlpha=1;STAR_LAYERS[q]=c;return c;
-}
-function getScanlineLayer(){
-  const q=renderQuality(),p=renderProfile();
-  if(!p.scanlines)return null;
-  if(SCANLINE_LAYERS[q])return SCANLINE_LAYERS[q];
-  const c=mkLayer(),g=c.getContext('2d');
-  g.globalAlpha=p.scanlineAlpha;g.fillStyle='#000';
-  for(let y=0;y<H;y+=2)g.fillRect(0,y,W,1);
-  g.globalAlpha=1;SCANLINE_LAYERS[q]=c;return c;
 }
 // Motion dust - screen-space parallax particles, drift opposite player velocity
 genBackground(0);
@@ -373,4 +364,3 @@ function drMissile(x,y,a,type='standard'){
   cx.fillRect(-md.width*0.9,md.length*0.3,md.width*1.8,1.2);
   cx.restore();
 }
-function scanlines(){const layer=getScanlineLayer();if(layer)cx.drawImage(layer,0,0);}

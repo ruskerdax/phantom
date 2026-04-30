@@ -74,7 +74,6 @@ function draw(){
   if(st==='overworld'||st==='dead_ow'){drawOW();if(st==='dead_ow'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px monospace';cx.textAlign='center';cx.fillText('SHIP DESTROYED',W/2,H/2);cx.restore();}}
   else if(st==='enc_in'||st==='encounter'||st==='dead_enc'){drawEnc();if(st==='dead_enc'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px monospace';cx.textAlign='center';cx.fillText('SHIP DESTROYED',W/2,H/2);cx.restore();}}
   else drawSite();
-  scanlines();
   if(G.paused)drawPause();
 }
 

@@ -57,7 +57,7 @@ function growActor(actor,mult){
 }
 function withActorBodyScale(actor,def,hull,drawFn){
   const scale=actorScale(actor,def,hull);
-  if(scale!==1){cx.save();try{cx.scale(scale,scale);drawFn(scale);}finally{cx.restore();}}
+  if(scale!==1){cx.save();try{cx.scale(scale,scale);cx.lineWidth/=scale;drawFn(scale);}finally{cx.restore();}}
   else drawFn(scale);
   return scale;
 }

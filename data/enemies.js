@@ -152,7 +152,7 @@ const ENEMY_CLASSES = [
     className:'Arrow', type:ENEMY_TYPES.FIGHTER, typeName:'Fighter',
     name:'ARROW-CLASS FIGHTER',
     col:'#ffdd33', col2:'#ff8800',
-    sc:160, energy:false, spinRate:0,
+    sc:160, energy:false, spinRate:0, scale:.7,
     hull:{angle:'flight', boundsR:16, parts:[{kind:'poly', pts:[[0,-12],[-4,-2],[-14,4],[-10,8],[-4,6],[0,10],[4,6],[10,8],[14,4],[4,-2]]}]},
     enc:{cnt:1, hp:2, spd:3.5, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
       ai:{passRange:58, commitRange:170, flybyRange:125, resetRange:430, reengageRange:330, minExtendFrames:48, lead:.45, attackSpd:5.2, extendSpd:5.7, turnSpd:3.9, attackThrust:.13, extendThrust:.15, turnThrust:.04, avoidRange:210, passClearance:70, avoidThrust:.04,
