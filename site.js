@@ -365,13 +365,13 @@ function updCaveSite(){
   for(const f of site.fu){if(!f.got&&Math.hypot(s.x-f.x,s.y-f.y)<22){f.got=true;pickupEnergy(s,f.x,f.y,site.pts,d.col);}}
   if(G.st==='esc'){site.esc--;if(site.esc<=0){saveActiveSiteState();saveGame();siteKillShip();return;}}
   const walls=siteBoundarySegments(d);
-  {const wp=wpSlot(0);if(wp){const wt=WEAPON_TYPES[wp.wpnType];
+  {const wp=wpSlot(0);if(wp){const wt=WEAPON_TYPES[wp.fireMode];
   if(s.pulsesLeft>0&&wt.tick){const tgts=siteBeamTargets(site),res=wt.tick(wp,s,0,tgts,site.lsb,walls);if(res&&res.hitIdx>=0)siteHandleBeamHit(site,tgts[res.hitIdx],wp,res);}
-  if(s.misLeft>0&&wt.tick&&wp.wpnType==='missile launcher') wt.tick(wp,s,0,site.mis);
+  if(s.misLeft>0&&wt.tick&&wp.fireMode==='missile') wt.tick(wp,s,0,site.mis);
   if(iFir()&&!s.scd&&!s.pulsesLeft&&!s.misLeft) tryFire(wp,wt,s,0,site.bul);}}
-  {const wp=wpSlot(1);if(wp){const wt=WEAPON_TYPES[wp.wpnType];
+  {const wp=wpSlot(1);if(wp){const wt=WEAPON_TYPES[wp.fireMode];
   if(s.pulsesLeft2>0&&wt.tick){const tgts=siteBeamTargets(site),res=wt.tick(wp,s,1,tgts,site.lsb,walls);if(res&&res.hitIdx>=0)siteHandleBeamHit(site,tgts[res.hitIdx],wp,res);}
-  if(s.misLeft2>0&&wt.tick&&wp.wpnType==='missile launcher') wt.tick(wp,s,1,site.mis);
+  if(s.misLeft2>0&&wt.tick&&wp.fireMode==='missile') wt.tick(wp,s,1,site.mis);
   if(iFireSec()&&!s.scd2&&!s.pulsesLeft2&&!s.misLeft2) tryFire(wp,wt,s,1,site.bul);}}
   for(let i=site.bul.length-1;i>=0;i--){
     const b=site.bul[i];b.x+=b.vx;b.y+=b.vy;b.l-=Math.hypot(b.vx,b.vy);
@@ -559,13 +559,13 @@ function updSurface(){
     if(Math.hypot(s.x-tx,s.y-ty)<34){saveActiveSiteState();enterTunnel('down',s);return;}
   }
   const beamSpace={toroidal:true,worldW:d.worldW,worldH:999999};
-  {const wp=wpSlot(0);if(wp){const wt=WEAPON_TYPES[wp.wpnType];
+  {const wp=wpSlot(0);if(wp){const wt=WEAPON_TYPES[wp.fireMode];
   if(s.pulsesLeft>0&&wt.tick){const tgts=surfaceBeamTargets(site),res=wt.tick(wp,s,0,tgts,site.lsb,[],beamSpace);if(res&&res.hitIdx>=0)surfaceHandleBeamHit(site,tgts[res.hitIdx],wp,res);}
-  if(s.misLeft>0&&wt.tick&&wp.wpnType==='missile launcher')wt.tick(wp,s,0,site.mis);
+  if(s.misLeft>0&&wt.tick&&wp.fireMode==='missile')wt.tick(wp,s,0,site.mis);
   if(iFir()&&!s.scd&&!s.pulsesLeft&&!s.misLeft)tryFire(wp,wt,s,0,site.bul);}}
-  {const wp=wpSlot(1);if(wp){const wt=WEAPON_TYPES[wp.wpnType];
+  {const wp=wpSlot(1);if(wp){const wt=WEAPON_TYPES[wp.fireMode];
   if(s.pulsesLeft2>0&&wt.tick){const tgts=surfaceBeamTargets(site),res=wt.tick(wp,s,1,tgts,site.lsb,[],beamSpace);if(res&&res.hitIdx>=0)surfaceHandleBeamHit(site,tgts[res.hitIdx],wp,res);}
-  if(s.misLeft2>0&&wt.tick&&wp.wpnType==='missile launcher')wt.tick(wp,s,1,site.mis);
+  if(s.misLeft2>0&&wt.tick&&wp.fireMode==='missile')wt.tick(wp,s,1,site.mis);
   if(iFireSec()&&!s.scd2&&!s.pulsesLeft2&&!s.misLeft2)tryFire(wp,wt,s,1,site.bul);}}
   updSurfaceProjectiles(site);
   for(const df of site.defenses)updateDefense(site,df);

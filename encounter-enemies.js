@@ -70,7 +70,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
 
   const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1;
   const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn],ta=enemyAimAngle(e,s,ew,eh,fw,ewp);
-  if(ewp.wpnType==='beam gun'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
+  if(ewp.fireMode==='beam'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
     const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;
     const src=tor?toroidalPointNear(ox,oy,s.x,s.y,ew,eh):{x:ox,y:oy};
     const beamHit={source:src,kind:'beam',weapon:ewp};
@@ -106,12 +106,12 @@ function enemyUpdate(e, s, enc, ew, eh) {
   } else if(e.pulsesLeft===0&&--e.timer<=0){
     if(!enemyCanStartFire(e,dist,ta,fw,ewp)){
       e.timer=8+Math.floor(Math.random()*12);
-    } else if(ewp.wpnType==='beam gun'){
+    } else if(ewp.fireMode==='beam'){
       e.a=ta;
       e.pulsesLeft=ewp.pulses;
       e.pulseTimer=1;
     }
-    else if(ewp.wpnType==='missile launcher'){
+    else if(ewp.fireMode==='missile'){
       e.timer=weaponCooldownFrames(ewp);
       const cnt=fw.count||1;
       const bas=Array.from({length:cnt},(_,k)=>ta+(k-(cnt-1)/2)*(fw.spread||0));

@@ -79,7 +79,7 @@ function loadoutReactorRate(){return reactorRateForDef(activeReactorObj());}
 function wpSlot(n){const id=G.loadout.weapons[n];return id?WEAPONS.find(w=>w.id===id)||null:null;}
 function isEquipped(id){return G.loadout.chassis===id||G.loadout.battery===id||G.loadout.reactor===id||G.loadout.aux===id||G.loadout.shield===id||G.loadout.weapons.includes(id);}
 function hasLicense(id){return G.licenses.includes(id);}
-function slotMatchesWeapon(slot,wp){return wp.wpnType.startsWith(slot.type+' ');}
+function slotMatchesWeapon(slot,wp){return slot.type===wp.wpnType;}
 function licensedWeaponsForSlot(slot){return WEAPONS.filter(w=>slotMatchesWeapon(slot,w)&&hasLicense(w.id));}
 function licensedWeaponIdsForSlot(slot){return licensedWeaponsForSlot(slot).map(w=>w.id);}
 function compatibleSlots(wp){return activeChassisObj().slots.map((sl,i)=>({sl,i})).filter(({sl})=>slotMatchesWeapon(sl,wp));}

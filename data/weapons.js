@@ -26,16 +26,16 @@ function spawnMissile(wp, s, mis) {
   tone(360,.10,'square',.06);
 }
 
-// Weapon type behavior — firing mechanics for player weapons
+// Weapon firing mechanic behavior — keyed by wp.fireMode
 const WEAPON_TYPES = {
-  'kinetic gun': {
+  'projectile': {
     fire(wp, s, slot, bul) {
       bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*wp.spd+s.vx*.3,vy:-Math.cos(s.a)*wp.spd+s.vy*.3,l:wp.life*wp.spd,dmg:wp.dmg});
       if(slot===0)s.scd=Math.round(wp.cd*60);else s.scd2=Math.round(wp.cd*60);
       tone(900,.04,'square',.05);
     }
   },
-  'beam gun': {
+  'beam': {
     fire(wp, s, slot) {
       if(slot===0){s.pulsesLeft=wp.pulses;s.pulseTimer=wp.chargeDelay??1;}
       else{s.pulsesLeft2=wp.pulses;s.pulseTimer2=wp.chargeDelay??1;}
@@ -67,7 +67,7 @@ const WEAPON_TYPES = {
       return res;
     }
   },
-  'missile launcher': {
+  'missile': {
     fire(wp, s, slot) {
       // Same pattern as beam gun: fire() only arms the volley; tick() spawns each missile.
       if(slot===0){s.misLeft=wp.salvo;s.misTimer=1;}
@@ -85,12 +85,12 @@ const WEAPON_TYPES = {
 
 // Weapon class definitions
 const WEAPONS = [
-  {id:'mass driver',  name:'MASS DRIVER',  wpnType:'kinetic gun', dmg:3, cd:1.0, spd:7,  life:60, buyable:true},
-  {id:'railgun',      name:'RAILGUN',      wpnType:'kinetic gun', dmg:2, cd:2.0, spd:12, life:90, buyable:true},
-  {id:'pulse laser', name:'PULSE LASER', wpnType:'beam gun',    dmg:1, cd:2.0, range:267, pulses:5, pulseCd:5, persist:3, energyCost:1, buyable:true},
-  {id: 'mining laser', name:'MINING LASER', wpnType:'beam gun', dmg:1, cd:2.0, range:150, pulses:1, pulseCd:5, persist:3, energyCost:1, buyable:true},
-  {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'beam gun',    dmg:8, cd:4.0, range:400, pulses:1, pulseCd:20, persist:4, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#8f0', beamSound:[120,.35,'sawtooth',.09], chargeTone:[1200,1800,'sine',.05], buyable:true},
-  {id:'rocket pod', name:'ROCKET POD', wpnType:'missile launcher', missileType:'standard', dmg:6, expDmg:8, expR:55, cd:3.0, spd:1.8, maxSpd:9, accel:0.18, life:140, hp:2, salvo:1, salvoCd:6, buyable:true},
+  {id:'mass driver',  name:'MASS DRIVER',  wpnType:'kinetic', fireMode:'projectile', dmg:3, cd:1.0, spd:7,  life:60, buyable:true},
+  {id:'railgun',      name:'RAILGUN',      wpnType:'kinetic', fireMode:'projectile', dmg:2, cd:2.0, spd:12, life:90, buyable:true},
+  {id:'pulse laser', name:'PULSE LASER', wpnType:'energy', fireMode:'beam',    dmg:1, cd:2.0, range:267, pulses:5, pulseCd:5, persist:3, energyCost:1, buyable:true},
+  {id: 'mining laser', name:'MINING LASER', wpnType:'energy', fireMode:'beam', dmg:1, cd:2.0, range:150, pulses:1, pulseCd:5, persist:3, energyCost:1, buyable:true},
+  {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'energy', fireMode:'beam',    dmg:8, cd:4.0, range:400, pulses:1, pulseCd:20, persist:4, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#8f0', beamSound:[120,.35,'sawtooth',.09], chargeTone:[1200,1800,'sine',.05], buyable:true},
+  {id:'rocket pod', name:'ROCKET POD', wpnType:'missile', fireMode:'missile', missileType:'standard', dmg:6, expDmg:8, expR:55, cd:3.0, spd:1.8, maxSpd:9, accel:0.18, life:140, hp:2, salvo:1, salvoCd:6, buyable:true},
 ];
 
 const WEAPON_MAP = Object.fromEntries(WEAPONS.map(w => [w.id, w]));

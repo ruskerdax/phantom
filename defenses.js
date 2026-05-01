@@ -130,8 +130,8 @@ function fireDefenseBeam(site, d, def, aimAngle) {
 function fireDefenseWeapon(site, d, def, aimAngle) {
   const wp = defenseWeapon(def);
   d.a = aimAngle;
-  if(wp.wpnType === 'missile launcher') fireDefenseMissile(site, d, def, aimAngle);
-  else if(wp.wpnType === 'beam gun') fireDefenseBeam(site, d, def, aimAngle);
+  if(wp.fireMode === 'missile') fireDefenseMissile(site, d, def, aimAngle);
+  else if(wp.fireMode === 'beam') fireDefenseBeam(site, d, def, aimAngle);
   else fireDefenseKinetic(site, d, def, aimAngle);
   d.timer = defenseCooldown(def);
 }

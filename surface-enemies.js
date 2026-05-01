@@ -118,8 +118,8 @@ function fireSurfaceEnemyBeam(site, e, def, aimAngle) {
 function fireSurfaceEnemyWeapon(site, e, def, aimAngle) {
   const wp = surfaceEnemyWeapon(def);
   e.a = aimAngle;
-  if(wp.wpnType === 'missile launcher') fireSurfaceEnemyMissile(site, e, def, aimAngle);
-  else if(wp.wpnType === 'beam gun') fireSurfaceEnemyBeam(site, e, def, aimAngle);
+  if(wp.fireMode === 'missile') fireSurfaceEnemyMissile(site, e, def, aimAngle);
+  else if(wp.fireMode === 'beam') fireSurfaceEnemyBeam(site, e, def, aimAngle);
   else fireSurfaceEnemyKinetic(site, e, def, aimAngle);
   e.timer = surfaceEnemyCooldown(def);
 }
