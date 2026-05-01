@@ -119,6 +119,15 @@ function applyWorldCamera(cam){
   const z=cam?.z||1;
   cx.scale(z,z);cx.translate(-(cam?.x||0),-(cam?.y||0));
 }
+function drawActorHealthBar(r,hp,mhp,col,offset=8,height=4){
+  if(!(mhp>0)||hp>=mhp)return;
+  const f=Math.max(0,Math.min(1,hp/mhp));
+  cx.save();
+  cx.shadowBlur=0;
+  cx.fillStyle='#333';cx.fillRect(-r,-r-offset,r*2,height);
+  cx.fillStyle=col;cx.fillRect(-r,-r-offset,r*2*f,height);
+  cx.restore();
+}
 function indicatorProjection(opts,t){
   const cam=opts.cam||{x:0,y:0,z:1},z=cam.z||1,p=opts.player;
   let wx=t.x,wy=t.y,dx=t.x-p.x,dy=t.y-p.y;

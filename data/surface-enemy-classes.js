@@ -116,6 +116,9 @@ function drawSurfaceHullEnemy(def, e) {
   cx.strokeStyle = def.col; cx.shadowColor = def.col; cx.shadowBlur = 8; cx.lineWidth = 1.5;
   drawHullParts(h);
   cx.restore();
+  cx.save(); cx.translate(e.x, e.y);
+  drawActorHealthBar(h.boundsR, e.hp, e.mhp, def.col);
+  cx.restore();
 }
 
 function drawSurfaceEnemy(e) {
