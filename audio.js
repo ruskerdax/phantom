@@ -7,11 +7,14 @@ let AC=null;
 
 var MUSIC_TRACKS={
   // id: {src:['assets/music/name.ogg','assets/music/name.mp3'], loop:true, volume:1, loopStart:0, loopEnd:null}
+  killphrase:{src:['music/killphrase.ogg'],loop:true,volume:1},
+  creepdrone:{src:['music/creepdrone.ogg'],loop:true,volume:1},
   weirdspace:{src:['music/weirdspace.ogg'],loop:true,volume:1}
 };
 
 var MUSIC_ARRANGEMENTS={
-  title:{fade:1.5,layers:{}},
+  title:{fade:1.5,layers:{main:'killphrase'}},
+  gameover:{fade:1,layers:{main:'creepdrone'}},
   overworld:{fade:1.5,layers:{main:'weirdspace'}},
   encounter:{fade:1,layers:{}},
   site:{fade:1,layers:{}},
@@ -471,12 +474,12 @@ function musicReconcileLayers(arr){
   });
 }
 function musicContextForName(st){
-  if(st==='title'||st==='options'||st==='controls'||st==='over'||st==='done')return'title';
+  if(st==='title'||st==='options'||st==='controls'||st==='done')return'title';
+  if(st==='over'||st==='rebuild'||st==='dead_ow'||st==='dead_enc'||st==='dead_site')return'gameover';
   if(st==='overworld'||st==='base'||st==='slipgate')return'overworld';
   if(st==='enc_in'||st==='encounter')return'encounter';
   if(st==='play')return'site';
   if(st==='esc')return'escape';
-  if(st==='rebuild'||st==='dead_ow'||st==='dead_enc'||st==='dead_site')return'rebuild';
   return null;
 }
 function musicDesiredContext(){
