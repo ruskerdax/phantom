@@ -290,19 +290,6 @@ function genSurfaceEnergy(rng,surface,count){
   return fu;
 }
 
-function genSurfaceEnemies(rng,surface,count){
-  const en=[];
-  for(let i=0;i<count;i++){
-    const x=wrap((i+.35+rng.fl(-.18,.18))/count*surface.worldW,surface.worldW);
-    const ground=surfaceYAt(surface,x);
-    const roll=rng.next();
-    if(roll<.34)en.push({kind:'turret',x:Math.round(x),y:Math.round(ground-9),a:-Math.PI/2,hp:2});
-    else if(roll<.72)en.push({kind:'skimmer',x:Math.round(x),y:Math.round(ground-rng.fl(70,125)),vx:rng.fl(-1.2,1.2),vy:0,a:Math.PI/2,hp:2});
-    else en.push({kind:'diver',x:Math.round(x),y:Math.round(ground-rng.fl(140,230)),vx:rng.fl(-.8,.8),vy:0,a:Math.PI/2,hp:2});
-  }
-  return en;
-}
-
 function genTunnel(rng,tmpl,seed){
   const worldH=Math.round(rng.fl(H*1.1,H*1.55));
   const n=7,mg=58;
@@ -337,12 +324,14 @@ function genTunnel(rng,tmpl,seed){
 function genSurface(tmpl,seed,sites){
   const rng=mkRNG(seed);
   const screens=rng.int(8,14),worldW=screens*W;
-  const surface={...tmpl,kind:'surface',name:tmpl.name+' SURFACE',screenCount:screens,worldW,worldH:Math.round(H*1.05),exitY:-90,terrain:[],dishes:[],en:[],fu:[],tunnel:null,ent:{x:Math.round(W*.5),y:Math.round(H*.28)}};
+  const surface={...tmpl,kind:'surface',name:tmpl.name+' SURFACE',screenCount:screens,worldW,worldH:Math.round(H*1.05),exitY:-90,terrain:[],dishes:[],en:[],defenses:[],fu:[],tunnel:null,ent:{x:Math.round(W*.5),y:Math.round(H*.28)}};
   surface.terrain=genSurfaceTerrain(rng,worldW);
   const hasTargets=sites.some(s=>s.type==='surface_targets');
   if(hasTargets)surface.dishes=genSurfaceDishes(rng,surface,rng.int(4,6),'targets');
   surface.fu=genSurfaceEnergy(rng,surface,rng.int(2,4));
-  surface.en=genSurfaceEnemies(rng,surface,rng.int(6,10));
+  const threatSlots=rng.int(6,10),defenseCount=Math.max(1,Math.round(threatSlots*.34));
+  surface.defenses=genSurfaceDefenses(rng,surface,defenseCount);
+  surface.en=genSurfaceEnemies(rng,surface,threatSlots-defenseCount);
   const caveSite=sites.find(s=>s.type==='cave_connector');
   if(caveSite){
     const tx=wrap(rng.fl(W*.8,worldW-W*.8),worldW);

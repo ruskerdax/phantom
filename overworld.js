@@ -158,10 +158,9 @@ function startHBaseEnc(){
     const a=i*Math.PI/3+Math.PI/6,d=HEX_R*Math.sqrt(3)/2;
     return{x:hx+Math.cos(a)*d,y:hy+Math.sin(a)*d,hp:1,alive:hbs?hbs.softpts[i]:true};
   });
-  const initCd=Math.round(WEAPON_MAP['mass driver'].cd*60);
   const turrets=Array.from({length:6},(_,i)=>{
     const a=i*Math.PI/3;
-    return{x:hx+Math.cos(a)*HEX_R,y:hy+Math.sin(a)*HEX_R,a:a,timer:initCd+i*22,alive:hbs?hbs.turrets[i]:true};
+    return mkDefense(DEFENSE_CLASS_IDS.HBASE_TURRET,hx+Math.cos(a)*HEX_R,hy+Math.sin(a)*HEX_R,{a:a,timer:defenseCooldown(defenseDef(DEFENSE_CLASS_IDS.HBASE_TURRET))+i*22,alive:hbs?hbs.turrets[i]:true});
   });
   const hexPoly=Array.from({length:6},(_,i)=>{const a=i*Math.PI/3;return[hx+Math.cos(a)*HEX_R,hy+Math.sin(a)*HEX_R];});
   const encShip=mkShip(ew*.08,eh/2);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
