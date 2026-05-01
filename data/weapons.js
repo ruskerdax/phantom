@@ -42,10 +42,17 @@ const WEAPON_TYPES = {
     },
     // Advances one laser pulse; returns castLaser result or null if timer not ready.
     // Caller is responsible for building tgts (context-specific) and handling the hit.
+    // If wp.persist is set and a pulse misses, the same ray is re-cast for that many
+    // additional frames so targets moving through the beam path still register hits.
     tick(wp, s, slot, tgts, lsb, walls=[], space=null) {
-      const[plK,ptK,cdK]=slot===0?['pulsesLeft','pulseTimer','scd']:['pulsesLeft2','pulseTimer2','scd2'];
+      const[plK,ptK,cdK,pbK]=slot===0?['pulsesLeft','pulseTimer','scd','pb']:['pulsesLeft2','pulseTimer2','scd2','pb2'];
       if(--s[ptK]>0){
         if(wp.chargeTone&&s[ptK]===wp.chargeDelay-1)toneRise(wp.chargeTone[0],wp.chargeTone[1],wp.chargeDelay/60,wp.chargeTone[2],wp.chargeTone[3]);
+        if(s[pbK]&&s[pbK].l-->0){
+          const{ox,oy,a,range,hitPad}=s[pbK];
+          const res=castLaserForSpace(ox,oy,a,range,tgts,walls,space,hitPad);
+          if(res.hitIdx>=0){s[pbK].l=0;return res;}
+        }
         return null;
       }
       const ox=s.x+Math.sin(s.a)*13,oy=s.y-Math.cos(s.a)*13;
@@ -53,6 +60,8 @@ const WEAPON_TYPES = {
       const res=castLaserForSpace(ox,oy,s.a,wp.range,tgts,walls,space,hitPad);
       lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:wp.beamColor??'#0cf',w:wp.beamWidth??2});
       if(wp.beamSound)tone(...wp.beamSound);else tone(1200,.08,'sine',.05);
+      if(wp.persist&&res.hitIdx<0)s[pbK]={ox,oy,a:s.a,range:wp.range,hitPad,l:wp.persist};
+      else s[pbK]=null;
       s[plK]--;
       if(s[plK]>0)s[ptK]=wp.pulseCd;else s[cdK]=Math.round(wp.cd*60);
       return res;
@@ -78,9 +87,9 @@ const WEAPON_TYPES = {
 const WEAPONS = [
   {id:'mass driver',  name:'MASS DRIVER',  wpnType:'kinetic gun', dmg:3, cd:1.0, spd:7,  life:60, buyable:true},
   {id:'railgun',      name:'RAILGUN',      wpnType:'kinetic gun', dmg:2, cd:2.0, spd:12, life:90, buyable:true},
-  {id:'pulse laser', name:'PULSE LASER', wpnType:'beam gun',    dmg:1, cd:2.0, range:267, pulses:5, pulseCd:5, energyCost:1, buyable:true},
-  {id: 'mining laser', name:'MINING LASER', wpnType:'beam gun', dmg:1, cd:2.0, range:150, pulses:1, pulseCd:5, energyCost:1, buyable:true},
-  {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'beam gun',    dmg:8, cd:4.0, range:400, pulses:1, pulseCd:20, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#8f0', beamSound:[120,.35,'sawtooth',.09], chargeTone:[1200,1800,'sine',.05], buyable:true},
+  {id:'pulse laser', name:'PULSE LASER', wpnType:'beam gun',    dmg:1, cd:2.0, range:267, pulses:5, pulseCd:5, persist:3, energyCost:1, buyable:true},
+  {id: 'mining laser', name:'MINING LASER', wpnType:'beam gun', dmg:1, cd:2.0, range:150, pulses:1, pulseCd:5, persist:3, energyCost:1, buyable:true},
+  {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'beam gun',    dmg:8, cd:4.0, range:400, pulses:1, pulseCd:20, persist:4, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#8f0', beamSound:[120,.35,'sawtooth',.09], chargeTone:[1200,1800,'sine',.05], buyable:true},
   {id:'rocket pod', name:'ROCKET POD', wpnType:'missile launcher', missileType:'standard', dmg:6, expDmg:8, expR:55, cd:3.0, spd:1.8, maxSpd:9, accel:0.18, life:140, hp:2, salvo:1, salvoCd:6, buyable:true},
 ];
 
