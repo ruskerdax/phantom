@@ -136,12 +136,17 @@ function indicatorProjection(opts,t){
     const vp=toroidalPointNear(p.x,p.y,cam.x+viewW*.5,cam.y+viewH*.5,opts.worldW,opts.worldH);
     const wt=toroidalPointNear(t.x,t.y,vp.x,vp.y,opts.worldW,opts.worldH);
     wx=wt.x;wy=wt.y;dx=wx-vp.x;dy=wy-vp.y;
+  }else if(opts.wrapX){
+    const viewW=W/z,centerX=cam.x+viewW*.5;
+    const px=wrapCoordNear(p.x,centerX,opts.worldW);
+    wx=wrapCoordNear(t.x,centerX,opts.worldW);
+    dx=wx-px;
   }
   const dist=Math.hypot(dx,dy);
   if((opts.maxRange!=null&&dist>opts.maxRange)||dist<=0)return null;
   const r=(t.r||0)*z,sx=(wx-cam.x)*z,sy=(wy-cam.y)*z;
   if(sx+r>=0&&sx-r<=W&&sy+r>=0&&sy-r<=H)return null;
-  const psx=((opts.toroidal?wx-dx:p.x)-cam.x)*z,psy=((opts.toroidal?wy-dy:p.y)-cam.y)*z;
+  const psx=((opts.toroidal||opts.wrapX?wx-dx:p.x)-cam.x)*z,psy=((opts.toroidal?wy-dy:p.y)-cam.y)*z;
   return{sx,sy,psx,psy,dist};
 }
 function indicatorEdgePoint(ox,oy,dx,dy,inset){

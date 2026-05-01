@@ -2,6 +2,7 @@
 
 const SITE_BOUNDARY_STEP=14;
 const SITE_BOUNDARY_SAMPLE=2.25;
+const SURFACE_INDICATOR_RANGE=W*2;
 
 function sitePointEmpty(d,x,y){
   if(y<0)return true;
@@ -653,8 +654,7 @@ function drawTunnelMouth(tun,done){
 }
 function drawSurfaceIndicators(site){
   if(G.st!=='play'||!site.s.alive)return;
-  const d=site.d,cam=site.cam||{x:0,y:0,z:1},z=cam.z||1,centerX=cam.x+W/z*.5;
-  const psx=(surfaceNearX(d,site.s.x,centerX)-cam.x)*z,psy=(site.s.y-cam.y)*z;
+  const d=site.d,cam=site.cam||{x:0,y:0,z:1};
   const targets=[
     ...site.dishes.map(o=>({x:o.x,y:o.y,r:16,col:'#ffdd88',alive:o.alive})),
     ...site.en.map(o=>({x:o.x,y:o.y,r:surfaceEnemyRadius(o),col:surfaceEnemyColor(o),alive:o.alive})),
@@ -662,16 +662,9 @@ function drawSurfaceIndicators(site){
     ...site.fu.map(o=>({x:o.x,y:o.y,r:12,col:'#0f8',alive:!o.got,kind:'energy'})),
   ];
   if(d.tunnel&&!planetState(G.lv).completedSites[d.tunnel.siteId])targets.push({x:d.tunnel.x,y:d.tunnel.y-38,r:24,col:'#00ccff',alive:true});
-  const inds=[];
-  for(const t of targets){
-    if(t.alive===false)continue;
-    const wx=surfaceNearX(d,t.x,centerX),sx=(wx-cam.x)*z,sy=(t.y-cam.y)*z,r=(t.r||10)*z;
-    if(sx+r>=0&&sx-r<=W&&sy+r>=0&&sy-r<=H)continue;
-    const dx=sx-psx,dy=sy-psy,len=Math.hypot(dx,dy);if(len<=0)continue;
-    const p=indicatorEdgePoint(psx,psy,dx,dy,22);
-    inds.push({x:p.x,y:p.y,edge:p.edge,a:Math.atan2(dy,dx),col:t.col,kind:t.kind,scale:Math.max(.85,Math.min(1.35,(t.r||12)/13))});
-  }
-  drawOffscreenIndicators(inds);
+  drawOffscreenIndicators(collectOffscreenIndicators({
+    cam,player:site.s,worldW:d.worldW,wrapX:true,maxRange:SURFACE_INDICATOR_RANGE,targets
+  }));
 }
 function drawSurface(){
   const site=G.site,d=site.d,col=d.col,cam=site.cam||{x:0,y:0,z:1};
