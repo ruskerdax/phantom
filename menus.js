@@ -1,10 +1,14 @@
 'use strict';
 
+const PHANTOM_LOGO=(()=>{const i=new Image();i.src='phantom.svg';return i;})();
+
 function drawTitle(){
   cx.fillStyle='#000';cx.fillRect(0,0,W,H);drStars();
   cx.save();cx.textAlign='center';
-  cx.shadowColor='#0f8';cx.shadowBlur=30;cx.fillStyle='#0f8';
-  cx.font='bold 72px monospace';cx.fillText('PHANTOM',W/2,H/2-100);
+  cx.shadowColor='#0f8';cx.shadowBlur=30;
+  const _lw=600,_lh=_lw*(132.62/841.73),_lx=W/2-_lw/2,_ly=H/2-155-_lh/2;
+  if(PHANTOM_LOGO.complete&&PHANTOM_LOGO.naturalWidth>0){cx.drawImage(PHANTOM_LOGO,_lx,_ly,_lw,_lh);}
+  else{cx.fillStyle='#0f8';cx.font='bold 72px monospace';cx.fillText('PHANTOM',W/2,H/2-100);}
   cx.shadowBlur=0;cx.fillStyle='#acd';cx.font='14px monospace';
   cx.fillText('KILL PHRASE ACTIVATED, EXECUTE PHANTOM PROTOCOL',W/2,H/2-55);
   const rows=[[]];
