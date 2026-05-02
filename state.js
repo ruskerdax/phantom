@@ -419,6 +419,15 @@ function castLaserForSpace(ox,oy,a,range,targets,walls=[],space=null,hitPad=0){
       if(hit.hit&&hit.t>0&&hit.t<bestT){bestT=hit.t;hitIdx=i;}
     }
   }
+  for(const[x1,y1,x2,y2]of walls){
+    for(let kx=-1;kx<=1;kx++){
+      const sx=x1+kx*space.worldW,tx2=x2+kx*space.worldW;
+      const dx=tx2-sx,dy=y2-y1,det=dx*rdy-dy*rdx;
+      if(Math.abs(det)<1e-9)continue;
+      const t=(dx*(y1-oy)-dy*(sx-ox))/det,u=(rdx*(y1-oy)-rdy*(sx-ox))/det;
+      if(t>0&&t<bestT&&u>=0&&u<=1){bestT=t;hitIdx=-1;}
+    }
+  }
   return{x2:ox+rdx*bestT,y2:oy+rdy*bestT,hitIdx};
 }
 

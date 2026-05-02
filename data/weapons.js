@@ -115,3 +115,27 @@ function tryFire(wp, wt, s, slot, bul) {
   wt.fire(wp, s, slot, bul);
   return true;
 }
+
+// Drives one of the player's two weapon slots for a single frame: advances any in-flight
+// beam pulses or missile salvos, then triggers a fresh fire if the input is held and
+// cooldowns/queues are clear. Each game mode (encounter/cave-site/surface) wires its own
+// targets, walls, and hit handler via ctx.
+//   ctx.tgts: () => array of beam targets (called only when a beam pulse is active)
+//   ctx.walls, ctx.space: forwarded to castLaserForSpace
+//   ctx.lsb, ctx.mis, ctx.bul: per-mode arrays the weapon writes into
+//   ctx.onBeamHit(tg, wp, res): mode-specific damage/effect dispatcher
+function runPlayerWeaponSlot(s, slot, ctx) {
+  const wp = wpSlot(slot); if (!wp) return;
+  const wt = WEAPON_TYPES[wp.fireMode];
+  const plK = slot === 0 ? 'pulsesLeft' : 'pulsesLeft2';
+  const mlK = slot === 0 ? 'misLeft' : 'misLeft2';
+  const cdK = slot === 0 ? 'scd' : 'scd2';
+  if (s[plK] > 0 && wt.tick) {
+    const tgts = ctx.tgts();
+    const res = wt.tick(wp, s, slot, tgts, ctx.lsb, ctx.walls || [], ctx.space || null);
+    if (res && res.hitIdx >= 0) ctx.onBeamHit(tgts[res.hitIdx], wp, res);
+  }
+  if (s[mlK] > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis);
+  const fireBtn = slot === 0 ? iFir() : iFireSec();
+  if (fireBtn && !s[cdK] && !s[plK] && !s[mlK]) tryFire(wp, wt, s, slot, ctx.bul);
+}

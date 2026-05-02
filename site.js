@@ -37,6 +37,27 @@ function siteBoundarySegments(d){
   return segs;
 }
 
+// Surface terrain is an open polyline (sky above, solid below). Each adjacent pair
+// becomes one wall segment so beams can occlude on the ground.
+function surfaceTerrainSegments(d){
+  if(d._terrainSegs)return d._terrainSegs;
+  const segs=[],t=d.terrain;
+  for(let i=0;i<t.length-1;i++){
+    const a=t[i],b=t[i+1];
+    segs.push([a[0],a[1],b[0],b[1]]);
+  }
+  d._terrainSegs=segs;
+  return segs;
+}
+
+// Single source for "what walls should beams collide with in this site"
+// across surface, hbase, and cave/tunnel modes.
+function siteBeamWalls(site){
+  if(site.mode==='surface')return surfaceTerrainSegments(site.d);
+  if(site.isHBase&&site.hbase)return site.hbase.hexPoly.map((p,i,hp)=>{const j=(i+1)%hp.length;return[p[0],p[1],hp[j][0],hp[j][1]];});
+  return site.d?siteBoundarySegments(site.d):[];
+}
+
 function polyPath(poly,closed=true){
   poly.forEach((p,i)=>i?cx.lineTo(p[0],p[1]):cx.moveTo(p[0],p[1]));
   if(closed)cx.closePath();
@@ -364,15 +385,9 @@ function updCaveSite(){
   if(wHit(s.x,s.y,9,G.lv)){siteBounce(s);if(s.hp<=0){siteKillShip();return;}}
   for(const f of site.fu){if(!f.got&&Math.hypot(s.x-f.x,s.y-f.y)<22){f.got=true;pickupEnergy(s,f.x,f.y,site.pts,d.col);}}
   if(G.st==='esc'){site.esc--;if(site.esc<=0){saveActiveSiteState();saveGame();siteKillShip();return;}}
-  const walls=siteBoundarySegments(d);
-  {const wp=wpSlot(0);if(wp){const wt=WEAPON_TYPES[wp.fireMode];
-  if(s.pulsesLeft>0&&wt.tick){const tgts=siteBeamTargets(site),res=wt.tick(wp,s,0,tgts,site.lsb,walls);if(res&&res.hitIdx>=0)siteHandleBeamHit(site,tgts[res.hitIdx],wp,res);}
-  if(s.misLeft>0&&wt.tick&&wp.fireMode==='missile') wt.tick(wp,s,0,site.mis);
-  if(iFir()&&!s.scd&&!s.pulsesLeft&&!s.misLeft) tryFire(wp,wt,s,0,site.bul);}}
-  {const wp=wpSlot(1);if(wp){const wt=WEAPON_TYPES[wp.fireMode];
-  if(s.pulsesLeft2>0&&wt.tick){const tgts=siteBeamTargets(site),res=wt.tick(wp,s,1,tgts,site.lsb,walls);if(res&&res.hitIdx>=0)siteHandleBeamHit(site,tgts[res.hitIdx],wp,res);}
-  if(s.misLeft2>0&&wt.tick&&wp.fireMode==='missile') wt.tick(wp,s,1,site.mis);
-  if(iFireSec()&&!s.scd2&&!s.pulsesLeft2&&!s.misLeft2) tryFire(wp,wt,s,1,site.bul);}}
+  const caveCtx={tgts:()=>siteBeamTargets(site),walls:siteBeamWalls(site),space:null,lsb:site.lsb,mis:site.mis,bul:site.bul,onBeamHit:(tg,wp,res)=>siteHandleBeamHit(site,tg,wp,res)};
+  runPlayerWeaponSlot(s,0,caveCtx);
+  runPlayerWeaponSlot(s,1,caveCtx);
   for(let i=site.bul.length-1;i>=0;i--){
     const b=site.bul[i];
     const consumed=stepBullet(b,0,0,4,()=>{
@@ -568,15 +583,9 @@ function updSurface(){
     const tx=surfaceNearX(d,d.tunnel.x,s.x),ty=d.tunnel.y-38;
     if(Math.hypot(s.x-tx,s.y-ty)<34){saveActiveSiteState();enterTunnel('down',s);return;}
   }
-  const beamSpace={toroidal:true,worldW:d.worldW,worldH:999999};
-  {const wp=wpSlot(0);if(wp){const wt=WEAPON_TYPES[wp.fireMode];
-  if(s.pulsesLeft>0&&wt.tick){const tgts=surfaceBeamTargets(site),res=wt.tick(wp,s,0,tgts,site.lsb,[],beamSpace);if(res&&res.hitIdx>=0)surfaceHandleBeamHit(site,tgts[res.hitIdx],wp,res);}
-  if(s.misLeft>0&&wt.tick&&wp.fireMode==='missile')wt.tick(wp,s,0,site.mis);
-  if(iFir()&&!s.scd&&!s.pulsesLeft&&!s.misLeft)tryFire(wp,wt,s,0,site.bul);}}
-  {const wp=wpSlot(1);if(wp){const wt=WEAPON_TYPES[wp.fireMode];
-  if(s.pulsesLeft2>0&&wt.tick){const tgts=surfaceBeamTargets(site),res=wt.tick(wp,s,1,tgts,site.lsb,[],beamSpace);if(res&&res.hitIdx>=0)surfaceHandleBeamHit(site,tgts[res.hitIdx],wp,res);}
-  if(s.misLeft2>0&&wt.tick&&wp.fireMode==='missile')wt.tick(wp,s,1,site.mis);
-  if(iFireSec()&&!s.scd2&&!s.pulsesLeft2&&!s.misLeft2)tryFire(wp,wt,s,1,site.bul);}}
+  const surfaceCtx={tgts:()=>surfaceBeamTargets(site),walls:siteBeamWalls(site),space:{toroidal:true,worldW:d.worldW,worldH:999999},lsb:site.lsb,mis:site.mis,bul:site.bul,onBeamHit:(tg,wp,res)=>surfaceHandleBeamHit(site,tg,wp,res)};
+  runPlayerWeaponSlot(s,0,surfaceCtx);
+  runPlayerWeaponSlot(s,1,surfaceCtx);
   updSurfaceProjectiles(site);
   for(const df of site.defenses)updateDefense(site,df);
   for(const e of site.en){updSurfaceEnemy(site,e);if(!s.alive)return;}

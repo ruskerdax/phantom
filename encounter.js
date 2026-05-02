@@ -12,6 +12,40 @@ function clampEncCameraForExit(enc){enc.cam=updateWorldCamera(enc.cam,enc.s.x,en
 function encKillShip(){
   const enc=G.ENC;killShip(enc.s,enc.pts,'dead_enc');
 }
+function encBeamTargets(enc){
+  const tgts=[];
+  enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));
+  enc.en.forEach((e,i)=>{if(e.alive)tgts.push(enemyBeamTarget(e,i));});
+  enc.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));
+  if(enc.isHBase){
+    enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push(defenseBeamTarget(t,i,'defense'));});
+    enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});
+  }
+  return tgts;
+}
+function encHandleBeamHit(enc,tg,wp,res){
+  if(tg.kind==='rock'){
+    const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);
+    if(rk.hp<=0)splitRock(enc,tg.idx);
+  }else if(tg.kind==='enemy'){
+    const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,enemyDef(e.t).enc.col,3);
+    if(e.hp<=0){
+      e.alive=false;addStake(enemyDef(e.t).sc);
+      boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);
+      tone(200,.3,'sawtooth',.1);
+      if(enemyDef(e.t).energy&&Math.random()<.75){
+        for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}
+      }
+    }
+  }else if(tg.kind==='missile'){
+    const m=enc.emi[tg.idx];m.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);
+    if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(tg.idx,1);}
+  }else if(tg.kind==='defense'){
+    damageDefense(enc,enc.hbase.turrets[tg.idx],wp.dmg,res.x2,res.y2);
+  }else if(tg.kind==='softpt'){
+    enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);
+  }
+}
 function encWin(){
   const enc=G.ENC,ow=G.OW;
   const keepVelocity=enc.fleetIdx!=null;
@@ -190,14 +224,9 @@ function updEnc(){
   if(enc.isHBase){const{hexPoly,hx,hy}=enc.hbase;let hbHit=pip(s.x,s.y,hexPoly);if(!hbHit){for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;if(dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1])<7){hbHit=true;break;}}}if(hbHit){let best=Infinity,nx=0,ny=0;for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;const dist=dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1]);if(dist<best){best=dist;const dx=hexPoly[j][0]-hexPoly[i][0],dy=hexPoly[j][1]-hexPoly[i][1],len=Math.hypot(dx,dy)||1;nx=-dy/len;ny=dx/len;if(nx*(s.x-hx)+ny*(s.y-hy)<0){nx=-nx;ny=-ny;}}}const spd=Math.hypot(s.vx,s.vy);const dot=s.vx*nx+s.vy*ny;if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}s.vx*=.55;s.vy*=.55;s.va*=.55;s.x+=nx*10;s.y+=ny*10;const dmg=Math.round((spd/5.5)*5);if(s.inv<=0&&dmg>0){const hit=applyShipDamage(s,dmg,{source:{x:s.x-nx*12,y:s.y-ny*12},kind:'collision'});if(hit.hullDamage>0)s.inv=40;shipDamageTone(hit,180,.15,'sawtooth',.12);}if(s.hp<=0){encKillShip();return;}}}
   const encWalls=enc.isHBase?enc.hbase.hexPoly.map((p,i,hp)=>{const j=(i+1)%hp.length;return[p[0],p[1],hp[j][0],hp[j][1]];}):[];
   const beamSpace=encToroidalActive(enc)?{toroidal:true,worldW:ew,worldH:eh}:null;
-  {const wp=wpSlot(0);if(wp){const wt=WEAPON_TYPES[wp.fireMode];
-  if(s.pulsesLeft>0&&wt.tick){const tgts=[];enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));enc.en.forEach((e,i)=>{if(e.alive)tgts.push(enemyBeamTarget(e,i));});enc.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));if(enc.isHBase){enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push(defenseBeamTarget(t,i,'defense'));});enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});}const res=wt.tick(wp,s,0,tgts,enc.lsb,encWalls,beamSpace);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='rock'){const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);if(rk.hp<=0)splitRock(enc,tg.idx);}else if(tg.kind==='enemy'){const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,enemyDef(e.t).enc.col,3);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}}else if(tg.kind==='missile'){const m=enc.emi[tg.idx];m.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(tg.idx,1);if(s.hp<=0){encKillShip();return;}}}else if(tg.kind==='defense'){damageDefense(enc,enc.hbase.turrets[tg.idx],wp.dmg,res.x2,res.y2);}else if(tg.kind==='softpt'){enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);}}}
-  if(s.misLeft>0&&wt.tick&&wp.fireMode==='missile') wt.tick(wp,s,0,enc.mis);
-  if(iFir()&&!s.scd&&!s.pulsesLeft&&!s.misLeft) tryFire(wp,wt,s,0,enc.bul);}}
-  {const wp=wpSlot(1);if(wp){const wt=WEAPON_TYPES[wp.fireMode];
-  if(s.pulsesLeft2>0&&wt.tick){const tgts=[];enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));enc.en.forEach((e,i)=>{if(e.alive)tgts.push(enemyBeamTarget(e,i));});enc.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));if(enc.isHBase){enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push(defenseBeamTarget(t,i,'defense'));});enc.hbase.softpts.forEach((sp,i)=>{if(sp.alive)tgts.push({x:sp.x,y:sp.y,r:12,kind:'softpt',idx:i});});}const res=wt.tick(wp,s,1,tgts,enc.lsb,encWalls,beamSpace);if(res&&res.hitIdx>=0){const tg=tgts[res.hitIdx];if(tg.kind==='rock'){const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);if(rk.hp<=0)splitRock(enc,tg.idx);}else if(tg.kind==='enemy'){const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,enemyDef(e.t).enc.col,3);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}}else if(tg.kind==='missile'){const m=enc.emi[tg.idx];m.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(tg.idx,1);if(s.hp<=0){encKillShip();return;}}}else if(tg.kind==='defense'){damageDefense(enc,enc.hbase.turrets[tg.idx],wp.dmg,res.x2,res.y2);}else if(tg.kind==='softpt'){enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);}}}
-  if(s.misLeft2>0&&wt.tick&&wp.fireMode==='missile') wt.tick(wp,s,1,enc.mis);
-  if(iFireSec()&&!s.scd2&&!s.pulsesLeft2&&!s.misLeft2) tryFire(wp,wt,s,1,enc.bul);}}
+  const encCtx={tgts:()=>encBeamTargets(enc),walls:encWalls,space:beamSpace,lsb:enc.lsb,mis:enc.mis,bul:enc.bul,onBeamHit:(tg,wp,res)=>encHandleBeamHit(enc,tg,wp,res)};
+  runPlayerWeaponSlot(s,0,encCtx);if(s.hp<=0){encKillShip();return;}
+  runPlayerWeaponSlot(s,1,encCtx);if(s.hp<=0){encKillShip();return;}
   for(let i=enc.bul.length-1;i>=0;i--){
     const b=enc.bul[i];
     const consumed=stepBullet(b,ew,eh,4,()=>{

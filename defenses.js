@@ -98,11 +98,7 @@ function fireDefenseBeam(site, d, def, aimAngle) {
   if(shipShieldCanTakeHit(s, hit)) tgts.push({x:s.x, y:s.y, r:shipShieldHitRadius(s), kind:'shield'});
   tgts.push({x:s.x, y:s.y, r:shipHitRadius(s), kind:'ship'});
   for(let i = 0; i < site.mis.length; i++) tgts.push({x:site.mis[i].x, y:site.mis[i].y, r:5, kind:'missile', idx:i});
-  const walls = site.mode === 'surface'
-    ? []
-    : site.isHBase
-      ? site.hbase.hexPoly.map((p,i,hp)=>{const j=(i+1)%hp.length;return[p[0],p[1],hp[j][0],hp[j][1]];})
-      : site.d ? siteBoundarySegments(site.d) : [];
+  const walls = siteBeamWalls(site);
   const res = castLaserForSpace(ox, oy, aimAngle, wp.range, tgts, walls, defenseBeamSpace(site));
   site.lsb.push({x1:ox, y1:oy, x2:res.x2, y2:res.y2, l:8, col:def.col, w:wp.beamWidth});
   if(res.hitIdx >= 0) {
