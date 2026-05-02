@@ -9,6 +9,23 @@ const RENDER_QUALITY_LABELS={full:'FULL',reduced:'REDUCED',minimal:'MINIMAL'};
 function dseg(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;if(!l2)return Math.hypot(px-ax,py-ay);const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l2));return Math.hypot(px-ax-t*dx,py-ay-t*dy);}
 function pip(px,py,p){let r=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const xi=p[i][0],yi=p[i][1],xj=p[j][0],yj=p[j][1];if((yi>py)!=(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi)r=!r;}return r;}
 function wrap(v,m){return((v%m)+m)%m;}
+// Advances a bullet in substeps no larger than maxStep so fast projectiles cannot
+// tunnel through targets. wrapX/wrapY are world dimensions for toroidal axes; pass
+// 0 (or null) for a non-wrapping axis. onStep() runs each substep with the bullet
+// at its new position and returns true if the bullet was consumed (hit/OOB).
+// Returns true when consumed (life expired or onStep returned true).
+function stepBullet(b,wrapX,wrapY,maxStep,onStep){
+  const sx=b.vx,sy=b.vy,sp=Math.hypot(sx,sy),n=Math.max(1,Math.ceil(sp/maxStep));
+  const dx=sx/n,dy=sy/n,dl=sp/n;
+  for(let k=0;k<n;k++){
+    b.x=wrapX?wrap(b.x+dx,wrapX):b.x+dx;
+    b.y=wrapY?wrap(b.y+dy,wrapY):b.y+dy;
+    b.l-=dl;
+    if(b.l<=0)return true;
+    if(onStep())return true;
+  }
+  return false;
+}
 function wrapDelta(ax,ay,bx,by,ew,eh){let dx=ax-bx,dy=ay-by;if(Math.abs(dx)>ew/2)dx-=Math.sign(dx)*ew;if(Math.abs(dy)>eh/2)dy-=Math.sign(dy)*eh;return{dx,dy};}
 function wrapCoordNear(v,ref,m){let d=v-ref;d-=Math.round(d/m)*m;return ref+d;}
 function toroidalPointNear(x,y,refX,refY,ew,eh){return{x:wrapCoordNear(x,refX,ew),y:wrapCoordNear(y,refY,eh)};}
