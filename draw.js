@@ -235,6 +235,8 @@ function drStars(scroll=0){
   cx.globalAlpha=1;
 }
 function dustVelocityForShip(s,cam){
+  const simRunning=G.st==='overworld'||G.st==='encounter'||G.st==='play'||G.st==='esc';
+  if(!simRunning||G.paused||!s?.alive)return{x:0,y:0};
   const z=cam?.z||1;
   return{x:(s?.vx||0)*z*(cam?.dustX??1),y:(s?.vy||0)*z*(cam?.dustY??1)};
 }
