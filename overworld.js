@@ -87,8 +87,8 @@ function owKillShip(){
 function doRebuildFinalize(){
   const bp=owPos(BASE);G.ENC=null;G.site=null;G.stake=0;
   G.needsRebuild=false;
-  if(!G.OW){initOW(loadoutBatteryCapacity());recordLastLocation('base');saveGame();return;}
-  G.OW.s=mkShip(bp.x,bp.y);G.OW.s.inv=180;
+  if(!G.OW){initOW(loadoutBatteryCapacity(),bp.x,bp.y);fillShipHull(G.OW.s);recordLastLocation('base');saveGame();return;}
+  G.OW.s=mkShip(bp.x,bp.y);fillShipHull(G.OW.s);G.OW.s.inv=180;
   G.OW.fleets=[];
   G.OW.slipgateSpawnTimer=1800;G.OW.convoySpawnTimer=5400;
   seedSystemFleets(bp.x,bp.y);

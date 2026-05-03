@@ -360,13 +360,20 @@ function applyShipDamage(s,amount,opts={}){
   if(hullDamage>0)s.hp=Math.max(0,s.hp-hullDamage);
   return{shieldDamage:shieldHit.shieldDamage,hullDamage,blocked:shieldHit.blocked,shieldBroken:shieldHit.shieldBroken};
 }
+function fillShipHull(s){
+  if(!s)return;
+  const maxHp=chassisDefForShip(s)?.maxHp;
+  if(Number.isFinite(maxHp)&&maxHp>0)s.maxHp=maxHp;
+  if(Number.isFinite(s.maxHp)&&s.maxHp>0)s.hp=s.maxHp;
+}
 function shipDamageTone(hit,hullFreq=380,hullDur=.08,hullType='square',hullVol=.08){
   if(hit?.shieldDamage>0)tone(760,.05,'sine',.05);
   if(hit?.hullDamage>0)tone(hullFreq,hullDur,hullType,hullVol);
 }
 function mkShip(x,y){
   const ch=activeChassisObj(),sh=activeShieldObj(),bat=activeBatteryObj(),rx=activeReactorObj();
-  const s={x,y,chassisId:ch.id,batteryId:bat?.id??null,reactorId:rx?.id??null,vx:0,vy:0,va:0,a:0,energy:0,maxEnergy:0,alive:true,inv:120,scd:0,scd2:0,hp:ch.maxHp,maxHp:ch.maxHp,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};
+  const s={x,y,chassisId:ch.id,batteryId:bat?.id??null,reactorId:rx?.id??null,vx:0,vy:0,va:0,a:0,energy:0,maxEnergy:0,alive:true,inv:120,scd:0,scd2:0,hp:0,maxHp:0,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};
+  fillShipHull(s);
   fillShipEnergy(s);
   resetShipShield(s,sh);
   return s;

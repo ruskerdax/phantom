@@ -414,10 +414,10 @@ function updCheatMenu(m){
   if(!m.confirm)return;
   const id=items[G.cheatSubSel].id;
   if(id==='repair'){
-    G.OW.s.hp=G.OW.s.maxHp;fillShipEnergy(G.OW.s);
+    fillShipHull(G.OW.s);fillShipEnergy(G.OW.s);
     resetShipShield(G.OW.s);
-    if(G.ENC){G.ENC.s.hp=G.ENC.s.maxHp;fillShipEnergy(G.ENC.s);resetShipShield(G.ENC.s);}
-    if(G.site){G.site.s.hp=G.site.s.maxHp;fillShipEnergy(G.site.s);resetShipShield(G.site.s);}
+    if(G.ENC){fillShipHull(G.ENC.s);fillShipEnergy(G.ENC.s);resetShipShield(G.ENC.s);}
+    if(G.site){fillShipHull(G.site.s);fillShipEnergy(G.site.s);resetShipShield(G.site.s);}
     tone(660,.2,'sine',.08);G.paused=false;G.cheatSub=false;
   }else if(id==='teleport_slipgate'){
     const sgp=owPos(SLIPGATE);G.OW.s.x=sgp.x;G.OW.s.y=sgp.y;G.ENC=null;G.site=null;returnToOverworld();G.paused=false;G.cheatSub=false;
