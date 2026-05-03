@@ -37,7 +37,7 @@ function basePanel(){
   const pw=530,ph=360,px=W/2-pw/2,py=H/2-ph/2;
   return{pw,ph,px,py};
 }
-function baseRepairCost(s){return Math.max(0,(s.maxHp-s.hp)*25);}
+function baseRepairCost(s){return Math.max(0,Math.ceil((s.maxHp-s.hp)*2));}
 function drawBaseHeader(px,py,pw){
   drawMenuPanel(px,py,pw,360,{fill:'rgba(0,12,8,.95)',stroke:'#aaccff',glow:'#aaccff'});
   drawMenuTitle('FRIENDLY BASE',W/2,py+24,'#aaccff','bold 18px monospace',10);

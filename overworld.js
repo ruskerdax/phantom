@@ -121,7 +121,7 @@ function slipNeighborList(){
 }
 function startAstEnc(){
   const ow=G.OW;
-  const tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
+  const tierDefs=[{r:[26,8],hp:180},{r:[17,5],hp:90},{r:[9,4],hp:30}];
   const rocks=[];
   const rockCount=8+Math.floor(Math.random()*13);
   const spawnX=EW*.08,spawnY=EH/2,minSpawnDist=120;
@@ -156,7 +156,7 @@ function startHBaseEnc(){
   const hbs=G.hbState;
   const softpts=Array.from({length:6},(_,i)=>{
     const a=i*Math.PI/3+Math.PI/6,d=HEX_R*Math.sqrt(3)/2;
-    return{x:hx+Math.cos(a)*d,y:hy+Math.sin(a)*d,hp:1,alive:hbs?hbs.softpts[i]:true};
+    return{x:hx+Math.cos(a)*d,y:hy+Math.sin(a)*d,hp:10,alive:hbs?hbs.softpts[i]:true};
   });
   const turrets=Array.from({length:6},(_,i)=>{
     const a=i*Math.PI/3;
@@ -189,7 +189,7 @@ function owStartFleetEnc(fi,contactA,playerA){
     }
   }
   const rng=mkRNG(seedChild(G.seed,300+fi));
-  const rocks=[],tierDefs=[{r:[26,8],hp:18},{r:[17,5],hp:9},{r:[9,4],hp:3}];
+  const rocks=[],tierDefs=[{r:[26,8],hp:180},{r:[17,5],hp:90},{r:[9,4],hp:30}];
   let rockCount=0;for(let i=0;i<8;i++)if(rng.fl(0,1)<.25)rockCount++;
   const minSpawnDist=120;
   for(let i=0;i<rockCount;i++){

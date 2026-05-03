@@ -18,7 +18,7 @@ const DEFENSE_CLASSES = [
     name:'CAVE TURRET',
     col:'#f44', col2:'#ff8800', sc:250,
     hull:{angle:'combat', boundsR:13, parts:[{kind:'circle', x:0, y:0, r:8}]},
-    defense:{hp:1, r:13, turn:.04, fire:{wpn:'mass driver', offset:15, arc:Math.PI}},
+    defense:{hp:10, r:13, turn:.04, fire:{wpn:'mass driver', offset:15, arc:Math.PI}},
   },
   {
     id:DEFENSE_CLASS_IDS.HBASE_TURRET,
@@ -26,7 +26,7 @@ const DEFENSE_CLASSES = [
     name:'HOSTILE BASE TURRET',
     col:'#f44', col2:'#ff8800', sc:250,
     hull:{angle:'combat', boundsR:10, parts:[{kind:'circle', x:0, y:0, r:8}]},
-    defense:{hp:1, r:10, turn:.04, fire:{wpn:'mass driver', offset:15, arc:Math.PI}},
+    defense:{hp:10, r:10, turn:.04, fire:{wpn:'mass driver', offset:15, arc:Math.PI}},
   },
   {
     id:DEFENSE_CLASS_IDS.SURFACE_SENTINEL,
@@ -34,7 +34,7 @@ const DEFENSE_CLASSES = [
     name:'SENTINEL SURFACE TURRET',
     col:'#f44', col2:'#ff8800', sc:180,
     hull:{angle:'combat', boundsR:10, parts:[{kind:'circle', x:0, y:0, r:8}]},
-    defense:{hp:2, r:10, groundOffset:9, turn:.045, fire:{wpn:'railgun', offset:13, arc:Math.PI, senseRange:520, cdJitter:45}},
+    defense:{hp:20, r:10, groundOffset:9, turn:.045, fire:{wpn:'railgun', offset:13, arc:Math.PI, senseRange:520, cdJitter:45}},
   },
 ];
 

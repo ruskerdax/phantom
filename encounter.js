@@ -74,7 +74,7 @@ function splitRock(enc,ri){
         x:rk.x+Math.cos(ang)*rk.r*.5, y:rk.y+Math.sin(ang)*rk.r*.5,
         vx:rk.vx+Math.cos(ang)*spd, vy:rk.vy+Math.sin(ang)*spd,
         r:nt===1?17+Math.random()*5:9+Math.random()*4,
-        hp:nt===1?9:3, maxHp:nt===1?9:3, tier:nt
+        hp:nt===1?90:30, maxHp:nt===1?90:30, tier:nt
       });
     }
   }
@@ -215,13 +215,13 @@ function updEnc(){
     const delta=encDelta(enc,s.x,s.y,rk.x,rk.y);
     const rd=Math.hypot(delta.dx,delta.dy)||1;const nx=delta.dx/rd;const ny=delta.dy/rd;
     const dot=s.vx*nx+s.vy*ny;if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}s.vx*=.55;s.vy*=.55;s.va*=.55;s.x+=nx*10;s.y+=ny*10;if(encToroidalActive(enc)){s.x=wrap(s.x,ew);s.y=wrap(s.y,eh);}
-    const dmg=Math.round((spd/5.5)*5);
+    const dmg=Math.round((spd/5.5)*50);
     let hit=null;
     if(dmg>0){hit=applyShipDamage(s,dmg,{source:encPointNear(enc,rk.x,rk.y,s.x,s.y),kind:'collision'});shipDamageTone(hit,180,.15,'sawtooth',.12);}
     if(dmg>0&&!(hit?.shieldDamage>0)){rk.hp-=dmg;boomAt(enc.pts,rk.x,rk.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);}
     if(s.hp<=0){encKillShip();return;}break;
   }}
-  if(enc.isHBase){const{hexPoly,hx,hy}=enc.hbase;let hbHit=pip(s.x,s.y,hexPoly);if(!hbHit){for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;if(dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1])<7){hbHit=true;break;}}}if(hbHit){let best=Infinity,nx=0,ny=0;for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;const dist=dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1]);if(dist<best){best=dist;const dx=hexPoly[j][0]-hexPoly[i][0],dy=hexPoly[j][1]-hexPoly[i][1],len=Math.hypot(dx,dy)||1;nx=-dy/len;ny=dx/len;if(nx*(s.x-hx)+ny*(s.y-hy)<0){nx=-nx;ny=-ny;}}}const spd=Math.hypot(s.vx,s.vy);const dot=s.vx*nx+s.vy*ny;if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}s.vx*=.55;s.vy*=.55;s.va*=.55;s.x+=nx*10;s.y+=ny*10;const dmg=Math.round((spd/5.5)*5);if(s.inv<=0&&dmg>0){const hit=applyShipDamage(s,dmg,{source:{x:s.x-nx*12,y:s.y-ny*12},kind:'collision'});if(hit.hullDamage>0)s.inv=40;shipDamageTone(hit,180,.15,'sawtooth',.12);}if(s.hp<=0){encKillShip();return;}}}
+  if(enc.isHBase){const{hexPoly,hx,hy}=enc.hbase;let hbHit=pip(s.x,s.y,hexPoly);if(!hbHit){for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;if(dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1])<7){hbHit=true;break;}}}if(hbHit){let best=Infinity,nx=0,ny=0;for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;const dist=dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1]);if(dist<best){best=dist;const dx=hexPoly[j][0]-hexPoly[i][0],dy=hexPoly[j][1]-hexPoly[i][1],len=Math.hypot(dx,dy)||1;nx=-dy/len;ny=dx/len;if(nx*(s.x-hx)+ny*(s.y-hy)<0){nx=-nx;ny=-ny;}}}const spd=Math.hypot(s.vx,s.vy);const dot=s.vx*nx+s.vy*ny;if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}s.vx*=.55;s.vy*=.55;s.va*=.55;s.x+=nx*10;s.y+=ny*10;const dmg=Math.round((spd/5.5)*50);if(s.inv<=0&&dmg>0){const hit=applyShipDamage(s,dmg,{source:{x:s.x-nx*12,y:s.y-ny*12},kind:'collision'});if(hit.hullDamage>0)s.inv=40;shipDamageTone(hit,180,.15,'sawtooth',.12);}if(s.hp<=0){encKillShip();return;}}}
   const encWalls=enc.isHBase?enc.hbase.hexPoly.map((p,i,hp)=>{const j=(i+1)%hp.length;return[p[0],p[1],hp[j][0],hp[j][1]];}):[];
   const beamSpace=encToroidalActive(enc)?{toroidal:true,worldW:ew,worldH:eh}:null;
   const encCtx={tgts:()=>encBeamTargets(enc),walls:encWalls,space:beamSpace,lsb:enc.lsb,mis:enc.mis,bul:enc.bul,onBeamHit:(tg,wp,res)=>encHandleBeamHit(enc,tg,wp,res)};
@@ -260,7 +260,7 @@ function updEnc(){
   for(let i=enc.ebu.length-1;i>=0;i--){
     const b=enc.ebu[i];
     const consumed=stepBullet(b,ew,eh,4,()=>{
-      for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(encDist(enc,b.x,b.y,rk.x,rk.y)<rk.r){rk.hp--;boomAt(enc.pts,b.x,b.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);return true;}}
+      for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(encDist(enc,b.x,b.y,rk.x,rk.y)<rk.r){rk.hp-=10;boomAt(enc.pts,b.x,b.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);return true;}}
       for(let mi=enc.mis.length-1;mi>=0;mi--){const m=enc.mis[mi];if(encDist(enc,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,false);enc.mis.splice(mi,1);}return true;}}
       if(enc.isHBase&&pip(b.x,b.y,enc.hbase.hexPoly))return true;
       const bSrc=encPointNear(enc,b.x,b.y,s.x,s.y),bHitOpts={source:bSrc,kind:'projectile',weapon:b};

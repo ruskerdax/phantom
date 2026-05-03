@@ -194,7 +194,7 @@ function siteBounce(s){
   if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}
   s.vx*=.55;s.vy*=.55;s.va*=.55;
   s.x+=nx*10;s.y+=ny*10;
-  const dmg=Math.round((spd/5.5)*5);
+  const dmg=Math.round((spd/5.5)*50);
   if(dmg>0){const hit=applyShipDamage(s,dmg,{source:{x:s.x-nx*12,y:s.y-ny*12},kind:'collision'});shipDamageTone(hit,Math.max(60,200-spd*18),.12,'sawtooth',.1);}
 }
 function boolStateArray(arr,len,def){
@@ -394,7 +394,7 @@ function updCaveSite(){
       if(b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,G.lv))return true;
       for(const e of site.en){if(!e.alive)continue;if(Math.hypot(b.x-e.x,b.y-e.y)<defenseRadius(e)){damageDefense(site,e,b.dmg,b.x,b.y);return true;}}
       for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){siteExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
-      const rx=site.rx;if(rx?.alive&&Math.hypot(b.x-rx.x,b.y-rx.y)<18){rx.hp--;addStake(100);tone(350,.1,'square',.08);if(rx.hp<=0){rx.alive=false;site.rdone=true;site.esc=1200;G.st='esc';addStake(2000);boomAt(site.pts,rx.x,rx.y,d.col,40);boomAt(site.pts,rx.x,rx.y,'#fff',20);tone(150,.8,'sawtooth',.18);}return true;}
+      const rx=site.rx;if(rx?.alive&&Math.hypot(b.x-rx.x,b.y-rx.y)<18){rx.hp-=10;addStake(100);tone(350,.1,'square',.08);if(rx.hp<=0){rx.alive=false;site.rdone=true;site.esc=1200;G.st='esc';addStake(2000);boomAt(site.pts,rx.x,rx.y,d.col,40);boomAt(site.pts,rx.x,rx.y,'#fff',20);tone(150,.8,'sawtooth',.18);}return true;}
       return false;
     });
     if(consumed)site.bul.splice(i,1);
@@ -460,7 +460,7 @@ function surfaceBounce(site){
   if(dot<0){s.vx-=dot*n.nx*1.85;s.vy-=dot*n.ny*1.85;}
   s.vx*=.58;s.vy*=.58;s.va*=.55;
   s.y=ground-r-2;s.x=wrap(s.x+n.nx*4,d.worldW);
-  const dmg=Math.round((spd/5.3)*5);
+  const dmg=Math.round((spd/5.3)*50);
   if(dmg>0){
     const hit=applyShipDamage(s,dmg,{source:{x:s.x-n.nx*12,y:s.y-n.ny*12},kind:'collision'});
     shipDamageTone(hit,Math.max(60,190-spd*18),.12,'sawtooth',.1);

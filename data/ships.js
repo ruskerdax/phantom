@@ -35,7 +35,7 @@ const CHASSIS = [
     id: 'kestrel',
     name: 'KESTREL LIGHT',
     desc: 'Balanced starter hull.',
-    maxHp: 15,
+    maxHp: 150,
     hitRadius: 12,
     thrust: {
       fwd:      0.04,
@@ -54,7 +54,7 @@ const CHASSIS = [
     id: 'sparrow',
     name: 'SPARROW SCOUT',
     desc: 'Fast and energy-rich. Light armor.',
-    maxHp: 10,
+    maxHp: 100,
     hitRadius: 12,
     thrust: {
       fwd:      0.08,
@@ -73,7 +73,7 @@ const CHASSIS = [
     id: 'ironclad',
     name: 'IRONCLAD HEAVY',
     desc: 'Heavy armor and firepower. Reduced speed.',
-    maxHp: 28,
+    maxHp: 280,
     hitRadius: 12,
     thrust: {
       fwd:      0.025,
@@ -92,7 +92,7 @@ const CHASSIS = [
     id: 'viper',
     name: 'VIPER RUNNER',
     desc: 'Agile hull with stronger reverse thrusters.',
-    maxHp: 12,
+    maxHp: 120,
     hitRadius: 12,
     thrust: {
       fwd:      0.05,

@@ -153,7 +153,7 @@ const ENERGY_BALANCE={
   thrustDrainMultiplier:{overworld:4,encounter:1,site:1},
   reactorRechargeMultiplier:{overworld:1.5,encounter:1,site:1},
 };
-const SHIELD_EMPTY_ENERGY_DRAIN=.5/60;
+const SHIELD_EMPTY_ENERGY_DRAIN=5/60;
 const SHIELD_FLASH_FRAMES=10;
 const FALLBACK_SHIP_HIT_RADIUS=12;
 function energyBalanceValue(group,mode,fallback=1){

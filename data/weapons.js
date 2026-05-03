@@ -85,12 +85,12 @@ const WEAPON_TYPES = {
 
 // Weapon class definitions
 const WEAPONS = [
-  {id:'mass driver',  name:'MASS DRIVER',  wpnType:'kinetic', fireMode:'projectile', dmg:3, cd:1.0, spd:7,  life:60, buyable:true},
-  {id:'railgun',      name:'RAILGUN',      wpnType:'kinetic', fireMode:'projectile', dmg:2, cd:2.0, spd:12, life:90, buyable:true},
-  {id:'pulse laser', name:'PULSE LASER', wpnType:'energy', fireMode:'beam',    dmg:1, cd:2.0, range:267, pulses:5, pulseCd:5, persist:3, energyCost:1, buyable:true},
-  {id: 'mining laser', name:'MINING LASER', wpnType:'energy', fireMode:'beam', dmg:1, cd:2.0, range:150, pulses:1, pulseCd:5, persist:3, energyCost:1, buyable:true},
-  {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'energy', fireMode:'beam',    dmg:8, cd:4.0, range:400, pulses:1, pulseCd:20, persist:4, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#8f0', beamSound:[120,.35,'sawtooth',.09], chargeTone:[1200,1800,'sine',.05], buyable:true},
-  {id:'rocket pod', name:'ROCKET POD', wpnType:'missile', fireMode:'missile', missileType:'standard', dmg:6, expDmg:8, expR:55, cd:3.0, spd:1.8, maxSpd:9, accel:0.18, life:140, hp:2, salvo:1, salvoCd:6, buyable:true},
+  {id:'mass driver',  name:'MASS DRIVER',  wpnType:'kinetic', fireMode:'projectile', dmg:30, cd:1.0, spd:7,  life:60, buyable:true},
+  {id:'railgun',      name:'RAILGUN',      wpnType:'kinetic', fireMode:'projectile', dmg:20, cd:2.0, spd:12, life:90, buyable:true},
+  {id:'pulse laser', name:'PULSE LASER', wpnType:'energy', fireMode:'beam',    dmg:10, cd:2.0, range:267, pulses:5, pulseCd:5, persist:3, energyCost:1, buyable:true},
+  {id: 'mining laser', name:'MINING LASER', wpnType:'energy', fireMode:'beam', dmg:10, cd:2.0, range:150, pulses:1, pulseCd:5, persist:3, energyCost:1, buyable:true},
+  {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'energy', fireMode:'beam',    dmg:80, cd:4.0, range:400, pulses:1, pulseCd:20, persist:4, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#8f0', beamSound:[120,.35,'sawtooth',.09], chargeTone:[1200,1800,'sine',.05], buyable:true},
+  {id:'rocket pod', name:'ROCKET POD', wpnType:'missile', fireMode:'missile', missileType:'standard', dmg:60, expDmg:80, expR:55, cd:3.0, spd:1.8, maxSpd:9, accel:0.18, life:140, hp:20, salvo:1, salvoCd:6, buyable:true},
 ];
 
 const WEAPON_MAP = Object.fromEntries(WEAPONS.map(w => [w.id, w]));

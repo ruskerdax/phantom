@@ -19,7 +19,7 @@ const SURFACE_ENEMY_CLASSES = [
     name:'GLIDER SURFACE SKIMMER',
     col:'#ffaa33', col2:'#ff7700', sc:220,
     hull:{angle:'flight', boundsR:11, parts:[{kind:'poly', pts:[[12,0],[3,-7],[-10,-5],[-12,5],[3,7]]}]},
-    surf:{hp:2, r:11, spd:2.8, fire:{wpn:'mass driver', offset:13, arc:Math.PI, senseRange:460}},
+    surf:{hp:20, r:11, spd:2.8, fire:{wpn:'mass driver', offset:13, arc:Math.PI, senseRange:460}},
     drawSurface(e){drawSurfaceHullEnemy(this,e);}
   },
   {
@@ -28,7 +28,7 @@ const SURFACE_ENEMY_CLASSES = [
     name:'PIERCER SURFACE DIVER',
     col:'#ff66cc', col2:'#aa3399', sc:220,
     hull:{angle:'flight', boundsR:12, parts:[{kind:'poly', pts:[[0,-12],[-9,8],[0,4],[9,8]]}]},
-    surf:{hp:2, r:12, spd:3.8, fire:{wpn:'mass driver', offset:13, arc:Math.PI, senseRange:460}},
+    surf:{hp:20, r:12, spd:3.8, fire:{wpn:'mass driver', offset:13, arc:Math.PI, senseRange:460}},
     drawSurface(e){drawSurfaceHullEnemy(this,e);}
   },
 ];
