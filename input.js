@@ -95,6 +95,11 @@ const GP_COMBAT_ROT_AXIS_CURVE=2.4;
 // Magnitude (radial) deadzone for absolute-aim mode. Larger than the per-axis deadzone so a stick that's
 // barely off-center can't suddenly command a wild target heading.
 const GP_ABS_AIM_MAG_DEADZONE=.28;
+// Scales the chassis rotMax while absolute aim is active. Lower = gentler hard turns, less twitch.
+const GP_ABS_AIM_ROT_MAX_SCALE=.65;
+// Power curve applied to stick magnitude after the radial deadzone. >1 biases toward fine control at
+// low deflection (e.g. half-stick gives less than half-speed). 1.0 is linear.
+const GP_ABS_AIM_STICK_CURVE=1.5;
 // When true (option B), the last absolute target heading is held after the stick returns to neutral so
 // the ship continues turning to it. When false (option A), releasing the stick clears the target and the
 // ship coasts as its angular velocity decays to zero.

@@ -564,9 +564,9 @@ function applyRotation(s, rotIn, energyEmpty){
   s.a += s.va;
 }
 
-// Bang-bang controller against the existing rotational inertia model. Returns a value in [-1, 1] suitable
-// to feed straight into applyRotation, picked so the ship arrives at G.absAimTarget without overshoot.
-// Returns null when no target is held (caller falls back to relative analog input).
+// Smooth velocity-tracking controller. Returns a value in [-1, 1] suitable to feed straight into
+// applyRotation, picked so the ship converges on G.absAimTarget along a trapezoidal angular-velocity
+// profile (full rate while far, tapered to zero at the target). Returns null when no target is held.
 function computeAbsoluteAimRotIn(s){
   if(absoluteAimEngaged()){
     G.absAimTarget=Math.atan2(GP.axLxRaw,-GP.axLyRaw);
@@ -577,19 +577,25 @@ function computeAbsoluteAimRotIn(s){
   const ch=chassisDefForShip(s);
   const energyEmpty=s.energy<=0;
   const accel=Math.max(0,(ch.thrust.rotAccel||0)*(energyEmpty?0.5:1));
-  if(accel<=0)return null;
+  const maxV=Math.max(0,ch.thrust.rotMax||0);
+  if(accel<=0||maxV<=0)return null;
   const va=Number.isFinite(s.va)?s.va:0;
   // angDiff(a,b) returns (b - a), so this is (target - s.a) — positive when target is CW of current.
   const delta=angDiff(s.a,G.absAimTarget);
-  const brakeDist=(va*va)/(2*accel);
-  // Settle: close enough on heading and barely moving — let applyRotation drift va to zero.
-  if(Math.abs(delta)<accel*0.5 && Math.abs(va)<accel)return 0;
-  // Already moving toward target and within braking distance — full reverse to brake.
-  if(va!==0 && Math.sign(delta)===Math.sign(va) && Math.abs(delta)<=brakeDist){
-    return -Math.sign(va);
-  }
-  // Otherwise drive toward the target at full requested rate.
-  return Math.sign(delta)||0;
+  // Stick magnitude past the radial deadzone scales the velocity cap: light stick = slow turn,
+  // full stick = full turn. Accel is left alone so braking authority near the target is unaffected.
+  // GP_ABS_AIM_STICK_CURVE biases the bottom of stick travel toward fine control;
+  // GP_ABS_AIM_ROT_MAX_SCALE caps the absolute-mode top turn rate below the chassis hard rotMax.
+  const stickMag=Math.hypot(GP.axLxRaw||0,GP.axLyRaw||0);
+  const speedScale=stickMag>=GP_ABS_AIM_MAG_DEADZONE
+    ? Math.pow(Math.min(1,(stickMag-GP_ABS_AIM_MAG_DEADZONE)/(1-GP_ABS_AIM_MAG_DEADZONE)),GP_ABS_AIM_STICK_CURVE)
+    : 1;
+  const effMaxV=maxV*GP_ABS_AIM_ROT_MAX_SCALE*speedScale;
+  // Desired angular velocity: capped at effMaxV when far, matched to braking distance when close. This
+  // is the time-optimal smooth trajectory — equivalent to bang-bang but with continuous accel commands.
+  const desiredVa=Math.sign(delta)*Math.min(effMaxV,Math.sqrt(2*accel*Math.abs(delta)));
+  // Command just enough acceleration to track desiredVa this frame; saturates to ±1 when far.
+  return Math.max(-1,Math.min(1,(desiredVa-va)/accel));
 }
 
 // Resolve player rotation input each frame. Digital input always wins (relative). Otherwise, when
