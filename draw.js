@@ -46,28 +46,38 @@ function encounterZoomTarget(enc){
   if(!dynZoomOn())return 1;
   const s=enc?.s;if(!s)return 1;
   const tor=enc&&!enc.isHBase&&!enc.cleared;
-  let far=0,alive=0;
+  let far=0,farX=0,farY=0,alive=0;
+  const acc=(x,y,useTor)=>{
+    const dx=useTor?wrapCoordNear(x,s.x,enc.ew)-s.x:x-s.x;
+    const dy=useTor?wrapCoordNear(y,s.y,enc.eh)-s.y:y-s.y;
+    far=Math.max(far,Math.hypot(dx,dy));
+    farX=Math.max(farX,Math.abs(dx));
+    farY=Math.max(farY,Math.abs(dy));
+  };
   for(const e of enc.en||[]){
     if(!e.alive)continue;
     alive++;
-    far=Math.max(far,tor?toroidalDistance(e.x,e.y,s.x,s.y,enc.ew,enc.eh):Math.hypot(e.x-s.x,e.y-s.y));
+    acc(e.x,e.y,tor);
   }
   if(enc.isHBase){
     for(const t of enc.hbase?.turrets||[]){
       if(!t.alive)continue;
       alive++;
-      far=Math.max(far,Math.hypot(t.x-s.x,t.y-s.y));
+      acc(t.x,t.y,false);
     }
     for(const sp of enc.hbase?.softpts||[]){
       if(!sp.alive)continue;
       alive++;
-      far=Math.max(far,Math.hypot(sp.x-s.x,sp.y-s.y));
+      acc(sp.x,sp.y,false);
     }
   }
   if(alive===0)return .98;
+  const zMin=.36,zMax=1.08,pad=60;
   const distT=Math.max(0,Math.min(1,(far-220)/900));
   const countT=Math.max(0,Math.min(1,(alive-1)/5));
-  return Math.max(.50,Math.min(1.08,1.08-distT*.62-countT*.12));
+  const zFormula=zMax-distT*.62-countT*.12;
+  const zFit=Math.min(W/(2*(farX+pad)),H/(2*(farY+pad)));
+  return Math.max(zMin,Math.min(zMax,Math.min(zFormula,zFit)));
 }
 function updateWorldCamera(cam,fx,fy,worldW,worldH,targetZ=1,ax=.5,ay=.5,smooth=.12){
   if(!cam)cam={x:0,y:0,z:1};
