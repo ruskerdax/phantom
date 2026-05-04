@@ -40,7 +40,7 @@ function basePanel(){
 function baseRepairCost(s){return Math.max(0,Math.ceil((s.maxHp-s.hp)*2));}
 function drawBaseHeader(px,py,pw){
   drawMenuPanel(px,py,pw,360,{fill:'rgba(0,12,8,.95)',stroke:'#aaccff',glow:'#aaccff'});
-  drawMenuTitle('FRIENDLY BASE',W/2,py+24,'#aaccff','bold 18px monospace',10);
+  drawMenuTitle('FRIENDLY BASE',W/2,py+24,'#aaccff','bold 18px MajorMonoDisplay, monospace',10);
   drawMenuTabs(baseTabs(),G.baseTab,px,py+32,pw);
   cx.shadowBlur=0;drawMenuDivider(px,py,pw,57);
 }
@@ -52,7 +52,7 @@ function drawBaseServices(){
   const repairCost=baseRepairCost(s);
   const costs=[repairCost],maxed=[s.hp>=s.maxHp];
   const items=['REPAIR HULL'];
-  cx.font='13px monospace';
+  cx.font='13px MajorMonoDisplay, monospace';
   for(let i=0;i<items.length;i++){
     const iy=py+88+i*44,sel=i===G.baseSel;
     const disabled=maxed[i]||G.credits<costs[i];
@@ -66,7 +66,7 @@ function drawBaseServices(){
       cx.fillText(costs[i]+' CR',px+pw-20,iy);
     }
   }
-  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
+  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px MajorMonoDisplay, monospace';cx.textAlign='center';
   drawMenuFooter(UI_GLYPH.left+UI_GLYPH.right+' SWITCH TAB   ENTER SELECT   '+pausePrompt('TO LEAVE'),W/2,py+348);
 }
 
@@ -74,7 +74,7 @@ function drawBaseShop(){
   const{pw,ph,px,py}=basePanel();
   const items=shopItemsForTab(G.baseTab);
   const sel=Math.min(G.shopSel,items.length-1);
-  cx.font='12px monospace';
+  cx.font='12px MajorMonoDisplay, monospace';
   for(let i=0;i<items.length;i++){
     const item=items[i],iy=py+78+i*34,isSel=i===sel;
     const owned=hasLicense(item.id),eq=isEquipped(item.id);
@@ -96,7 +96,7 @@ function drawBaseShop(){
     const item=items[sel];
     const dy=py+78+items.length*34+6;
     cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+8,dy-10);cx.lineTo(px+pw-8,dy-10);cx.stroke();
-    cx.fillStyle='#669';cx.font='11px monospace';cx.textAlign='left';
+    cx.fillStyle='#669';cx.font='11px MajorMonoDisplay, monospace';cx.textAlign='left';
     let detail='';
     const tabId=baseTabId();
     if(tabId==='chassis'){
@@ -106,12 +106,12 @@ function drawBaseShop(){
     else if(tabId==='weapons')detail=weaponStatsText(item);
     else if(tabId==='shields')detail=shieldStatsText(item);
     cx.fillText(detail,px+12,dy+6);
-    if(item.desc){cx.fillStyle='#446';cx.font='10px monospace';cx.fillText(item.desc,px+12,dy+20);}
-    cx.fillStyle='#446';cx.font='10px monospace';cx.textAlign='right';
+    if(item.desc){cx.fillStyle='#446';cx.font='10px MajorMonoDisplay, monospace';cx.fillText(item.desc,px+12,dy+20);}
+    cx.fillStyle='#446';cx.font='10px MajorMonoDisplay, monospace';cx.textAlign='right';
     if(!hasLicense(item.id))cx.fillText('BUILD: '+itemBuildPrice(item)+' CR  (after license)',px+pw-12,dy+34);
     else if(!isEquipped(item.id))cx.fillText('BUILD COST: '+itemBuildPrice(item)+' CR',px+pw-12,dy+34);
   }
-  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px monospace';cx.textAlign='center';
+  cx.shadowBlur=0;cx.fillStyle='#334';cx.font='11px MajorMonoDisplay, monospace';cx.textAlign='center';
   drawMenuFooter(UI_GLYPH.left+UI_GLYPH.right+' SWITCH TAB   ENTER SELECT   '+pausePrompt('TO LEAVE'),W/2,py+348);
 }
 
@@ -125,7 +125,7 @@ function drawShopAction(){
   const items=shopItemsForTab(G.baseTab);
   const item=items.find(it=>it.id===G.shopActionId);
   if(!item){G.shopActionId=null;return;}
-  cx.fillStyle='#aaccff';cx.font='bold 13px monospace';cx.textAlign='center';cx.fillText(item.name,W/2,oy+26);
+  cx.fillStyle='#aaccff';cx.font='bold 13px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText(item.name,W/2,oy+26);
   const opts=shopActionOpts(item);
   for(let i=0;i<opts.length;i++){
     const sel=i===G.shopActionSel,opt=opts[i];
@@ -170,9 +170,9 @@ function drawEquipFlow(){
   cx.save();
   cx.fillStyle='rgba(0,10,6,.97)';cx.fillRect(px,py,pw,ph);
   cx.strokeStyle='#aaccff';cx.shadowColor='#aaccff';cx.shadowBlur=14;cx.lineWidth=1.5;cx.strokeRect(px,py,pw,ph);cx.shadowBlur=0;
-  cx.fillStyle='#aaccff';cx.font='bold 15px monospace';cx.textAlign='center';
+  cx.fillStyle='#aaccff';cx.font='bold 15px MajorMonoDisplay, monospace';cx.textAlign='center';
   cx.fillText('CONFIGURE: '+ch.name,W/2,py+28);
-  cx.fillStyle='#446';cx.font='11px monospace';
+  cx.fillStyle='#446';cx.font='11px MajorMonoDisplay, monospace';
   cx.fillText('BUILD COST: '+ef.buildPrice+' CR   '+UI_GLYPH.left+UI_GLYPH.right+' CYCLE   ENTER CONFIRM   '+pausePrompt('TO CANCEL'),W/2,py+44);
   cx.strokeStyle='#1a4a2a';cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+54);cx.lineTo(px+pw-10,py+54);cx.stroke();
   // weapon slots
@@ -185,7 +185,7 @@ function drawEquipFlow(){
     const row=rows[r],ry=py+74+r*40,sel=r===ef.focus;
     cx.textAlign='left';
     cx.fillStyle=sel?'#0f8':'#558';cx.shadowColor='#0f8';cx.shadowBlur=sel?8:0;
-    cx.font='12px monospace';
+    cx.font='12px MajorMonoDisplay, monospace';
     cx.fillText(selectedPrefix(sel)+row.label,px+20,ry);
     cx.shadowBlur=0;cx.textAlign='right';
     if(row.kind==='weapon'){
@@ -198,7 +198,7 @@ function drawEquipFlow(){
       cx.fillStyle=sh?'#aaffcc':'#446';cx.fillText(arrowValue(label,opts.length>0),px+pw-20,ry);
     }
   }
-  if(ef.warnShown){cx.fillStyle='#f84';cx.font='11px monospace';cx.textAlign='center';cx.fillText('WARNING: no weapons equipped!',W/2,py+ph-18);}
+  if(ef.warnShown){cx.fillStyle='#f84';cx.font='11px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('WARNING: no weapons equipped!',W/2,py+ph-18);}
   cx.restore();
 }
 

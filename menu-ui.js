@@ -45,12 +45,12 @@ function drawMenuPanel(px,py,pw,ph,opts={}){
 function drawMenuDivider(px,py,pw,y,col='#1a4a2a'){
   cx.strokeStyle=col;cx.lineWidth=1;cx.beginPath();cx.moveTo(px+10,py+y);cx.lineTo(px+pw-10,py+y);cx.stroke();
 }
-function drawMenuTitle(text,x,y,col='#0f8',font='bold 22px monospace',blur=10){
+function drawMenuTitle(text,x,y,col='#0f8',font='bold 22px MajorMonoDisplay, monospace',blur=10){
   cx.fillStyle=col;cx.font=font;cx.textAlign='center';cx.shadowColor=col;cx.shadowBlur=blur;
   cx.fillText(text,x,y);cx.shadowBlur=0;
 }
 function drawMenuFooter(text,x,y,col='#334'){
-  cx.fillStyle=col;cx.font='11px monospace';cx.textAlign='center';cx.shadowBlur=0;cx.fillText(text,x,y);
+  cx.fillStyle=col;cx.font='11px MajorMonoDisplay, monospace';cx.textAlign='center';cx.shadowBlur=0;cx.fillText(text,x,y);
 }
 function inputPromptLabel(id){
   const b=BND?.[id];
@@ -68,7 +68,7 @@ function drawMenuRow(label,x,y,sel,opts={}){
   const disabled=!!opts.disabled;
   const col=sel?(disabled?(opts.selDisabledCol||'#844'):(opts.selCol||'#0f8')):(disabled?(opts.disabledCol||'#445'):(opts.col||'#668'));
   cx.fillStyle=col;cx.shadowColor=opts.glow||col;cx.shadowBlur=sel&&!disabled?(opts.blur??8):0;
-  cx.font=(sel&&opts.bold!==false?'bold ':'')+(opts.font||'13px monospace');
+  cx.font=(sel&&opts.bold!==false?'bold ':'')+(opts.font||'13px MajorMonoDisplay, monospace');
   cx.textAlign=opts.align||'center';
   cx.fillText((sel&&opts.pointer!==false?UI_GLYPH.pointer+' ':'')+label,x,y);
   cx.shadowBlur=0;
@@ -82,7 +82,7 @@ function drawMenuTabs(tabs,sel,px,py,pw,opts={}){
     cx.fillStyle=isSel?(opts.selFill||'rgba(0,40,20,.9)'):(opts.fill||'rgba(0,15,8,.6)');
     cx.fillRect(tx,py,tw-2,22);cx.strokeRect(tx,py,tw-2,22);
     cx.fillStyle=isSel?(opts.selCol||'#0f8'):(opts.col||'#558');
-    cx.font=isSel?'bold 11px monospace':'11px monospace';cx.textAlign='center';cx.shadowBlur=0;
+    cx.font=isSel?'bold 11px MajorMonoDisplay, monospace':'11px MajorMonoDisplay, monospace';cx.textAlign='center';cx.shadowBlur=0;
     cx.fillText(tabs[i].label||tabs[i],tx+tw/2-1,py+15);
   }
 }
@@ -99,6 +99,6 @@ function drawMenuVolumeBar(value,x,y,sel){
 function drawMenuToggle(on,x,y,sel,onCol='#0f8'){
   cx.fillStyle=on?(sel?onCol:'#2a6a4a'):(sel?'#446':'#334');
   cx.shadowColor=onCol;cx.shadowBlur=on&&sel?8:0;
-  cx.font='bold 13px monospace';cx.textAlign='center';
+  cx.font='bold 13px MajorMonoDisplay, monospace';cx.textAlign='center';
   cx.fillText(on?'ON':'OFF',x,y);cx.shadowBlur=0;
 }

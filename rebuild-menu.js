@@ -57,7 +57,7 @@ function drawRebuild(){
   cx.fillStyle='#000';cx.fillRect(0,0,W,H);drStars();
   cx.save();cx.textAlign='center';
   cx.shadowColor='#f40';cx.shadowBlur=28;cx.fillStyle='#f40';
-  cx.font='bold 46px monospace';cx.fillText('SHIP DESTROYED',W/2,90);cx.shadowBlur=0;
+  cx.font='bold 46px MajorMonoDisplay, monospace';cx.fillText('SHIP DESTROYED',W/2,90);cx.shadowBlur=0;
   if(rf.phase==='chassis')drawRebuildChassis(rf);else drawRebuildConfig(rf);
   cx.restore();drGPI();
 }
@@ -65,61 +65,61 @@ function drawRebuildChassis(rf){
   const lch=licensedRebuildChassis(),items=rebuildChassisItems();
   const rh=34,ph=52+lch.length*rh+10+2*rh+26,pw=520,px=W/2-pw/2,py=Math.max(110,H/2-ph/2);
   drawMenuPanel(px,py,pw,ph,{fill:'rgba(0,12,8,.97)',stroke:'#f84',glow:'#f84',shadowBlur:14});
-  drawMenuTitle('SELECT REPLACEMENT HULL',W/2,py+26,'#f84','bold 14px monospace',8);
+  drawMenuTitle('SELECT REPLACEMENT HULL',W/2,py+26,'#f84','bold 14px MajorMonoDisplay, monospace',8);
   drawMenuDivider(px,py,pw,36,'#3a1000');
   for(let i=0;i<items.length;i++){
     const item=items[i],isSel=i===rf.sel,iy=py+50+i*rh+(i>=lch.length?12:0);
     if(i===lch.length)drawMenuDivider(px+10,py,pw-20,iy-py-8,'#3a1000');
     if(item.id==='charity'){
-      cx.fillStyle=isSel?'#fd8':'#553';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='left';
+      cx.fillStyle=isSel?'#fd8':'#553';cx.font=(isSel?'bold ':'')+'13px MajorMonoDisplay, monospace';cx.textAlign='left';
       cx.fillText((isSel?UI_GLYPH.pointer+' ':'  ')+'CHARITY ASSISTANCE',px+14,iy);
-      cx.fillStyle=isSel?'#aa8':'#442';cx.font='11px monospace';cx.textAlign='right';
+      cx.fillStyle=isSel?'#aa8':'#442';cx.font='11px MajorMonoDisplay, monospace';cx.textAlign='right';
       cx.fillText('FORFEIT ALL CREDITS & STAKE '+UI_GLYPH.dash+' DEFAULT SHIP FREE',px+pw-14,iy);
     }else if(item.id==='quit'){
-      cx.fillStyle=isSel?'#f84':'#553';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='center';
+      cx.fillStyle=isSel?'#f84':'#553';cx.font=(isSel?'bold ':'')+'13px MajorMonoDisplay, monospace';cx.textAlign='center';
       cx.fillText((isSel?UI_GLYPH.pointer+' ':'  ')+'QUIT TO TITLE',W/2,iy);
     }else{
       const ch=item,cost=ch.buildPrice;
-      cx.fillStyle=isSel?'#0f8':'#446';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='left';
+      cx.fillStyle=isSel?'#0f8':'#446';cx.font=(isSel?'bold ':'')+'13px MajorMonoDisplay, monospace';cx.textAlign='left';
       cx.fillText((isSel?UI_GLYPH.pointer+' ':'  ')+ch.name,px+14,iy);
-      cx.fillStyle=isSel?'#0a6':'#334';cx.font='11px monospace';cx.textAlign='right';
+      cx.fillStyle=isSel?'#0a6':'#334';cx.font='11px MajorMonoDisplay, monospace';cx.textAlign='right';
       cx.fillText(chassisStatsText(ch,{slots:false})+'  HULL: '+(cost===0?'FREE':cost+' CR'),px+pw-14,iy);
     }
   }
-  cx.fillStyle='#8df';cx.font='13px monospace';cx.textAlign='center';
+  cx.fillStyle='#8df';cx.font='13px MajorMonoDisplay, monospace';cx.textAlign='center';
   cx.fillText('CREDITS: '+G.credits+'  STAKE: '+G.stake,W/2,py+ph+18);
-  cx.fillStyle='#334';cx.font='11px monospace';
+  cx.fillStyle='#334';cx.font='11px MajorMonoDisplay, monospace';
   cx.fillText('SEED  '+seedText(G.seed),W/2,py+ph+34);
 }
 function drawRebuildConfig(rf){
   const ch=CHASSIS.find(c=>c.id===rf.chassisId);if(!ch)return;
   const nRows=ch.slots.length+3,rh=36,pw=500,ph=52+nRows*rh+20,px=W/2-pw/2,py=Math.max(110,H/2-ph/2);
   drawMenuPanel(px,py,pw,ph,{fill:'rgba(0,12,8,.97)',stroke:'#f84',glow:'#f84',shadowBlur:14});
-  drawMenuTitle('CONFIGURE: '+ch.name,W/2,py+26,'#f84','bold 14px monospace',8);
+  drawMenuTitle('CONFIGURE: '+ch.name,W/2,py+26,'#f84','bold 14px MajorMonoDisplay, monospace',8);
   drawMenuDivider(px,py,pw,36,'#3a1000');
   for(let i=0;i<ch.slots.length;i++){
     const sl=ch.slots[i],wpId=rf.slots[i],wp=wpId?WEAPONS.find(w=>w.id===wpId):null;
     const isSel=rf.focus===i,iy=py+50+i*rh,opts=licensedWeaponsForSlot(sl);
-    cx.fillStyle=isSel?'#0f8':'#446';cx.font=(isSel?'bold ':'')+'13px monospace';cx.textAlign='left';
+    cx.fillStyle=isSel?'#0f8':'#446';cx.font=(isSel?'bold ':'')+'13px MajorMonoDisplay, monospace';cx.textAlign='left';
     cx.fillText((isSel?UI_GLYPH.pointer+' ':'  ')+'SLOT '+(i+1)+' ['+sl.type.toUpperCase()+']',px+14,iy);
     cx.fillStyle=isSel?'#0f8':(wp?'#668':'#444');cx.textAlign='right';
     cx.fillText(arrowValue(wp?wp.id.toUpperCase():'(empty)',opts.length>0),px+pw-14,iy);
   }
   const shieldRow=ch.slots.length,iy_shield=py+50+shieldRow*rh,isSelShield=rf.focus===shieldRow;
   const sh=rf.shieldId?SHIELDS.find(s=>s.id===rf.shieldId):null,shieldOpts=SHIELDS.filter(s=>hasLicense(s.id));
-  cx.fillStyle=isSelShield?'#0f8':'#446';cx.font=(isSelShield?'bold ':'')+'13px monospace';cx.textAlign='left';
+  cx.fillStyle=isSelShield?'#0f8':'#446';cx.font=(isSelShield?'bold ':'')+'13px MajorMonoDisplay, monospace';cx.textAlign='left';
   cx.fillText((isSelShield?UI_GLYPH.pointer+' ':'  ')+'SHIELD',px+14,iy_shield);
   cx.fillStyle=isSelShield?'#0f8':(sh?'#668':'#444');cx.textAlign='right';
   cx.fillText(arrowValue(sh?sh.name:'(none)',shieldOpts.length>1),px+pw-14,iy_shield);
   const confirmRow=ch.slots.length+1,iy_conf=py+50+confirmRow*rh,isSelConf=rf.focus===confirmRow;
   const totalCost=rebuildTotalCost(rf.chassisId,rf.shieldId),canAfford=G.credits>=totalCost;
-  cx.fillStyle=isSelConf?(canAfford?'#0f8':'#f84'):'#446';cx.font=(isSelConf?'bold ':'')+'13px monospace';cx.textAlign='center';
+  cx.fillStyle=isSelConf?(canAfford?'#0f8':'#f84'):'#446';cx.font=(isSelConf?'bold ':'')+'13px MajorMonoDisplay, monospace';cx.textAlign='center';
   cx.fillText((isSelConf?UI_GLYPH.pointer+' ':'  ')+'REBUILD  '+(totalCost===0?'FREE':totalCost+' CR')+(canAfford?'':'  '+UI_GLYPH.dash+' INSUFFICIENT'),W/2,iy_conf);
   const backRow=ch.slots.length+2,iy_back=py+50+backRow*rh,isSelBack=rf.focus===backRow;
-  cx.fillStyle=isSelBack?'#f84':'#446';cx.font=(isSelBack?'bold ':'')+'13px monospace';cx.textAlign='center';
+  cx.fillStyle=isSelBack?'#f84':'#446';cx.font=(isSelBack?'bold ':'')+'13px MajorMonoDisplay, monospace';cx.textAlign='center';
   cx.fillText((isSelBack?UI_GLYPH.pointer+' ':'  ')+'BACK',W/2,iy_back);
-  if(rf.warnShown){cx.fillStyle='#f84';cx.font='11px monospace';cx.textAlign='center';cx.fillText('WARNING: no weapons equipped!',W/2,py+ph-10);}
-  cx.fillStyle=canAfford?'#8df':'#f84';cx.font='13px monospace';cx.textAlign='center';
+  if(rf.warnShown){cx.fillStyle='#f84';cx.font='11px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('WARNING: no weapons equipped!',W/2,py+ph-10);}
+  cx.fillStyle=canAfford?'#8df':'#f84';cx.font='13px MajorMonoDisplay, monospace';cx.textAlign='center';
   cx.fillText('CREDITS: '+G.credits+(totalCost>0?'   COST: '+totalCost+' CR':''),W/2,py+ph+18);
 }
 function updRebuild(){
