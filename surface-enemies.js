@@ -29,8 +29,10 @@ function initSurfaceEnemy(e, alive = true) {
 
 function genSurfaceEnemies(rng, surface, count) {
   const en = [];
+  const excl = W * .6, availLen = Math.max(0, surface.worldW - 2 * excl), startX = surface.ent.x + excl;
   for(let i = 0; i < count; i++) {
-    const x = wrap((i + .35 + rng.fl(-.18, .18)) / count * surface.worldW, surface.worldW);
+    const t = (i + .35 + rng.fl(-.18, .18)) / count;
+    const x = wrap(startX + t * availLen, surface.worldW);
     const ground = surfaceYAt(surface, x);
     const roll = rng.next();
     if(roll < .58) en.push(mkSurfaceEnemy(SURFACE_ENEMY_TYPES.SKIMMER, Math.round(x), Math.round(ground - rng.fl(70, 125)), {vx:rng.fl(-1.2, 1.2), vy:0, phase:rng.fl(0, Math.PI * 2)}, rng));

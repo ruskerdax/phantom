@@ -157,8 +157,10 @@ function drawDefense(d) {
 
 function genSurfaceDefenses(rng, surface, count) {
   const defs = [];
+  const excl = W * .6, availLen = Math.max(0, surface.worldW - 2 * excl), startX = surface.ent.x + excl;
   for(let i = 0; i < count; i++) {
-    const x = wrap((i + .5 + rng.fl(-.22, .22)) / count * surface.worldW, surface.worldW);
+    const t = (i + .5 + rng.fl(-.22, .22)) / count;
+    const x = wrap(startX + t * availLen, surface.worldW);
     const ground = surfaceYAt(surface, x);
     defs.push(mkDefense(DEFENSE_CLASS_IDS.SURFACE_SENTINEL, Math.round(x), Math.round(ground - 9), {a:-Math.PI/2}, rng));
   }
