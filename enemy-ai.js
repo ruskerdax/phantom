@@ -52,8 +52,50 @@ function enemySetSpeedLimit(e, speed) {
   if(Number.isFinite(speed)&&speed>0)e.speedLimit=speed;
 }
 
+// Conditional anti-kite boost: if a tagged enemy spends sustained time at long range
+// from the player, lift its speed cap slightly above the player's so it can close.
+// Clears once back in close-fight range (hysteresis prevents flapping at the edge).
+// Raw strings (not ENEMY_TYPES.*) because data/enemies.js loads after this file.
+const PURSUIT_BOOST_TYPES=new Set(['fighter','destroyer','interceptor']);
+const PURSUIT_BOOST_SPEED=5.4;
+const PURSUIT_BOOST_FAR=280;
+const PURSUIT_BOOST_NEAR=170;
+const PURSUIT_BOOST_ENGAGE_FRAMES=420;     // ~7s sustained at far range before boost engages
+const PURSUIT_BOOST_MIN_ACTIVE_FRAMES=360; // ~6s minimum commit once engaged
+
+function enemyTickPursuitBoost(e, s, ew, eh, type) {
+  if(!PURSUIT_BOOST_TYPES.has(type)){
+    if(e.pursuitBoostActive)e.pursuitBoostActive=false;
+    if(e.pursuitBoostFarTimer)e.pursuitBoostFarTimer=0;
+    if(e.pursuitBoostActiveTimer)e.pursuitBoostActiveTimer=0;
+    return;
+  }
+  const d=wrapDelta(s.x,s.y,e.x,e.y,ew,eh);
+  const dist=Math.hypot(d.dx,d.dy);
+  if(e.pursuitBoostActive){
+    e.pursuitBoostActiveTimer=(e.pursuitBoostActiveTimer||0)+1;
+    // Disengage only after minimum commit AND enemy has reached close range.
+    if(e.pursuitBoostActiveTimer>=PURSUIT_BOOST_MIN_ACTIVE_FRAMES&&dist<=PURSUIT_BOOST_NEAR){
+      e.pursuitBoostActive=false;
+      e.pursuitBoostActiveTimer=0;
+      e.pursuitBoostFarTimer=0;
+    }
+  }else{
+    if(dist<=PURSUIT_BOOST_NEAR){
+      e.pursuitBoostFarTimer=0;
+    }else if(dist>=PURSUIT_BOOST_FAR){
+      e.pursuitBoostFarTimer=(e.pursuitBoostFarTimer||0)+1;
+      if(e.pursuitBoostFarTimer>=PURSUIT_BOOST_ENGAGE_FRAMES){
+        e.pursuitBoostActive=true;
+        e.pursuitBoostActiveTimer=0;
+      }
+    }
+  }
+}
+
 function enemyApplySpeedLimit(e, fallback) {
-  const speedLimit=Number.isFinite(e.speedLimit)&&e.speedLimit>0?e.speedLimit:fallback;
+  let speedLimit=Number.isFinite(e.speedLimit)&&e.speedLimit>0?e.speedLimit:fallback;
+  if(e.pursuitBoostActive&&PURSUIT_BOOST_SPEED>speedLimit)speedLimit=PURSUIT_BOOST_SPEED;
   const es=Math.hypot(e.vx,e.vy);
   if(es>speedLimit){e.vx=e.vx/es*speedLimit;e.vy=e.vy/es*speedLimit;}
 }

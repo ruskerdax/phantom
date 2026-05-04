@@ -62,6 +62,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
   if(!ai)throw new Error(`Enemy type ${ecDef.type} has no AI behavior`);
   enemySetSpeedLimit(e,ec.spd);
   ai.update(e, ec, s, ew, eh);
+  enemyTickPursuitBoost(e,s,ew,eh,ecDef.type);
   e.vx*=.975;e.vy*=.975;enemyApplySpeedLimit(e,ec.spd);
   e.x=wrap(e.x+e.vx,ew);e.y=wrap(e.y+e.vy,eh);
   for(const rk of enc.rocks){const d=tor?wrapDelta(e.x,e.y,rk.x,rk.y,ew,eh):{dx:e.x-rk.x,dy:e.y-rk.y},rd=Math.hypot(d.dx,d.dy)||1;if(rd<rk.r+16){e.vx+=(d.dx/rd)*.3;e.vy+=(d.dy/rd)*.3;}}

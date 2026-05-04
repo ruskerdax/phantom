@@ -3,6 +3,8 @@
 const SITE_BOUNDARY_STEP=14;
 const SITE_BOUNDARY_SAMPLE=2.25;
 const SURFACE_INDICATOR_RANGE=W*2;
+const SITE_CAP_CAVE=5.5;
+const SITE_CAP_SURFACE=5.8;
 
 function sitePointEmpty(d,x,y){
   if(y<0)return true;
@@ -360,7 +362,7 @@ function updCaveSite(){
     drainEnergy(s, thrustEnergyDrainForMode('site')*thrustEnergyScale(thrustIn));
   }
   thrusterSound(thrustIn,'site',s.energy<=0);
-  s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;const sp=Math.hypot(s.vx,s.vy);if(sp>5.5){s.vx=s.vx/sp*5.5;s.vy=s.vy/sp*5.5;}
+  s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;const sp=Math.hypot(s.vx,s.vy);if(sp>SITE_CAP_CAVE){s.vx=s.vx/sp*SITE_CAP_CAVE;s.vy=s.vy/sp*SITE_CAP_CAVE;}
   s.x+=s.vx;s.y+=s.vy;
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
   const wH=d.worldH||H;
@@ -572,7 +574,7 @@ function updSurface(){
   if(thrustIn.activeAxes>0){applyShipThrust(s,thrustIn,s.energy<=0);drainEnergy(s,thrustEnergyDrainForMode('site')*thrustEnergyScale(thrustIn));}
   thrusterSound(thrustIn,'site',s.energy<=0);
   s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;
-  const sp=Math.hypot(s.vx,s.vy);if(sp>5.8){s.vx=s.vx/sp*5.8;s.vy=s.vy/sp*5.8;}
+  const sp=Math.hypot(s.vx,s.vy);if(sp>SITE_CAP_SURFACE){s.vx=s.vx/sp*SITE_CAP_SURFACE;s.vy=s.vy/sp*SITE_CAP_SURFACE;}
   s.x=wrap(s.x+s.vx,d.worldW);s.y+=s.vy;
   if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
   site.cam=updateSurfaceCamera(site.cam,s,d);
