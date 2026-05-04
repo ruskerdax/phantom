@@ -1,0 +1,72 @@
+/* =============================================================================
+   PHANTOM UI THEME
+   Single source of truth for menu colors, fonts, spacing, glows.
+   Change a token here and every menu updates. The canvas HUD reads the same
+   tokens via ui/theme.js so colors stay consistent across DOM and canvas.
+   ============================================================================= */
+
+:root {
+  /* ---- Accent palette ---- */
+  --accent:           #00ff88;   /* primary green */
+  --accent-soft:      #aaffcc;
+  --accent-dim:       #2a6a4a;
+  --accent-deep:      #0a6;
+  --accent-warn:      #ff8844;   /* orange (rebuild, danger) */
+  --accent-warn-soft: #ffd0a0;
+  --accent-danger:    #ff4040;   /* destructive */
+  --accent-cheat:     #ffee44;   /* yellow */
+  --accent-cheat-dim: #665500;
+  --accent-slip:      #cc99ff;   /* purple */
+  --accent-slip-dim:  #776688;
+
+  /* ---- Surface / background ---- */
+  --bg:               #000;
+  --panel-bg:         rgba(0, 12, 8, 0.95);
+  --panel-bg-strong:  rgba(0, 8, 4, 0.97);
+  --scrim:            rgba(0, 0, 0, 0.78);
+  --divider:          #1a4a2a;
+
+  /* ---- Text ---- */
+  --text:             #cce;
+  --text-strong:      #aaffcc;
+  --text-dim:         #668;
+  --text-faint:       #446;
+  --text-disabled:    #344;
+  --text-footer:      #334;
+
+  /* ---- Sizing ---- */
+  --row-h:            32px;
+  --row-h-tight:      26px;
+  --gap:              10px;
+  --gap-tight:        6px;
+  --pad:              18px;
+  --pad-tight:        12px;
+  --panel-radius:     0px;       /* sharp corners for retro/terminal feel */
+  --border-w:         1.5px;
+
+  /* ---- Typography ---- */
+  --font:             'MajorMonoDisplay', monospace;
+  --fs-title:         22px;
+  --fs-subtitle:      13px;
+  --fs-row:           14px;
+  --fs-row-detail:    11px;
+  --fs-footer:        11px;
+  --fs-banner:        46px;
+  --fs-banner-sub:    20px;
+  --letter-spacing:   .04em;
+
+  /* ---- Effects ---- */
+  --glow:             0 0 8px var(--accent);
+  --glow-strong:      0 0 14px var(--accent);
+  --glow-title:       0 0 18px var(--accent);
+  --transition-fast:  120ms ease;
+}
+
+/* Theme variants — applied per-screen on the screen container.
+   Each variant retargets --accent so all child widgets recolor automatically. */
+.theme-default  { /* uses default accents */ }
+.theme-warn     { --accent: var(--accent-warn);  --accent-soft: var(--accent-warn-soft);  --accent-dim: #6a3010; }
+.theme-danger   { --accent: var(--accent-danger);--accent-soft: #ffb0a0; --accent-dim: #6a2020; }
+.theme-cheat    { --accent: var(--accent-cheat); --accent-soft: #ffe; --accent-dim: var(--accent-cheat-dim); }
+.theme-slip     { --accent: var(--accent-slip);  --accent-soft: #ddccff; --accent-dim: var(--accent-slip-dim); }
+.theme-info     { --accent: #aaccff; --accent-soft: #ddeeff; --accent-dim: #335577; }
