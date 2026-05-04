@@ -320,7 +320,7 @@ function enterTunnel(dir='down',ship=null){
   if(!d){enterSurface(ship);return;}
   const ent=dir==='up'?d.entBottom:d.entTop;
   const s=ship||siteShipAt(ent.x,ent.y);
-  s.x=ent.x;s.y=ent.y;s.a=dir==='up'?0:Math.PI;s.vx*=.35;s.vy*=.35;
+  s.x=ent.x;s.y=ent.y;if(!ship)s.a=dir==='up'?0:Math.PI;s.vx*=.35;s.vy*=.35;
   G.site={mode:'tunnel',tunnelDir:dir,planet:p,d,s,
     en:d.en.map((e,i)=>initDefense(e,ps.tunnel.enemyAlive[i])),
     fu:[],rx:{alive:false,hp:0},bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:dir==='up'?Math.max(0,d.worldH-H):0,z:1}};
@@ -330,7 +330,7 @@ function enterTunnel(dir='down',ship=null){
 function enterCaveFromTunnel(ship=null){
   const p=LV[G.lv],d=p.cave,ps=planetState(G.lv);
   const s=ship||siteShipAt(d.ent.x,d.ent.y);
-  s.x=d.ent.x;s.y=d.ent.y;s.a=0;s.vx*=.3;s.vy*=.3;
+  s.x=d.ent.x;s.y=d.ent.y;if(!ship)s.a=0;s.vx*=.3;s.vy*=.3;
   G.site={mode:'cave',planet:p,d,s,
     en:d.en.map((e,i)=>initDefense(e,ps.cave.en[i])),
     fu:d.fu.map((f,i)=>({...f,got:ps.cave.fu[i]})),
@@ -369,7 +369,7 @@ function updCaveSite(){
     saveActiveSiteState();
     if(site.mode==='tunnel'){
       const p=LV[G.lv],mouth=p.surface?.tunnel;
-      enterSurface(s,{x:mouth?.x??p.surface.ent.x,y:(mouth?.y??surfaceYAt(p.surface,mouth?.x??p.surface.ent.x))-95,a:0});
+      enterSurface(s,{x:mouth?.x??p.surface.ent.x,y:(mouth?.y??surfaceYAt(p.surface,mouth?.x??p.surface.ent.x))-95});
     }else{
       if(site.mode==='cave'&&G.st==='esc')completePlanetSite('cave');
       G.st='play';
