@@ -132,6 +132,18 @@ function _turretOnObs(rng,obs){
   return{x:Math.round(ex+nx*8),y:Math.round(ey+ny*8),a:Math.atan2(nx,-ny)};
 }
 
+function _placeWallTurrets(rng,terrain,wH,count,minSpacing){
+  const en=[];
+  for(let att=0;att<count*40&&en.length<count;att++){
+    const c=_turretOnWall(rng,terrain,wH);
+    if(!c)continue;
+    if(!pip(c.x,c.y,terrain))continue;
+    if(en.some(e=>Math.hypot(c.x-e.x,c.y-e.y)<minSpacing))continue;
+    en.push(c);
+  }
+  return en;
+}
+
 // ---- Turret (cave enemy) placement ----
 function genEnemies(rng,terrain,obs,guardObs,wH,count){
   const en=[];
@@ -308,16 +320,7 @@ function genTunnel(rng,tmpl,seed){
     left.push([Math.round(lx),y]);right.push([Math.round(rx),y]);
   }
   const terrain=[...left,...right.reverse()];
-  const en=[];
-  const count=rng.int(2,4);
-  for(let i=0;i<count;i++){
-    const y=worldH*((i+1)/(count+1));
-    const idx=Math.max(0,Math.min(n-1,Math.floor(y/worldH*n)));
-    const side=rng.next()<.5?'left':'right';
-    const wall=side==='left'?left[idx]:right[idx];
-    const wx=wall[0],wy=Math.round(y+rng.fl(-28,28));
-    en.push({x:side==='left'?wx+10:wx-10,y:wy,a:side==='left'?Math.PI/2:-Math.PI/2});
-  }
+  const en=_placeWallTurrets(rng,terrain,worldH,rng.int(2,4),50);
   return{...tmpl,kind:'tunnel',name:'CAVE ACCESS',worldH,terrain,obs:[],en,fu:[],entTop:{x:W/2,y:32},entBottom:{x:W/2,y:worldH-42},grav:tmpl.grav};
 }
 
