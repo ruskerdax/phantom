@@ -186,18 +186,12 @@ function wNormal(x,y,li){
   }
   return{nx,ny};
 }
-// Bounce the ship off a site wall. wNormal() returns the nearest wall's outward surface normal (nx,ny).
-// dot<0 means the ship is moving into the wall; subtracting 1.9x that component reflects the velocity.
-// All speed is then damped 45% and the ship is nudged clear of the surface to prevent re-collision.
+// Bounce the ship off a site wall. wNormal() returns the nearest wall's outward surface normal,
+// then applyShipBounce handles reflect/damp/damage/tone with the canonical collision tuning.
 function siteBounce(s){
-  const spd=Math.hypot(s.vx,s.vy);
   const{nx,ny}=wNormal(s.x,s.y,G.lv);
-  const dot=s.vx*nx+s.vy*ny;
-  if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}
-  s.vx*=.55;s.vy*=.55;s.va*=.55;
   s.x+=nx*10;s.y+=ny*10;
-  const dmg=Math.round((spd/5.5)*50);
-  if(dmg>0){const hit=applyShipDamage(s,dmg,{source:{x:s.x-nx*12,y:s.y-ny*12},kind:'collision'});shipDamageTone(hit,Math.max(60,200-spd*18),.12,'sawtooth',.1);}
+  applyShipBounce(s,nx,ny,{x:s.x-nx*12,y:s.y-ny*12});
 }
 function boolStateArray(arr,len,def){
   const out=Array.isArray(arr)?arr.slice(0,len):[];
@@ -457,16 +451,9 @@ function updateSurfaceCamera(cam,s,d){
 function surfaceBounce(site){
   const s=site.s,d=site.d,r=shipHitRadius(s),ground=surfaceYAt(d,s.x);
   if(s.y+r<=ground)return false;
-  const spd=Math.hypot(s.vx,s.vy),n=surfaceGroundNormal(d,s.x);
-  const dot=s.vx*n.nx+s.vy*n.ny;
-  if(dot<0){s.vx-=dot*n.nx*1.85;s.vy-=dot*n.ny*1.85;}
-  s.vx*=.58;s.vy*=.58;s.va*=.55;
+  const n=surfaceGroundNormal(d,s.x);
   s.y=ground-r-2;s.x=wrap(s.x+n.nx*4,d.worldW);
-  const dmg=Math.round((spd/5.3)*50);
-  if(dmg>0){
-    const hit=applyShipDamage(s,dmg,{source:{x:s.x-n.nx*12,y:s.y-n.ny*12},kind:'collision'});
-    shipDamageTone(hit,Math.max(60,190-spd*18),.12,'sawtooth',.1);
-  }
+  applyShipBounce(s,n.nx,n.ny,{x:s.x-n.nx*12,y:s.y-n.ny*12});
   return true;
 }
 function damageSurfaceDish(site,dish,dmg,x=dish.x,y=dish.y){

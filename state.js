@@ -370,6 +370,26 @@ function shipDamageTone(hit,hullFreq=380,hullDur=.08,hullType='square',hullVol=.
   if(hit?.shieldDamage>0)tone(760,.05,'sine',.05);
   if(hit?.hullDamage>0)tone(hullFreq,hullDur,hullType,hullVol);
 }
+// Canonical collision tuning. Used everywhere the ship bounces off something solid
+// (cave/tunnel walls, surface ground, asteroids, enemy base hex). Tweak values here.
+const COLLISION_BOUNCE={reflect:1.9,damp:.55,divisor:5.5,toneBase:200,toneDecay:18,toneDur:.12,toneVol:.1};
+// Reflect ship velocity off a surface with normal (nx,ny), apply damp & damage, play tone.
+// Caller is responsible for any position correction (nudge/snap/wrap) before or after.
+// opts.skipDamage skips damage+tone but still applies the bounce (used for invuln gating).
+// Returns {spd,dmg,hit} where spd is the pre-reflect speed.
+function applyShipBounce(s,nx,ny,source,opts={}){
+  const{reflect,damp,divisor,toneBase,toneDecay,toneDur,toneVol}=COLLISION_BOUNCE;
+  const spd=Math.hypot(s.vx,s.vy);
+  const dot=s.vx*nx+s.vy*ny;
+  if(dot<0){s.vx-=dot*nx*reflect;s.vy-=dot*ny*reflect;}
+  s.vx*=damp;s.vy*=damp;s.va*=damp;
+  if(opts.skipDamage)return{spd,dmg:0,hit:null};
+  const dmg=Math.round((spd/divisor)*50);
+  if(dmg<=0)return{spd,dmg:0,hit:null};
+  const hit=applyShipDamage(s,dmg,{source,kind:'collision'});
+  shipDamageTone(hit,Math.max(60,toneBase-spd*toneDecay),toneDur,'sawtooth',toneVol);
+  return{spd,dmg,hit};
+}
 function mkShip(x,y){
   const ch=activeChassisObj(),sh=activeShieldObj(),bat=activeBatteryObj(),rx=activeReactorObj();
   const s={x,y,chassisId:ch.id,batteryId:bat?.id??null,reactorId:rx?.id??null,vx:0,vy:0,va:0,a:0,energy:0,maxEnergy:0,alive:true,inv:120,scd:0,scd2:0,hp:0,maxHp:0,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};

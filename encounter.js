@@ -211,17 +211,15 @@ function updEnc(){
   enc.cam=encToroidalActive(enc)?updateToroidalWorldCamera(enc.cam,s.x,s.y,ew,eh,encounterZoomTarget(enc),.5,.5,dynZoomOn()?.12:1):updateWorldCamera(enc.cam,s.x,s.y,ew,eh,encounterZoomTarget(enc),.5,.5,dynZoomOn()?.12:1);
   for(const rk of enc.rocks){rk.x=wrap(rk.x+rk.vx,ew);rk.y=wrap(rk.y+rk.vy,eh);}
   for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(encDist(enc,s.x,s.y,rk.x,rk.y)<rk.r+7){
-    const spd=Math.hypot(s.vx,s.vy);
     const delta=encDelta(enc,s.x,s.y,rk.x,rk.y);
     const rd=Math.hypot(delta.dx,delta.dy)||1;const nx=delta.dx/rd;const ny=delta.dy/rd;
-    const dot=s.vx*nx+s.vy*ny;if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}s.vx*=.55;s.vy*=.55;s.va*=.55;s.x+=nx*10;s.y+=ny*10;if(encToroidalActive(enc)){s.x=wrap(s.x,ew);s.y=wrap(s.y,eh);}
-    const dmg=Math.round((spd/5.5)*50);
-    let hit=null;
-    if(dmg>0){hit=applyShipDamage(s,dmg,{source:encPointNear(enc,rk.x,rk.y,s.x,s.y),kind:'collision'});shipDamageTone(hit,180,.15,'sawtooth',.12);}
+    s.x+=nx*10;s.y+=ny*10;
+    if(encToroidalActive(enc)){s.x=wrap(s.x,ew);s.y=wrap(s.y,eh);}
+    const{dmg,hit}=applyShipBounce(s,nx,ny,encPointNear(enc,rk.x,rk.y,s.x,s.y));
     if(dmg>0&&!(hit?.shieldDamage>0)){rk.hp-=dmg;boomAt(enc.pts,rk.x,rk.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);}
     if(s.hp<=0){encKillShip();return;}break;
   }}
-  if(enc.isHBase){const{hexPoly,hx,hy}=enc.hbase;let hbHit=pip(s.x,s.y,hexPoly);if(!hbHit){for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;if(dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1])<7){hbHit=true;break;}}}if(hbHit){let best=Infinity,nx=0,ny=0;for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;const dist=dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1]);if(dist<best){best=dist;const dx=hexPoly[j][0]-hexPoly[i][0],dy=hexPoly[j][1]-hexPoly[i][1],len=Math.hypot(dx,dy)||1;nx=-dy/len;ny=dx/len;if(nx*(s.x-hx)+ny*(s.y-hy)<0){nx=-nx;ny=-ny;}}}const spd=Math.hypot(s.vx,s.vy);const dot=s.vx*nx+s.vy*ny;if(dot<0){s.vx-=dot*nx*1.9;s.vy-=dot*ny*1.9;}s.vx*=.55;s.vy*=.55;s.va*=.55;s.x+=nx*10;s.y+=ny*10;const dmg=Math.round((spd/5.5)*50);if(s.inv<=0&&dmg>0){const hit=applyShipDamage(s,dmg,{source:{x:s.x-nx*12,y:s.y-ny*12},kind:'collision'});if(hit.hullDamage>0)s.inv=40;shipDamageTone(hit,180,.15,'sawtooth',.12);}if(s.hp<=0){encKillShip();return;}}}
+  if(enc.isHBase){const{hexPoly,hx,hy}=enc.hbase;let hbHit=pip(s.x,s.y,hexPoly);if(!hbHit){for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;if(dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1])<7){hbHit=true;break;}}}if(hbHit){let best=Infinity,nx=0,ny=0;for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;const dist=dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1]);if(dist<best){best=dist;const dx=hexPoly[j][0]-hexPoly[i][0],dy=hexPoly[j][1]-hexPoly[i][1],len=Math.hypot(dx,dy)||1;nx=-dy/len;ny=dx/len;if(nx*(s.x-hx)+ny*(s.y-hy)<0){nx=-nx;ny=-ny;}}}s.x+=nx*10;s.y+=ny*10;const{hit}=applyShipBounce(s,nx,ny,{x:s.x-nx*12,y:s.y-ny*12},{skipDamage:s.inv>0});if(hit?.hullDamage>0)s.inv=40;if(s.hp<=0){encKillShip();return;}}}
   const encWalls=enc.isHBase?enc.hbase.hexPoly.map((p,i,hp)=>{const j=(i+1)%hp.length;return[p[0],p[1],hp[j][0],hp[j][1]];}):[];
   const beamSpace=encToroidalActive(enc)?{toroidal:true,worldW:ew,worldH:eh}:null;
   const encCtx={tgts:()=>encBeamTargets(enc),walls:encWalls,space:beamSpace,lsb:enc.lsb,mis:enc.mis,bul:enc.bul,onBeamHit:(tg,wp,res)=>encHandleBeamHit(enc,tg,wp,res)};
