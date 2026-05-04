@@ -11,6 +11,7 @@ function updEncPts(enc){if(encToroidalActive(enc)){for(let i=enc.pts.length-1;i>
 function clampEncCameraForExit(enc){enc.cam=updateWorldCamera(enc.cam,enc.s.x,enc.s.y,enc.ew,enc.eh,encounterZoomTarget(enc),.5,.5,1);}
 function encKillShip(){
   const enc=G.ENC;killShip(enc.s,enc.pts,'dead_enc');
+  G.absAimTarget=null;
 }
 function encBeamTargets(enc){
   const tgts=[];
@@ -57,7 +58,7 @@ function encWin(){
   copyShieldState(enc.s,ow.s);
   if(keepVelocity){ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;}
   ow.s.inv=80;
-  G.ENC=null;returnToOverworld({keepVelocity});
+  G.ENC=null;G.absAimTarget=null;returnToOverworld({keepVelocity});
   tone(660,.12,'sine',.09);setTimeout(()=>tone(880,.25,'sine',.09),140);
 }
 function splitRock(enc,ri){
@@ -192,7 +193,7 @@ function updEnc(){
   const s=enc.s;if(!s.alive)return;
   const{ew,eh}=enc;
   for(let i=enc.fu.length-1;i>=0;i--){const f=enc.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,ew);f.y=wrap(f.y+f.vy,eh);if(encDist(enc,s.x,s.y,f.x,f.y)<18){pickupEnergy(s,f.x,f.y,enc.pts,'#0f8');enc.fu.splice(i,1);}}
-  applyRotation(s, iRotCombat(), s.energy<=0);
+  applyShipSteering(s, s.energy<=0, true);
   if(iShieldToggle())toggleShipShield(s);
   tickShieldRecharge(s);
   const thrustIn=iThrustInput();

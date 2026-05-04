@@ -83,6 +83,7 @@ function initOW(energy,sx,sy){
 }
 function owKillShip(){
   const ow=G.OW;killShip(ow.s,ow.pts,'dead_ow');
+  G.absAimTarget=null;
 }
 function doRebuildFinalize(){
   const bp=owPos(BASE);G.ENC=null;G.site=null;G.stake=0;
@@ -146,7 +147,7 @@ function startAstEnc(){
   G.ENC={isAst:true,et:astEnemy,label:'ASTEROID FIELD',
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:ens.length?70:0,cleared:!ens.length,
     ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2),z:1}};
-  G.st=ens.length?'enc_in':'encounter';
+  G.absAimTarget=null;G.st=ens.length?'enc_in':'encounter';
   recordLastLocation('asteroid',ow.nearAst);
   saveGame();
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
@@ -170,7 +171,7 @@ function startHBaseEnc(){
     s:encShip,en:[],rocks:[],bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew,eh,hbase:{HEX_R,hx,hy,softpts,turrets,hexPoly},
     cam:{x:Math.max(0,hx-W/2),y:Math.max(0,hy-H/2),z:1}};
-  G.st='enc_in';
+  G.absAimTarget=null;G.st='enc_in';
   recordLastLocation('hbase');
   saveGame();
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
@@ -208,7 +209,7 @@ function owStartFleetEnc(fi,contactA,playerA){
   G.ENC={fleetIdx:fi,et:repType,label:f.id+' FLEET',
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:70,cleared:false,
     ew:EW,eh:EH,cam:{x:Math.max(0,Math.min(EW-W,spawnX-W/2)),y:Math.max(0,Math.min(EH-H,spawnY-H/2)),z:1}};
-  G.st='enc_in';
+  G.absAimTarget=null;G.st='enc_in';
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
 function updOW(){
@@ -222,7 +223,7 @@ function updOW(){
     if(ow.fleets.filter(f=>f.alive&&f.id==='CONVOY').length<CF.maxOnOW){const sgp=owPos(SLIPGATE);ow.fleets.push(mkFleet('CONVOY',sgp.x,sgp.y));}}
   for(let i=ow.fu.length-1;i>=0;i--){const f=ow.fu[i];f.vx*=.97;f.vy*=.97;f.x=wrap(f.x+f.vx,OW_W);f.y=wrap(f.y+f.vy,OW_H);if(Math.hypot(ow.s.x-f.x,ow.s.y-f.y)<20&&ow.s.alive){pickupEnergy(ow.s,f.x,f.y,ow.pts,'#0f8');ow.fu.splice(i,1);}}
   const s=ow.s;if(!s.alive)return;
-  applyRotation(s, iRot(), s.energy<=0);
+  applyShipSteering(s, s.energy<=0, false);
   if(iShieldToggle())toggleShipShield(s);
   tickShieldRecharge(s);
   // sin(angle) = X component, -cos(angle) = Y component: canvas Y increases downward, so "forward" is -cos.

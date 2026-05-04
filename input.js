@@ -87,11 +87,18 @@ function fmtKey(c){return({ArrowLeft:'◄ LEFT',ArrowRight:'► RIGHT',ArrowUp:'
 function fmtBtn(i){const n=['A','B','X','Y','LB','RB','LT','RT','SEL','START','L3','R3','↑','↓','◄','►'];return n[i]!==undefined?n[i]:'BTN'+i;}
 
 // Gamepad
-var GP={connected:false,id:'',axL:0,axLCombat:0,rotDigital:0,thrust:false,reverse:false,strafeLeft:false,strafeRight:false,fire:false,fireSec:false,shield:false,shieldj:false,startj:false,menuUp:false,menuDown:false,menuLeft:false,menuRight:false,confirmj:false};
+var GP={connected:false,id:'',axL:0,axLCombat:0,axLxRaw:0,axLyRaw:0,rotDigital:0,thrust:false,reverse:false,strafeLeft:false,strafeRight:false,fire:false,fireSec:false,shield:false,shieldj:false,startj:false,menuUp:false,menuDown:false,menuLeft:false,menuRight:false,confirmj:false};
 let _gsh=false,_gshield=false,_gmuh=false,_gmdh=false,_gmlh=false,_gmrh=false,_gconfirm=false,_gprev=[];
 const GP_AXIS_DEADZONE=.18;
 const GP_ROT_AXIS_CURVE=1.4;
 const GP_COMBAT_ROT_AXIS_CURVE=2.4;
+// Magnitude (radial) deadzone for absolute-aim mode. Larger than the per-axis deadzone so a stick that's
+// barely off-center can't suddenly command a wild target heading.
+const GP_ABS_AIM_MAG_DEADZONE=.28;
+// When true (option B), the last absolute target heading is held after the stick returns to neutral so
+// the ship continues turning to it. When false (option A), releasing the stick clears the target and the
+// ship coasts as its angular velocity decays to zero.
+const ABS_AIM_HOLD_ON_RELEASE=false;
 const DIGITAL_ROT_RAMP_FRAMES=48;
 const DIGITAL_ROT_RAMP_CURVE=1.75;
 let _rotDigitalDir=0,_rotDigitalFrames=0,_rotDigitalFrame=-1;
@@ -108,7 +115,7 @@ function shapeGPAxis(v,dead=GP_AXIS_DEADZONE,curve=GP_ROT_AXIS_CURVE){
 function pollGP(){
   const pads=navigator.getGamepads?navigator.getGamepads():[];let gp=null;
   for(const p of pads){if(p&&p.connected){gp=p;GP.connected=true;GP.id=p.id.slice(0,36);break;}}
-  if(!gp){GP.axL=0;GP.axLCombat=0;GP.rotDigital=0;GP.thrust=false;GP.reverse=false;GP.strafeLeft=false;GP.strafeRight=false;GP.fire=false;GP.fireSec=false;GP.shield=false;GP.shieldj=false;GP.startj=false;GP.menuUp=false;GP.menuDown=false;GP.menuLeft=false;GP.menuRight=false;GP.confirmj=false;_gprev=[];return;}
+  if(!gp){GP.axL=0;GP.axLCombat=0;GP.axLxRaw=0;GP.axLyRaw=0;GP.rotDigital=0;GP.thrust=false;GP.reverse=false;GP.strafeLeft=false;GP.strafeRight=false;GP.fire=false;GP.fireSec=false;GP.shield=false;GP.shieldj=false;GP.startj=false;GP.menuUp=false;GP.menuDown=false;GP.menuLeft=false;GP.menuRight=false;GP.confirmj=false;_gprev=[];return;}
   const ax=gp.axes,bt=gp.buttons,dead=GP_AXIS_DEADZONE;
   if(G&&G.optListen==='btn'){
     for(let i=0;i<bt.length;i++){
@@ -124,6 +131,8 @@ function pollGP(){
   GP.rotDigital=dL?-1:dR?1:0;
   GP.axL=lx;
   GP.axLCombat=lxCombat;
+  GP.axLxRaw=rawLx;
+  GP.axLyRaw=ly;
   const dU=bpressed(bt,12);
   GP.thrust=bpressed(bt,BND.thrust.btn);
   GP.reverse=bpressed(bt,BND.reverse.btn);
@@ -173,6 +182,13 @@ function iRot(){
 }
 function iRotCombat(){
   return iRotWithAnalog(GP.axLCombat);
+}
+function digitalRotActive(){
+  return!!(kdown('rotLeft')||kdown('rotRight')||GP.rotDigital);
+}
+function absoluteAimEngaged(){
+  if(!GP.connected||(typeof G!=='undefined'&&G.gpAimMode!=='absolute'))return false;
+  return Math.hypot(GP.axLxRaw||0,GP.axLyRaw||0)>=GP_ABS_AIM_MAG_DEADZONE;
 }
 function iThrustInput(){
   const forward=!!(kdown('thrust')||GP.thrust);

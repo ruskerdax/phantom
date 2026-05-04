@@ -307,7 +307,7 @@ function enterSurface(ship=null,opts={}){
     defenses:(d.defenses||[]).map((df,i)=>initDefense(df,ps.surface.defenseAlive[i],DEFENSE_CLASS_IDS.SURFACE_SENTINEL)),
     fu:d.fu.map((f,i)=>({...f,got:ps.surface.fuGot[i]})),
     bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],cam:{x:x-W/2,y:0,z:1}};
-  G.st='play';
+  G.absAimTarget=null;G.st='play';
   recordLastLocation('planet',G.lv);
   saveGame();
 }
@@ -320,7 +320,7 @@ function enterTunnel(dir='down',ship=null){
   G.site={mode:'tunnel',tunnelDir:dir,planet:p,d,s,
     en:d.en.map((e,i)=>initDefense(e,ps.tunnel.enemyAlive[i])),
     fu:[],rx:{alive:false,hp:0},bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:dir==='up'?Math.max(0,d.worldH-H):0,z:1}};
-  G.st='play';
+  G.absAimTarget=null;G.st='play';
   saveGame();
 }
 function enterCaveFromTunnel(ship=null){
@@ -332,7 +332,7 @@ function enterCaveFromTunnel(ship=null){
     fu:d.fu.map((f,i)=>({...f,got:ps.cave.fu[i]})),
     rx:{...d.rx,hp:ps.cave.rx.hp,alive:ps.cave.rx.alive},
     bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:0,z:1}};
-  G.st='play';
+  G.absAimTarget=null;G.st='play';
   saveGame();
 }
 function enterPlanet(){
@@ -343,11 +343,12 @@ function enterLv(){
 }
 function siteKillShip(){
   const site=G.site;killShip(site.s,site.pts,'dead_site',18);
+  G.absAimTarget=null;
 }
 function updCaveSite(){
   const site=G.site;updPts(site.pts,.06);for(let i=site.lsb.length-1;i>=0;i--){if(--site.lsb[i].l<=0)site.lsb.splice(i,1);}
   const s=site.s,d=site.d;if(!s.alive)return;
-  applyRotation(s, iRot(), s.energy<=0);
+  applyShipSteering(s, s.energy<=0, false);
   if(iShieldToggle())toggleShipShield(s);
   tickShieldRecharge(s);
   const thrustIn=iThrustInput();
@@ -554,7 +555,7 @@ function updSurface(){
   updPts(site.pts,.03);
   for(let i=site.lsb.length-1;i>=0;i--)if(--site.lsb[i].l<=0)site.lsb.splice(i,1);
   if(!s.alive)return;
-  applyRotation(s,iRot(),s.energy<=0);
+  applyShipSteering(s,s.energy<=0,false);
   if(iShieldToggle())toggleShipShield(s);
   tickShieldRecharge(s);
   const thrustIn=iThrustInput();

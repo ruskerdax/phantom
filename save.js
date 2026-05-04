@@ -35,6 +35,7 @@ function defaultSave() {
     musVol: DEFAULT_VOLUME,
     dynamicZoom: true,
     renderQuality: 'full',
+    gpAimMode: 'relative',
   };
 }
 
@@ -91,6 +92,7 @@ function loadSave() {
     if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
     if (typeof d.dynamicZoom !== 'boolean')  d.dynamicZoom = true;
+    if (d.gpAimMode !== 'absolute')          d.gpAimMode = 'relative';
     if (!d.settingsVersion) {
       if (d.sfxVol === 10) d.sfxVol = DEFAULT_VOLUME;
       if (d.musVol === 10) d.musVol = DEFAULT_VOLUME;
@@ -151,6 +153,7 @@ function buildSaveData() {
     musVol: G.musVol,
     dynamicZoom: G.dynamicZoom,
     renderQuality: normalizeRenderQuality(G.renderQuality),
+    gpAimMode: G.gpAimMode === 'absolute' ? 'absolute' : 'relative',
   };
 }
 
@@ -161,5 +164,6 @@ function saveSettings() {
   d.musVol = G.musVol;
   d.dynamicZoom = G.dynamicZoom;
   d.renderQuality = normalizeRenderQuality(G.renderQuality);
+  d.gpAimMode = G.gpAimMode === 'absolute' ? 'absolute' : 'relative';
   writeSave(d);
 }

@@ -3,7 +3,7 @@
 // Master game state. G.st drives the state machine — update() and draw() both branch on it so only one
 // sub-system runs per frame. Active mode data lives in sub-objects: G.OW (overworld), G.ENC (encounter), G.site (site).
 const STARTING_POWER=defaultPowerForChassisId('kestrel');
-var G={st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,site:null,paused:false,pauseSel:0,cheatSub:false,cheatSubSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',fps:60,frameMs:16.7,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,fullscreen:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',battery:STARTING_POWER.battery,reactor:STARTING_POWER.reactor,weapons:['mass driver','pulse laser'],aux:null,shield:'shield_std'},visitedSeeds:[],tutorialDone:false,prevSeed:null,systemFlavor:null,menuSuppressUntil:0,systemStates:{},needsRebuild:false,lastLocation:null};
+var G={st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,site:null,paused:false,pauseSel:0,cheatSub:false,cheatSubSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',gpAimMode:'relative',absAimTarget:null,fps:60,frameMs:16.7,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,fullscreen:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',battery:STARTING_POWER.battery,reactor:STARTING_POWER.reactor,weapons:['mass driver','pulse laser'],aux:null,shield:'shield_std'},visitedSeeds:[],tutorialDone:false,prevSeed:null,systemFlavor:null,menuSuppressUntil:0,systemStates:{},needsRebuild:false,lastLocation:null};
 function openTitleMenu(){
   G.titleSel=0;
   G.paused=false;
@@ -404,6 +404,7 @@ function stopShipMotion(s){
 }
 function returnToOverworld(opts={}){
   if(!opts.keepVelocity)stopShipMotion(G.OW?.s);
+  G.absAimTarget=null;
   G.st='overworld';
 }
 function markNeedsRebuild(){G.needsRebuild=true;saveGame();}
@@ -561,6 +562,47 @@ function applyRotation(s, rotIn, energyEmpty){
   if(s.va >  maxV) s.va =  maxV;
   if(s.va < -maxV) s.va = -maxV;
   s.a += s.va;
+}
+
+// Bang-bang controller against the existing rotational inertia model. Returns a value in [-1, 1] suitable
+// to feed straight into applyRotation, picked so the ship arrives at G.absAimTarget without overshoot.
+// Returns null when no target is held (caller falls back to relative analog input).
+function computeAbsoluteAimRotIn(s){
+  if(absoluteAimEngaged()){
+    G.absAimTarget=Math.atan2(GP.axLxRaw,-GP.axLyRaw);
+  } else if(!ABS_AIM_HOLD_ON_RELEASE){
+    G.absAimTarget=null;
+  }
+  if(G.absAimTarget==null)return null;
+  const ch=chassisDefForShip(s);
+  const energyEmpty=s.energy<=0;
+  const accel=Math.max(0,(ch.thrust.rotAccel||0)*(energyEmpty?0.5:1));
+  if(accel<=0)return null;
+  const va=Number.isFinite(s.va)?s.va:0;
+  // angDiff(a,b) returns (b - a), so this is (target - s.a) — positive when target is CW of current.
+  const delta=angDiff(s.a,G.absAimTarget);
+  const brakeDist=(va*va)/(2*accel);
+  // Settle: close enough on heading and barely moving — let applyRotation drift va to zero.
+  if(Math.abs(delta)<accel*0.5 && Math.abs(va)<accel)return 0;
+  // Already moving toward target and within braking distance — full reverse to brake.
+  if(va!==0 && Math.sign(delta)===Math.sign(va) && Math.abs(delta)<=brakeDist){
+    return -Math.sign(va);
+  }
+  // Otherwise drive toward the target at full requested rate.
+  return Math.sign(delta)||0;
+}
+
+// Resolve player rotation input each frame. Digital input always wins (relative). Otherwise, when
+// gamepad absolute-aim is enabled and a target is active, use the bang-bang controller; in all other
+// cases fall through to the existing analog-relative behavior.
+function applyShipSteering(s,energyEmpty,combatCurve){
+  const fallback=combatCurve?iRotCombat():iRot();
+  if(digitalRotActive()||(typeof G!=='undefined'&&G.gpAimMode!=='absolute')||!GP.connected){
+    applyRotation(s,fallback,energyEmpty);
+    return;
+  }
+  const rotIn=computeAbsoluteAimRotIn(s);
+  applyRotation(s,rotIn==null?fallback:rotIn,energyEmpty);
 }
 
 // Apply local-axis thrust to a ship in place. Forward/reverse and strafe are additive, so diagonal

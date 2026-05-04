@@ -302,13 +302,17 @@ function drawControls(){
     }
   }
   cx.shadowBlur=0;
-  const ry=startY+ACT_DEFS.length*rowH+8,retSel=G.ctrlSel===ACT_DEFS.length,rsel=G.ctrlSel===ACT_DEFS.length+1;
+  const ry=startY+ACT_DEFS.length*rowH+8;
+  const steerSel=G.ctrlSel===ACT_DEFS.length,retSel=G.ctrlSel===ACT_DEFS.length+1,rsel=G.ctrlSel===ACT_DEFS.length+2;
   cx.beginPath();cx.moveTo(60,ry-24);cx.lineTo(W-60,ry-24);cx.strokeStyle='#1a4a2a';cx.stroke();
-  cx.textAlign='center';
+  cx.textAlign='center';cx.font='bold 13px monospace';
+  cx.fillStyle=steerSel?'#0f8':'#668';cx.shadowColor='#0f8';cx.shadowBlur=steerSel?8:0;
+  const steerLabel='GAMEPAD STEERING: '+(G.gpAimMode==='absolute'?'ABSOLUTE':'RELATIVE');
+  cx.fillText(steerSel?UI_GLYPH.pointer+' '+steerLabel:steerLabel,W/2,ry);
   cx.fillStyle=retSel?'#0f8':'#668';cx.shadowColor='#0f8';cx.shadowBlur=retSel?8:0;
-  cx.font='bold 13px monospace';cx.fillText(retSel?UI_GLYPH.pointer+' RETURN':'RETURN',W/2,ry);
+  cx.fillText(retSel?UI_GLYPH.pointer+' RETURN':'RETURN',W/2,ry+rowH);
   cx.fillStyle=rsel?'#f84':'#446';cx.shadowColor='#f84';cx.shadowBlur=rsel?8:0;
-  cx.fillText(rsel?UI_GLYPH.pointer+' RESET TO DEFAULTS':'RESET TO DEFAULTS',W/2,ry+rowH);
+  cx.fillText(rsel?UI_GLYPH.pointer+' RESET TO DEFAULTS':'RESET TO DEFAULTS',W/2,ry+rowH*2);
   cx.shadowBlur=0;
   cx.fillStyle='#334';cx.font='11px monospace';
   cx.fillText(UI_GLYPH.up+UI_GLYPH.down+' SELECT ROW   '+UI_GLYPH.left+UI_GLYPH.right+' SWITCH COLUMN   ENTER REMAP   DEL CLEAR   '+pausePrompt('BACK'),W/2,H-18);
@@ -385,24 +389,38 @@ function updControlsMenu(){
     return;
   }
   const m=menuInput();
-  const nRows=ACT_DEFS.length+2;
+  const STEER_ROW=ACT_DEFS.length;
+  const RETURN_ROW=ACT_DEFS.length+1;
+  const RESET_ROW=ACT_DEFS.length+2;
+  const nRows=ACT_DEFS.length+3;
   G.ctrlSel=moveSelection(G.ctrlSel,nRows-1,m.up,m.down);
-  if(m.left)G.optCol=0;
-  if(m.right)G.optCol=1;
-  const confirm=m.confirm&&!m.left&&!m.right;
-  if(confirm){
-    if(G.ctrlSel===ACT_DEFS.length){
-      openOptionsMenu(G.optFrom);
-    }else if(G.ctrlSel===ACT_DEFS.length+1){
-      ACT_DEFS.forEach(a=>{BND[a.id]={key:a.defKey,btn:a.defBtn};});saveBND();
-    }else{
-      G.optListen=G.optCol===0?'key':'btn';
+  // Steering toggle owns left/right; for action rows left/right still switches column.
+  if(G.ctrlSel===STEER_ROW){
+    if(m.left||m.right||m.confirm){
+      G.gpAimMode=G.gpAimMode==='absolute'?'relative':'absolute';
+      G.absAimTarget=null;
+      tone(G.gpAimMode==='absolute'?1200:400,.08,'square',.05);
+      saveSettings();
     }
-  }
-  if(m.clear&&G.ctrlSel<ACT_DEFS.length){
-    const b=BND[ACT_DEFS[G.ctrlSel].id];
-    if(G.optCol===0)b.key=null;else b.btn=null;
-    saveBND();
+  } else {
+    if(m.left)G.optCol=0;
+    if(m.right)G.optCol=1;
+    const confirm=m.confirm&&!m.left&&!m.right;
+    if(confirm){
+      if(G.ctrlSel===RETURN_ROW){
+        openOptionsMenu(G.optFrom);
+      }else if(G.ctrlSel===RESET_ROW){
+        ACT_DEFS.forEach(a=>{BND[a.id]={key:a.defKey,btn:a.defBtn};});saveBND();
+        G.gpAimMode='relative';G.absAimTarget=null;saveSettings();
+      }else{
+        G.optListen=G.optCol===0?'key':'btn';
+      }
+    }
+    if(m.clear&&G.ctrlSel<ACT_DEFS.length){
+      const b=BND[ACT_DEFS[G.ctrlSel].id];
+      if(G.optCol===0)b.key=null;else b.btn=null;
+      saveBND();
+    }
   }
   if(m.cancel)openOptionsMenu(G.optFrom);
 }
