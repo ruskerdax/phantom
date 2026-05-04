@@ -608,7 +608,8 @@ function drawCaveSite(){
   cx.fillStyle='#000';cx.beginPath();polyPath(d.terrain);cx.fill();
   cx.fillStyle=d.bg;for(const o of d.obs){cx.beginPath();polyPath(o);cx.fill();}
   cx.save();cx.shadowColor=col;cx.shadowBlur=10;cx.strokeStyle=col;cx.lineWidth=1.5;
-  cx.beginPath();for(const s of siteBoundarySegments(d)){cx.moveTo(s[0],s[1]);cx.lineTo(s[2],s[3]);}cx.stroke();
+  const tunnelBottomOpen=site.mode==='tunnel'&&!planetState(G.lv).completedSites['cave'];
+  cx.beginPath();for(const s of siteBoundarySegments(d)){if(tunnelBottomOpen&&Math.min(s[1],s[3])>d.worldH-4)continue;cx.moveTo(s[0],s[1]);cx.lineTo(s[2],s[3]);}cx.stroke();
   cx.restore();
   for(const f of site.fu)if(!f.got)drEnergy(f.x,f.y,col);
   const rx=site.rx;
