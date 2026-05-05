@@ -296,7 +296,7 @@ function drawEnc(){
   const drawAt=(x,y,r,fn)=>tor?drawToroidalCopies(x,y,r,enc.ew,enc.eh,cam,fn):fn(x,y);
   const drawSeg=(x1,y1,x2,y2,pad,fn)=>tor?drawToroidalSegmentCopies(x1,y1,x2,y2,pad,enc.ew,enc.eh,cam,fn):fn(x1,y1,x2,y2);
   function drawRockAt(rk,x,y){
-    cx.save();cx.strokeStyle=tierCol[rk.tier||0];cx.shadowColor='#334';cx.shadowBlur=rk.tier===0?6:3;cx.lineWidth=1.5;
+    cx.save();cx.strokeStyle=tierCol[rk.tier||0];cx.shadowColor='#334';cx.shadowBlur=sb(rk.tier===0?6:3);cx.lineWidth=1.5;
     cx.beginPath();
     for(let i=0;i<8;i++){const a=(i/8)*Math.PI*2,r2=rk.r*(1+.2*Math.sin(a*3+rk.r));i?cx.lineTo(x+Math.cos(a)*r2,y+Math.sin(a)*r2):cx.moveTo(x+Math.cos(a)*r2,y+Math.sin(a)*r2);}
     cx.closePath();cx.stroke();
@@ -310,11 +310,11 @@ function drawEnc(){
   for(const e of enc.en)if(e.alive)drawAt(e.x,e.y,(enemyCollisionRadius(e)||12)+16,(x,y)=>enemyDef(e.t).drawEnc({...e,x,y}));
   if(enc.isHBase){
     const{HEX_R,hx,hy,softpts,turrets}=enc.hbase,pu=.5+.5*Math.sin(G.fr*.06);
-    cx.save();cx.strokeStyle='#cc2200';cx.shadowColor='#cc2200';cx.shadowBlur=8+pu*8;cx.lineWidth=2;
+    cx.save();cx.strokeStyle='#cc2200';cx.shadowColor='#cc2200';cx.shadowBlur=sb(8+pu*8);cx.lineWidth=2;
     cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;i?cx.lineTo(hx+Math.cos(a)*HEX_R,hy+Math.sin(a)*HEX_R):cx.moveTo(hx+Math.cos(a)*HEX_R,hy+Math.sin(a)*HEX_R);}cx.closePath();cx.stroke();cx.restore();
     for(const sp of softpts){
       cx.save();
-      if(sp.alive){cx.strokeStyle='#ff8800';cx.shadowColor='#ff8800';cx.shadowBlur=8+pu*6;cx.lineWidth=1.5;}
+      if(sp.alive){cx.strokeStyle='#ff8800';cx.shadowColor='#ff8800';cx.shadowBlur=sb(8+pu*6);cx.lineWidth=1.5;}
       else{cx.strokeStyle='#442200';cx.shadowBlur=0;cx.lineWidth=1;}
       cx.beginPath();cx.arc(sp.x,sp.y,8,0,Math.PI*2);cx.stroke();cx.restore();
     }
@@ -325,7 +325,7 @@ function drawEnc(){
   for(const b of enc.ebu)drawAt(b.x,b.y,5,(x,y)=>drBullet(x,y,b.col));
   for(const m of enc.mis)drawAt(m.x,m.y,10,(x,y)=>drMissile(x,y,m.a,m.type));
   for(const m of enc.emi)drawAt(m.x,m.y,10,(x,y)=>drMissile(x,y,m.a,m.type));
-  for(const lb of enc.lsb){const a=lb.l/8,bw=lb.w||2;drawSeg(lb.x1,lb.y1,lb.x2,lb.y2,bw+12,(x1,y1,x2,y2)=>{cx.save();cx.globalAlpha=a;cx.strokeStyle=lb.col;cx.shadowColor=lb.col;cx.shadowBlur=10;cx.lineWidth=bw;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();cx.globalAlpha=a*.6;cx.strokeStyle='#fff';cx.lineWidth=Math.max(1,bw/2);cx.shadowBlur=0;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();cx.restore();});}
+  for(const lb of enc.lsb){const a=lb.l/8,bw=lb.w||2;drawSeg(lb.x1,lb.y1,lb.x2,lb.y2,bw+12,(x1,y1,x2,y2)=>{cx.save();cx.globalAlpha=a;cx.strokeStyle=lb.col;cx.shadowColor=lb.col;cx.shadowBlur=sb(10);cx.lineWidth=bw;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();cx.globalAlpha=a*.6;cx.strokeStyle='#fff';cx.lineWidth=Math.max(1,bw/2);cx.shadowBlur=0;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();cx.restore();});}
   for(const p of enc.pts)drawAt(p.x,p.y,4,(x,y)=>{let a=Math.max(0,p.l/p.ml);const step=renderProfile().particleAlphaStep;if(step>0)a=Math.ceil(a/step)*step;cx.globalAlpha=a;cx.fillStyle=p.c;cx.beginPath();cx.arc(x,y,1.5,0,Math.PI*2);cx.fill();cx.globalAlpha=1;});
   if(enc.s.alive)drawAt(enc.s.x,enc.s.y,24,(x,y)=>drShip(x,y,enc.s.a,enc.s,iThrustInput(),enc.s.energy,enc.s.inv,G.fr));
   if(enc.s.alive)drawAt(enc.s.x,enc.s.y,CONE.outerR+8,(x,y)=>drAimCone({...enc.s,x,y}));
@@ -339,10 +339,10 @@ function drawEnc(){
       ]
     }));
   }
-  if(enc.introTimer>0){const a=Math.min(1,(70-enc.introTimer)/20);cx.save();cx.globalAlpha=a;cx.fillStyle='rgba(0,0,0,.7)';cx.fillRect(0,H/2-36,W,72);cx.fillStyle=et.enc.col;cx.shadowColor=et.enc.col;cx.shadowBlur=20;cx.font='bold 32px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText((enc.label||'').toLowerCase(),W/2,H/2+4);cx.shadowBlur=0;cx.fillStyle='#668';cx.font='13px MajorMonoDisplay, monospace';cx.fillText(enc.isAst&&!enc.en.length?'you may leave at any time':enc.isHBase?'destroy all soft points to escape':'destroy all enemies to escape',W/2,H/2+26);cx.globalAlpha=1;cx.restore();}
+  if(enc.introTimer>0){const a=Math.min(1,(70-enc.introTimer)/20);cx.save();cx.globalAlpha=a;cx.fillStyle='rgba(0,0,0,.7)';cx.fillRect(0,H/2-36,W,72);cx.fillStyle=et.enc.col;cx.shadowColor=et.enc.col;cx.shadowBlur=sb(20);cx.font='bold 32px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText((enc.label||'').toLowerCase(),W/2,H/2+4);cx.shadowBlur=0;cx.fillStyle='#668';cx.font='13px MajorMonoDisplay, monospace';cx.fillText(enc.isAst&&!enc.en.length?'you may leave at any time':enc.isHBase?'destroy all soft points to escape':'destroy all enemies to escape',W/2,H/2+26);cx.globalAlpha=1;cx.restore();}
   const alive=enc.en.filter(e=>e.alive).length;
   cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.textAlign='center';
-  if(enc.cleared){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=6+5*Math.abs(Math.sin(G.fr*.08));cx.fillText('all clear — leave the area',W/2,18);}
+  if(enc.cleared){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=sb(6+5*Math.abs(Math.sin(G.fr*.08)));cx.fillText('all clear — leave the area',W/2,18);}
   else{const lbl=(enc.label||'').toLowerCase();cx.fillStyle=et.enc.col;cx.fillText(enc.isHBase?lbl+' — '+enc.hbase.softpts.filter(sp=>sp.alive).length+' soft points remaining':lbl+' — '+alive+' remaining',W/2,18);}
   cx.restore();
   drHUD(enc.s.energy,enc.s.maxEnergy,enc.s.hp,enc.s.maxHp,enc.s);

@@ -1,10 +1,23 @@
 'use strict';
 
 const W=800,H=580;
+let DPR=window.devicePixelRatio||1;
+let GAME_CSS_SCALE=1;
+let CANVAS_PIXEL_RATIO=1;
 const EW=Math.round(W*3.9),EH=Math.round(W*3.9);
 const OW_W=Math.round(W*5),OW_H=Math.round(W*5);
 const RENDER_QUALITY_VALUES=['full','reduced','minimal'];
 const RENDER_QUALITY_LABELS={full:'FULL',reduced:'REDUCED',minimal:'MINIMAL'};
+
+function setCanvasPixelRatio(cssScale=GAME_CSS_SCALE){
+  DPR=window.devicePixelRatio||1;
+  GAME_CSS_SCALE=Number.isFinite(cssScale)&&cssScale>0?cssScale:1;
+  const next=Math.max(1,DPR*GAME_CSS_SCALE);
+  const changed=Math.abs(next-CANVAS_PIXEL_RATIO)>1e-6;
+  CANVAS_PIXEL_RATIO=next;
+  return changed;
+}
+function sb(v){return v*CANVAS_PIXEL_RATIO;}
 
 function dseg(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;if(!l2)return Math.hypot(px-ax,py-ay);const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l2));return Math.hypot(px-ax-t*dx,py-ay-t*dy);}
 function pip(px,py,p){let r=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const xi=p[i][0],yi=p[i][1],xj=p[j][0],yj=p[j][1];if((yi>py)!=(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi)r=!r;}return r;}

@@ -147,7 +147,7 @@ function updateDefense(site, d) {
 function drawDefense(d) {
   const def = defenseDef(d), h = defenseHullWorld(d, def);
   cx.save(); cx.translate(d.x, d.y);
-  cx.strokeStyle = def.col; cx.shadowColor = def.col; cx.shadowBlur = 8; cx.lineWidth = 1.5;
+  cx.strokeStyle = def.col; cx.shadowColor = def.col; cx.shadowBlur = sb(8); cx.lineWidth = 1.5;
   drawHullParts(h);
   cx.rotate(d.a); cx.beginPath(); cx.moveTo(0, -8); cx.lineTo(0, -18); cx.stroke();
   cx.rotate(-d.a);

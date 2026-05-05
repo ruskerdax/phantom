@@ -1,7 +1,17 @@
 'use strict';
 
 var CV=document.getElementById('g'),cx=CV.getContext('2d');
-CV.width=W;CV.height=H;
+function resizeGameCanvas(cssScale=GAME_CSS_SCALE){
+  const ratioChanged=setCanvasPixelRatio(cssScale);
+  const bw=Math.round(W*CANVAS_PIXEL_RATIO),bh=Math.round(H*CANVAS_PIXEL_RATIO);
+  const sizeChanged=CV.width!==bw||CV.height!==bh;
+  if(sizeChanged){CV.width=bw;CV.height=bh;}
+  CV.style.width=W+'px';
+  CV.style.height=H+'px';
+  if(ratioChanged&&typeof clearStarLayers==='function')clearStarLayers();
+  return ratioChanged||sizeChanged;
+}
+resizeGameCanvas(1);
 
 // True iff a DOM screen is registered for the current G.st/G.paused combination
 // (i.e. the migrated UI owns this state and the legacy canvas menu should skip).
@@ -66,6 +76,7 @@ function drawMenuBackdrop(){
 }
 
 function draw(){
+  cx.setTransform(CANVAS_PIXEL_RATIO,0,0,CANVAS_PIXEL_RATIO,0,0);
   const st=G.st;
   const uiOwns = uiOwnsCurrent();
 
@@ -105,7 +116,7 @@ function draw(){
 function drawDeadShipBanner(){
   cx.save();
   cx.fillStyle='rgba(0,0,0,.4)'; cx.fillRect(0,0,W,H);
-  cx.fillStyle='#f43'; cx.shadowColor='#f43'; cx.shadowBlur=14;
+  cx.fillStyle='#f43'; cx.shadowColor='#f43'; cx.shadowBlur=sb(14);
   cx.font='bold 26px MajorMonoDisplay, monospace';
   cx.textAlign='center';
   cx.fillText('ship destroyed', W/2, H/2);

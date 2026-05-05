@@ -101,7 +101,7 @@ const ENEMY_CLASSES = [
     drawEnc(e){
       const ec=this.enc,a=combatFacingAngle(e);
       cx.save();cx.translate(e.x,e.y);cx.rotate(a);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
+      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=sb(10);cx.lineWidth=1.5;
       withEnemyBodyScale(this,e,()=>{drawEnemyHull(this);cx.beginPath();cx.moveTo(-6,-6);cx.lineTo(-6,-14);cx.moveTo(0,-8);cx.lineTo(0,-16);cx.moveTo(6,-6);cx.lineTo(6,-14);cx.stroke();});
       if(e.hp<e.mhp){cx.save();cx.rotate(-a);drawEnemyHealthBar(e,ec.col);cx.restore();}
       cx.restore();
@@ -121,7 +121,7 @@ const ENEMY_CLASSES = [
     drawEnc(e){
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
+      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=sb(10);cx.lineWidth=1.5;
       withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
       if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);drawEnemyHealthBar(e,ec.col);cx.restore();}
       cx.restore();
@@ -141,7 +141,7 @@ const ENEMY_CLASSES = [
     drawEnc(e){
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
+      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=sb(10);cx.lineWidth=1.5;
       withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
       if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);drawEnemyHealthBar(e,ec.col);cx.restore();}
       cx.restore();
@@ -161,7 +161,7 @@ const ENEMY_CLASSES = [
     drawEnc(e){
       const ec=this.enc,a=flightAngle(e);
       cx.save();cx.translate(e.x,e.y);cx.rotate(a);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=10;cx.lineWidth=1.5;
+      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=sb(10);cx.lineWidth=1.5;
       withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
       if(e.hp<e.mhp){cx.save();cx.rotate(-a);drawEnemyHealthBar(e,ec.col);cx.restore();}
       cx.restore();
@@ -181,7 +181,7 @@ const ENEMY_CLASSES = [
     drawEnc(e){
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=8;cx.lineWidth=1.2;
+      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=sb(8);cx.lineWidth=1.2;
       withEnemyBodyScale(this,e,()=>{drawEnemyHull(this);for(let k=0;k<3;k++){const a=k*Math.PI*2/3;cx.beginPath();cx.moveTo(Math.cos(a)*5,Math.sin(a)*5);cx.lineTo(Math.cos(a)*8,Math.sin(a)*8);cx.stroke();}});
       if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);drawEnemyHealthBar(e,ec.col,7,3);cx.restore();}
       cx.restore();
@@ -207,7 +207,7 @@ const ENEMY_CLASSES = [
     drawEnc(e){
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=12;cx.lineWidth=2;
+      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=sb(12);cx.lineWidth=2;
       withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
       cx.save();cx.rotate(-e.spin);
       drawEnemyHealthBar(e,ec.col);
@@ -233,7 +233,7 @@ const ENEMY_CLASSES = [
     drawEnc(e){
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
-      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=14;cx.lineWidth=2;
+      cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=sb(14);cx.lineWidth=2;
       withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
       cx.save();cx.rotate(-e.spin);
       drawEnemyHealthBar(e,ec.col);

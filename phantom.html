@@ -64,6 +64,7 @@ function resizeCanvas(){
   var g=document.getElementById('game');
   var max=document.fullscreenElement?Infinity:1;
   var s=Math.min(max,window.innerWidth/800,window.innerHeight/580);
+  if(typeof resizeGameCanvas==='function')resizeGameCanvas(s);
   g.style.transform='scale('+s+')';
 }
 window.addEventListener('resize',resizeCanvas);

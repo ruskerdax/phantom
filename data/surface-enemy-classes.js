@@ -113,7 +113,7 @@ function surfaceEnemyBeamTarget(e, idx) {
 function drawSurfaceHullEnemy(def, e) {
   const h = surfaceEnemyHullWorld(e, def);
   cx.save(); cx.translate(e.x, e.y); cx.rotate(h.a);
-  cx.strokeStyle = def.col; cx.shadowColor = def.col; cx.shadowBlur = 8; cx.lineWidth = 1.5;
+  cx.strokeStyle = def.col; cx.shadowColor = def.col; cx.shadowBlur = sb(8); cx.lineWidth = 1.5;
   drawHullParts(h);
   cx.restore();
   cx.save(); cx.translate(e.x, e.y);
