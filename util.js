@@ -17,7 +17,8 @@ function setCanvasPixelRatio(cssScale=GAME_CSS_SCALE){
   CANVAS_PIXEL_RATIO=next;
   return changed;
 }
-function sb(v){return v*CANVAS_PIXEL_RATIO;}
+// Canvas gameplay glows are disabled; DOM menu CSS still owns menu shadows.
+function sb(v){return 0;}
 
 function dseg(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;if(!l2)return Math.hypot(px-ax,py-ay);const t=Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l2));return Math.hypot(px-ax-t*dx,py-ay-t*dy);}
 function pip(px,py,p){let r=false;for(let i=0,j=p.length-1;i<p.length;j=i++){const xi=p[i][0],yi=p[i][1],xj=p[j][0],yj=p[j][1];if((yi>py)!=(yj>py)&&px<(xj-xi)*(py-yi)/(yj-yi)+xi)r=!r;}return r;}
