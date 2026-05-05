@@ -8,6 +8,9 @@
 body{background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;overflow:hidden}
 #game{position:relative;width:800px;height:580px;transform-origin:center center}
 canvas{display:block;cursor:none}
+#g,#shader-canvas{position:absolute;inset:0;width:800px;height:580px}
+#g{z-index:0}
+#shader-canvas{display:none;z-index:1;pointer-events:none}
 </style>
 </head><body>
 <div id="game">
@@ -28,11 +31,13 @@ canvas{display:block;cursor:none}
 <script src="gen.js"></script>
 <script src="surface-enemies.js"></script>
 <script src="data/levels.js"></script>
+<script src="shader-presets.js"></script>
 <script src="save.js"></script>
 <script src="audio.js"></script>
 <script src="input.js"></script>
 <script src="draw.js"></script>
 <script src="state.js"></script>
+<script src="shader.js"></script>
 <script src="menu-ui.js"></script>
 <script src="overworld.js"></script>
 <script src="encounter.js"></script>
@@ -50,6 +55,7 @@ canvas{display:block;cursor:none}
 <script src="ui/screens/cheats.js"></script>
 <script src="ui/screens/ship-config.js"></script>
 <script src="ui/screens/options.js"></script>
+<script src="ui/screens/shaders.js"></script>
 <script src="ui/screens/controls.js"></script>
 <script src="ui/screens/clear-data.js"></script>
 <script src="ui/screens/seed-input.js"></script>

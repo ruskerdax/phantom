@@ -19,6 +19,7 @@ const UI_SCREEN_FACTORIES = {};   // populated by ui/screens/*.js via registerSc
 let UI_LAST_KEY = '';
 
 function registerScreen(key, factory) { UI_SCREEN_FACTORIES[key] = factory; }
+function uiInvalidateScreen() { UI_LAST_KEY = ''; }
 
 // Compute the screen identity that should be mounted right now. Returns a
 // string key (matched against UI_SCREEN_FACTORIES) or '' for "no screen".
@@ -37,6 +38,7 @@ function uiCurrentScreenKey() {
     case 'title':       return 'title';
     case 'options':     return G.clearDataSel !== undefined ? 'clear-data' : 'options';
     case 'controls':    return 'controls';
+    case 'shaders':     return 'shaders';
     case 'rebuild':     return (G.rebuildFlow && G.rebuildFlow.phase === 'config') ? 'rebuild-config' : 'rebuild';
     case 'base':        return 'base';
     case 'slipgate':    return 'slipgate';

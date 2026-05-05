@@ -8,6 +8,7 @@ function resizeGameCanvas(cssScale=GAME_CSS_SCALE){
   if(sizeChanged){CV.width=bw;CV.height=bh;}
   CV.style.width=W+'px';
   CV.style.height=H+'px';
+  if(typeof shaderResize==='function')shaderResize();
   if(ratioChanged&&typeof clearStarLayers==='function')clearStarLayers();
   return ratioChanged||sizeChanged;
 }
@@ -85,7 +86,7 @@ function draw(){
   if(st==='slipgate') { if(uiOwns) drawOW(); return; }
 
   // Fullscreen menus / banners — DOM owns the menu, canvas paints the stars.
-  if(st==='title'||st==='options'||st==='controls'||st==='rebuild'||st==='over'||st==='done'){
+  if(st==='title'||st==='options'||st==='controls'||st==='shaders'||st==='rebuild'||st==='over'||st==='done'){
     if(uiOwns){
       drawMenuBackdrop();
       drGPI(8, H-8, 'left');
@@ -156,18 +157,30 @@ function loop(ts){
   if(steps===SIM_MAX_STEPS)simAccumMs=0;
 
   draw();
+  if(typeof shaderPresentFrame==='function')shaderPresentFrame();
   requestAnimationFrame(loop);
 }
 
 function shouldSaveOnUnload(){
   const activeStates=['overworld','enc_in','encounter','play','esc','base','slipgate','rebuild','dead_ow','dead_enc','dead_site'];
-  return !!(G.OW||G.ENC||G.site)&&(activeStates.includes(G.st)||((G.st==='options'||G.st==='controls')&&G.optFrom!=='title'));
+  return !!(G.OW||G.ENC||G.site)&&(activeStates.includes(G.st)||((G.st==='options'||G.st==='controls'||G.st==='shaders')&&G.optFrom!=='title'));
 }
 window.addEventListener('beforeunload',()=>{ if(shouldSaveOnUnload()) saveGame(); });
 
-// Boot — restore audio settings from save, generate the tutorial world, init the
-// DOM UI overlay, then start the main loop.
-{const sv=loadSave();if(sv){G.sfxVol=sv.sfxVol??7;G.musVol=sv.musVol??7;G.dynamicZoom=sv.dynamicZoom??true;G.renderQuality=normalizeRenderQuality(sv.renderQuality);G.gpAimMode=sv.gpAimMode==='absolute'?'absolute':'relative';}}
+// Boot — restore audio/settings from save, generate the tutorial world, init the
+// post-process + DOM UI overlays, then start the main loop.
+{
+  const sv=loadSave(),shaderDefault=typeof shaderPreferredDefaultEnabled==='function'?shaderPreferredDefaultEnabled():false;
+  if(sv){
+    G.sfxVol=sv.sfxVol??7;G.musVol=sv.musVol??7;G.dynamicZoom=sv.dynamicZoom??true;
+    G.renderQuality=normalizeRenderQuality(sv.renderQuality);G.gpAimMode=sv.gpAimMode==='absolute'?'absolute':'relative';
+    G.shaderEnabled=typeof sv.shaderEnabled==='boolean'?sv.shaderEnabled:shaderDefault;
+    G.shaderPresetId=normalizeShaderPresetId(sv.shaderPresetId);G.shaderParams=normalizeShaderParams(sv.shaderParams);
+  }else{
+    G.shaderEnabled=shaderDefault;G.shaderPresetId=SHADER_DEFAULT_PRESET_ID;G.shaderParams=normalizeShaderParams(null);
+  }
+}
 G.seed=TUTORIAL_SEED; genWorld(G.seed);
+if(typeof shaderInit==='function'){shaderInit(CV);if(!shaderSupported())G.shaderEnabled=false;shaderApplyVisibility();}
 if(typeof uiInit === 'function') uiInit();
 requestAnimationFrame(loop);

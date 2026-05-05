@@ -44,6 +44,7 @@
   flex-direction: column;
   min-width: 320px;
   max-width: 720px;
+  max-height: calc(100% - 48px);
   width: 100%;
 }
 .panel.compact { padding: var(--pad-tight); }
@@ -79,6 +80,9 @@
   flex-direction: column;
   gap: var(--gap-tight);
   margin: 4px 0;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-color: var(--accent-dim) transparent;
 }
 .panel-footer {
   font-size: var(--fs-footer);

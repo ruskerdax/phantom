@@ -36,6 +36,9 @@ function defaultSave() {
     dynamicZoom: true,
     renderQuality: 'full',
     gpAimMode: 'relative',
+    shaderEnabled: false,
+    shaderPresetId: SHADER_DEFAULT_PRESET_ID,
+    shaderParams: normalizeShaderParams(null),
   };
 }
 
@@ -93,6 +96,9 @@ function loadSave() {
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
     if (typeof d.dynamicZoom !== 'boolean')  d.dynamicZoom = true;
     if (d.gpAimMode !== 'absolute')          d.gpAimMode = 'relative';
+    if (typeof d.shaderEnabled !== 'boolean') d.shaderEnabled = null;
+    d.shaderPresetId = normalizeShaderPresetId(d.shaderPresetId);
+    d.shaderParams = normalizeShaderParams(d.shaderParams);
     if (!d.settingsVersion) {
       if (d.sfxVol === 10) d.sfxVol = DEFAULT_VOLUME;
       if (d.musVol === 10) d.musVol = DEFAULT_VOLUME;
@@ -154,6 +160,9 @@ function buildSaveData() {
     dynamicZoom: G.dynamicZoom,
     renderQuality: normalizeRenderQuality(G.renderQuality),
     gpAimMode: G.gpAimMode === 'absolute' ? 'absolute' : 'relative',
+    shaderEnabled: !!G.shaderEnabled,
+    shaderPresetId: normalizeShaderPresetId(G.shaderPresetId),
+    shaderParams: normalizeShaderParams(G.shaderParams),
   };
 }
 
@@ -165,5 +174,8 @@ function saveSettings() {
   d.dynamicZoom = G.dynamicZoom;
   d.renderQuality = normalizeRenderQuality(G.renderQuality);
   d.gpAimMode = G.gpAimMode === 'absolute' ? 'absolute' : 'relative';
+  d.shaderEnabled = !!G.shaderEnabled;
+  d.shaderPresetId = normalizeShaderPresetId(G.shaderPresetId);
+  d.shaderParams = normalizeShaderParams(G.shaderParams);
   writeSave(d);
 }

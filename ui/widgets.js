@@ -187,7 +187,51 @@ class Slider extends Widget {
   }
 }
 
-// ----- Cycle (◄ value ►) -----------------------------------------------------
+// ----- NumberStepper (numeric shader/config parameter) ----------------------
+class NumberStepper extends Widget {
+  constructor(opts) {
+    super(opts);
+    this.label = opts.label;
+    this.min = opts.min ?? 0;
+    this.max = opts.max ?? 1;
+    this.step = opts.step ?? 0.01;
+    this.get = opts.get;
+    this.set = opts.set;
+    this.format = opts.format || (v => String(v));
+  }
+  build() {
+    const el = document.createElement('div');
+    el.className = 'row';
+    el.innerHTML = `
+      <span class="row-pointer">${UI_GLYPH_DOM.pointer}</span>
+      <span class="row-label"></span>
+      <span class="row-value cycle">
+        <span class="arrow left">${UI_GLYPH_DOM.left}</span>
+        <span class="cycle-text"></span>
+        <span class="arrow right">${UI_GLYPH_DOM.right}</span>
+      </span>
+    `;
+    return el;
+  }
+  refresh() {
+    super.refresh();
+    if (!this._el) return;
+    this._el.querySelector('.row-label').textContent = typeof this.label === 'function' ? this.label() : this.label;
+    this._el.querySelector('.cycle-text').textContent = this.format(this.get());
+  }
+  _set(v) {
+    const n = Math.max(this.min, Math.min(this.max, v));
+    this.set(Number(n.toFixed(6)));
+  }
+  handle(input) {
+    if (this.disabled) return false;
+    if (input.left)  { this._set(this.get() - this.step); return true; }
+    if (input.right) { this._set(this.get() + this.step); return true; }
+    return false;
+  }
+}
+
+// ----- Cycle ---------------------------------------------------------------
 // `values` may be: array of strings, array of {id, label}, or a function ()=>array.
 class Cycle extends Widget {
   constructor(opts) {

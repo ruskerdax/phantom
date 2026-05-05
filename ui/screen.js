@@ -177,6 +177,10 @@ class Screen {
       w.setFocused(i === this.focusIdx);
       w.refresh && w.refresh();
     }
+    const focusedEl = this.widgets[this.focusIdx]?._el;
+    if (focusedEl && focusedEl.scrollIntoView) {
+      try { focusedEl.scrollIntoView({ block: 'nearest' }); } catch(e) {}
+    }
     if (this._footerEl) {
       const txt = typeof this.footer === 'function' ? this.footer() : this.footer;
       this._footerEl.textContent = txt || '';

@@ -20,6 +20,11 @@ function makeOptionsScreen() {
     label: 'controls →',
     onConfirm: () => openControlsMenu(),
   }));
+  screen.add(new Button({
+    label: 'shader settings ->',
+    disabled: !shaderSupported(),
+    onConfirm: () => openShaderMenu(),
+  }));
   screen.add(new Slider({
     label: 'sound effects',
     get: () => G.sfxVol,
@@ -41,6 +46,12 @@ function makeOptionsScreen() {
     get: () => normalizeRenderQuality(G.renderQuality),
     set: v => { G.renderQuality = v; tone(v === 'full' ? 1200 : v === 'reduced' ? 800 : 400, .08, 'square', .05); saveSettings(); },
     format: v => (typeof v === 'string' ? v : v?.id || 'full'),
+  }));
+  screen.add(new Toggle({
+    label: 'shaders',
+    disabled: !shaderSupported(),
+    get: () => !!G.shaderEnabled,
+    set: v => { shaderSetEnabled(v); tone(v ? 1200 : 400, .08, 'square', .05); saveSettings(); },
   }));
   screen.add(new Toggle({
     label: 'cheat mode',

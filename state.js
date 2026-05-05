@@ -25,6 +25,7 @@ var G={
   equipFlow:null,
   optFrom:'title',
   sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',
+  shaderEnabled:false,shaderPresetId:SHADER_DEFAULT_PRESET_ID,shaderParams:normalizeShaderParams(null),
   gpAimMode:'relative',absAimTarget:null,
   fps:60,frameMs:16.7,
   ctrlSel:0,optCol:0,optListen:null,
@@ -58,6 +59,10 @@ function openControlsMenu(){
   G.optCol=0;
   G.optListen=null;
   G.st='controls';
+}
+function openShaderMenu(){
+  delete G.clearDataSel;
+  G.st='shaders';
 }
 function openBaseMenu(){
   G.baseTab=0;

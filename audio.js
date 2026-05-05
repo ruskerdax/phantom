@@ -135,7 +135,7 @@ function musicSyncVolume(immediate=false){
   audioRamp(AUDIO.musicMaster.gain,target,immediate?0:.12);
 }
 function musicPauseFilterActive(){
-  return !!(typeof G!=='undefined'&&(G.paused||((G.st==='options'||G.st==='controls')&&G.optFrom!=='title')));
+  return !!(typeof G!=='undefined'&&(G.paused||((G.st==='options'||G.st==='controls'||G.st==='shaders')&&G.optFrom!=='title')));
 }
 function musicSyncPauseFilter(immediate=false){
   if(!AUDIO.pauseFilter)return;
@@ -474,7 +474,7 @@ function musicReconcileLayers(arr){
   });
 }
 function musicContextForName(st){
-  if(st==='title'||st==='options'||st==='controls'||st==='done')return'title';
+  if(st==='title'||st==='options'||st==='controls'||st==='shaders'||st==='done')return'title';
   if(st==='over'||st==='rebuild'||st==='dead_ow'||st==='dead_enc'||st==='dead_site')return'gameover';
   if(st==='overworld'||st==='base'||st==='slipgate')return'overworld';
   if(st==='enc_in'||st==='encounter')return'encounter';
@@ -484,7 +484,7 @@ function musicContextForName(st){
 }
 function musicDesiredContext(){
   if(typeof G==='undefined')return'title';
-  if((G.st==='options'||G.st==='controls')&&G.optFrom&&G.optFrom!=='title')return musicContextForName(G.optFrom);
+  if((G.st==='options'||G.st==='controls'||G.st==='shaders')&&G.optFrom&&G.optFrom!=='title')return musicContextForName(G.optFrom);
   return musicContextForName(G.st);
 }
 function musicStopAll(fadeSec=.75){
