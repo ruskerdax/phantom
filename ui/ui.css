@@ -146,10 +146,10 @@
 
 /* ---- Centered button-style row (used for plain "do X" menus) --------------- */
 .row.center {
-  grid-template-columns: 1fr;
-  justify-items: center;
+  display: flex;
+  justify-content: center;
 }
-.row.center .row-pointer { display: inline; opacity: 0; margin-right: 6px; }
+.row.center .row-pointer { opacity: 0; margin-right: 6px; }
 .row.center.is-focused .row-pointer { opacity: 1; }
 .row.center .row-label { text-align: center; }
 
