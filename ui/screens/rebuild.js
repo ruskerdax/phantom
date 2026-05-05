@@ -119,12 +119,14 @@ function makeRebuildConfigScreen() {
     flow: () => G.rebuildFlow,
     priceText: () => {
       const rf = G.rebuildFlow;
+      if (!rf) return '';
       const cost = rebuildTotalCost(rf.chassisId, rf.shieldId);
       const ok = G.credits >= cost;
       return `cost: ${cost === 0 ? 'free' : cost + ' cr'}` + (ok ? '' : '   — insufficient credits');
     },
     confirmLabel: () => {
       const rf = G.rebuildFlow;
+      if (!rf) return 'rebuild';
       const cost = rebuildTotalCost(rf.chassisId, rf.shieldId);
       return 'rebuild  ' + (cost === 0 ? 'free' : cost + ' cr');
     },

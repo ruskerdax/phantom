@@ -44,8 +44,8 @@ function makeShipConfigurator(opts) {
     screen.add(new Cycle({
       label: `slot ${i + 1} [${slot.type.toLowerCase()}]`,
       values: () => [null, ...licensedWeaponsForSlot(slot).map(w => w.id)],
-      get: () => opts.flow().slots[slotIdx],
-      set: v => { opts.flow().slots[slotIdx] = v; },
+      get: () => opts.flow()?.slots[slotIdx] ?? null,
+      set: v => { const f = opts.flow(); if (f) f.slots[slotIdx] = v; },
       format: v => {
         if (v == null) return '(empty)';
         const wp = WEAPONS.find(w => w.id === v);
@@ -58,8 +58,8 @@ function makeShipConfigurator(opts) {
   screen.add(new Cycle({
     label: 'shield',
     values: () => [null, ...SHIELDS.filter(s => hasLicense(s.id)).map(s => s.id)],
-    get: () => opts.flow().shieldId,
-    set: v => { opts.flow().shieldId = v; },
+    get: () => opts.flow()?.shieldId ?? null,
+    set: v => { const f = opts.flow(); if (f) f.shieldId = v; },
     format: v => {
       if (v == null) return '(none)';
       const sh = SHIELDS.find(s => s.id === v);
@@ -74,6 +74,7 @@ function makeShipConfigurator(opts) {
     label: () => opts.confirmLabel ? opts.confirmLabel() : 'confirm',
     onConfirm: () => {
       const f = opts.flow();
+      if (!f) return;
       const hasWeapon = f.slots.some(s => s !== null);
       if (!hasWeapon && !f.warnShown) { f.warnShown = true; return; }
       opts.onConfirm();
@@ -83,7 +84,7 @@ function makeShipConfigurator(opts) {
 
   // ---- Tail row: warning -------------------------------------------------
   const warnRow = new TextRow({
-    text: () => opts.flow().warnShown ? 'warning: no weapons equipped!' : '',
+    text: () => opts.flow()?.warnShown ? 'warning: no weapons equipped!' : '',
     color: 'var(--accent-warn)',
     align: 'center',
     size: 'sm',
