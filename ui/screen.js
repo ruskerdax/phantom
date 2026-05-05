@@ -23,6 +23,11 @@ function uiInit() {
     UI.root.id = 'ui-root';
     document.body.appendChild(UI.root);
   }
+  if (!UI.root.dataset.shaderDirtyHook) {
+    UI.root.dataset.shaderDirtyHook = '1';
+    UI.root.addEventListener('input', () => { if (typeof shaderMarkUiDirty === 'function') shaderMarkUiDirty(); }, true);
+    UI.root.addEventListener('change', () => { if (typeof shaderMarkUiDirty === 'function') shaderMarkUiDirty(); }, true);
+  }
   syncThemeFromCSS();
 }
 
@@ -35,6 +40,7 @@ function uiPush(screen) {
   UI.stack.push(screen);
   screen._mount(UI.root);
   uiUpdateRootInteractivity();
+  if (typeof shaderResetUiCapture === 'function') shaderResetUiCapture();
   if (typeof suppressMenuInput === 'function') suppressMenuInput();
 }
 
@@ -42,6 +48,7 @@ function uiPop() {
   const screen = UI.stack.pop();
   if (screen) screen._unmount();
   uiUpdateRootInteractivity();
+  if (typeof shaderResetUiCapture === 'function') shaderResetUiCapture();
   if (typeof suppressMenuInput === 'function') suppressMenuInput();
   return screen;
 }
@@ -185,6 +192,7 @@ class Screen {
       const txt = typeof this.footer === 'function' ? this.footer() : this.footer;
       this._footerEl.textContent = txt || '';
     }
+    if (typeof shaderMarkUiDirty === 'function') shaderMarkUiDirty();
   }
 
   focusableCount() { return this.widgets.filter(w => w.focusable !== false).length; }
@@ -219,7 +227,10 @@ class Screen {
     // re-render footer if it's a function (so dynamic prompts update)
     if (this._footerEl && typeof this.footer === 'function') {
       const txt = this.footer();
-      if (this._footerEl.textContent !== txt) this._footerEl.textContent = txt || '';
+      if (this._footerEl.textContent !== txt) {
+        this._footerEl.textContent = txt || '';
+        if (typeof shaderMarkUiDirty === 'function') shaderMarkUiDirty();
+      }
     }
     for (const w of this.widgets) w.tick && w.tick();
   }

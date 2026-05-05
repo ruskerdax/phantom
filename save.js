@@ -37,6 +37,7 @@ function defaultSave() {
     renderQuality: 'full',
     gpAimMode: 'relative',
     shaderEnabled: false,
+    shaderUiEnabled: true,
     shaderPresetId: SHADER_DEFAULT_PRESET_ID,
     shaderParams: normalizeShaderParams(null),
   };
@@ -97,6 +98,7 @@ function loadSave() {
     if (typeof d.dynamicZoom !== 'boolean')  d.dynamicZoom = true;
     if (d.gpAimMode !== 'absolute')          d.gpAimMode = 'relative';
     if (typeof d.shaderEnabled !== 'boolean') d.shaderEnabled = null;
+    if (typeof d.shaderUiEnabled !== 'boolean') d.shaderUiEnabled = true;
     d.shaderPresetId = normalizeShaderPresetId(d.shaderPresetId);
     d.shaderParams = normalizeShaderParams(d.shaderParams);
     if (!d.settingsVersion) {
@@ -161,6 +163,7 @@ function buildSaveData() {
     renderQuality: normalizeRenderQuality(G.renderQuality),
     gpAimMode: G.gpAimMode === 'absolute' ? 'absolute' : 'relative',
     shaderEnabled: !!G.shaderEnabled,
+    shaderUiEnabled: G.shaderUiEnabled !== false,
     shaderPresetId: normalizeShaderPresetId(G.shaderPresetId),
     shaderParams: normalizeShaderParams(G.shaderParams),
   };
@@ -175,6 +178,7 @@ function saveSettings() {
   d.renderQuality = normalizeRenderQuality(G.renderQuality);
   d.gpAimMode = G.gpAimMode === 'absolute' ? 'absolute' : 'relative';
   d.shaderEnabled = !!G.shaderEnabled;
+  d.shaderUiEnabled = G.shaderUiEnabled !== false;
   d.shaderPresetId = normalizeShaderPresetId(G.shaderPresetId);
   d.shaderParams = normalizeShaderParams(G.shaderParams);
   writeSave(d);

@@ -19,7 +19,10 @@ const UI_SCREEN_FACTORIES = {};   // populated by ui/screens/*.js via registerSc
 let UI_LAST_KEY = '';
 
 function registerScreen(key, factory) { UI_SCREEN_FACTORIES[key] = factory; }
-function uiInvalidateScreen() { UI_LAST_KEY = ''; }
+function uiInvalidateScreen() {
+  UI_LAST_KEY = '';
+  if (typeof shaderResetUiCapture === 'function') shaderResetUiCapture();
+}
 
 // Compute the screen identity that should be mounted right now. Returns a
 // string key (matched against UI_SCREEN_FACTORIES) or '' for "no screen".

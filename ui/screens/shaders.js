@@ -44,6 +44,13 @@ function makeShadersScreen() {
     set: v => { shaderSetEnabled(v); tone(v ? 1200 : 400, .08, 'square', .05); saveSettings(); },
   }));
 
+  screen.add(new Toggle({
+    label: 'shader ui',
+    disabled: !shaderSupported(),
+    get: () => G.shaderUiEnabled !== false,
+    set: v => { shaderSetUiEnabled(v); tone(v ? 1000 : 360, .08, 'square', .05); saveSettings(); },
+  }));
+
   screen.add(new Cycle({
     label: 'preset',
     values: SHADER_PRESET_VALUES,

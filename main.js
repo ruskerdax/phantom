@@ -175,9 +175,10 @@ window.addEventListener('beforeunload',()=>{ if(shouldSaveOnUnload()) saveGame()
     G.sfxVol=sv.sfxVol??7;G.musVol=sv.musVol??7;G.dynamicZoom=sv.dynamicZoom??true;
     G.renderQuality=normalizeRenderQuality(sv.renderQuality);G.gpAimMode=sv.gpAimMode==='absolute'?'absolute':'relative';
     G.shaderEnabled=typeof sv.shaderEnabled==='boolean'?sv.shaderEnabled:shaderDefault;
+    G.shaderUiEnabled=sv.shaderUiEnabled!==false;
     G.shaderPresetId=normalizeShaderPresetId(sv.shaderPresetId);G.shaderParams=normalizeShaderParams(sv.shaderParams);
   }else{
-    G.shaderEnabled=shaderDefault;G.shaderPresetId=SHADER_DEFAULT_PRESET_ID;G.shaderParams=normalizeShaderParams(null);
+    G.shaderEnabled=shaderDefault;G.shaderUiEnabled=true;G.shaderPresetId=SHADER_DEFAULT_PRESET_ID;G.shaderParams=normalizeShaderParams(null);
   }
 }
 G.seed=TUTORIAL_SEED; genWorld(G.seed);
