@@ -3,9 +3,40 @@
 // Master game state. G.st drives the state machine — update() and draw() both branch on it so only one
 // sub-system runs per frame. Active mode data lives in sub-objects: G.OW (overworld), G.ENC (encounter), G.site (site).
 const STARTING_POWER=defaultPowerForChassisId('kestrel');
-var G={st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},slipgateActive:false,slipMsg:0,OW:null,ENC:null,site:null,paused:false,pauseSel:0,cheatSub:false,cheatSubSel:0,baseSel:0,baseTab:0,shopSel:0,shopActionId:null,shopActionSel:0,equipFlow:null,titleSel:0,optFrom:'title',optSel:0,sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',gpAimMode:'relative',absAimTarget:null,fps:60,frameMs:16.7,ctrlSel:0,optCol:0,optListen:null,seed:0,cheatMode:false,invincible:false,fullscreen:false,customSeed:null,seedInputOpen:false,slipSel:0,licenses:[],loadout:{chassis:'kestrel',battery:STARTING_POWER.battery,reactor:STARTING_POWER.reactor,weapons:['mass driver','pulse laser'],aux:null,shield:'shield_std'},visitedSeeds:[],tutorialDone:false,prevSeed:null,systemFlavor:null,menuSuppressUntil:0,systemStates:{},needsRebuild:false,lastLocation:null};
+// Master game state.
+//
+// Selection state for menus (titleSel/pauseSel/cheatSubSel/baseSel/shopSel/
+// shopActionSel/optSel/slipSel) used to live here when each canvas menu kept
+// its focus index on G; menus now own their own focus inside the DOM screen
+// stack, so those fields are gone. The remaining "menu state" on G is shared
+// across boundaries (G.paused, G.cheatSub, G.showShipConfig, G.shopActionId,
+// G.equipFlow, G.rebuildFlow, G.clearDataSel, G.seedInputOpen, G.optFrom,
+// G.optCol, G.optListen, G.ctrlSel) — the input.js rebinding pipeline still
+// needs G.ctrlSel/optCol/optListen to know which action it's writing to.
+var G={
+  st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,
+  cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},
+  slipgateActive:false,slipMsg:0,
+  OW:null,ENC:null,site:null,
+  paused:false,
+  cheatSub:false,
+  baseTab:0,
+  shopActionId:null,
+  equipFlow:null,
+  optFrom:'title',
+  sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',
+  gpAimMode:'relative',absAimTarget:null,
+  fps:60,frameMs:16.7,
+  ctrlSel:0,optCol:0,optListen:null,
+  seed:0,cheatMode:false,invincible:false,fullscreen:false,
+  customSeed:null,seedInputOpen:false,
+  licenses:[],
+  loadout:{chassis:'kestrel',battery:STARTING_POWER.battery,reactor:STARTING_POWER.reactor,weapons:['mass driver','pulse laser'],aux:null,shield:'shield_std'},
+  visitedSeeds:[],tutorialDone:false,prevSeed:null,systemFlavor:null,
+  menuSuppressUntil:0,systemStates:{},
+  needsRebuild:false,lastLocation:null,
+};
 function openTitleMenu(){
-  G.titleSel=0;
   G.paused=false;
   G.cheatSub=false;
   G.showShipConfig=false;
@@ -13,14 +44,11 @@ function openTitleMenu(){
 }
 function openPauseMenu(){
   G.paused=true;
-  G.pauseSel=0;
   G.cheatSub=false;
-  G.cheatSubSel=0;
   G.showShipConfig=false;
 }
 function openOptionsMenu(from){
   G.optFrom=from;
-  G.optSel=0;
   G.optListen=null;
   delete G.clearDataSel;
   G.st='options';
@@ -32,17 +60,13 @@ function openControlsMenu(){
   G.st='controls';
 }
 function openBaseMenu(){
-  G.baseSel=0;
   G.baseTab=0;
-  G.shopSel=0;
   G.shopActionId=null;
-  G.shopActionSel=0;
   G.equipFlow=null;
   fillShipEnergy(G.OW?.s);
   G.st='base';
 }
 function openSlipgateMenu(){
-  G.slipSel=0;
   G.st='slipgate';
 }
 function openRebuildMenu(){

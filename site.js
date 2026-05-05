@@ -620,9 +620,9 @@ function drawCaveSite(){
   if(site.s.alive)drAimCone(site.s);
   cx.restore();
   drHUD(site.s.energy,site.s.maxEnergy,site.s.hp,site.s.maxHp,site.s);
-  cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.fillStyle=col;cx.textAlign='center';cx.fillText(d.name,W/2,18);cx.restore();
-  if(G.st==='esc'){const sec=Math.ceil(site.esc/60);cx.save();cx.fillStyle=sec<=3?'#f40':'#ff0';cx.shadowColor=cx.fillStyle;cx.shadowBlur=12;cx.font='bold 20px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('REACTOR CRITICAL — ESCAPE NOW!',W/2,52);cx.font='bold 34px MajorMonoDisplay, monospace';cx.fillText(sec+'s',W/2,84);cx.restore();}
-  if(G.st==='dead_site'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('SHIP DESTROYED',W/2,H/2);cx.restore();}
+  cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.fillStyle=col;cx.textAlign='center';cx.fillText((d.name||'').toLowerCase(),W/2,18);cx.restore();
+  if(G.st==='esc'){const sec=Math.ceil(site.esc/60);cx.save();cx.fillStyle=sec<=3?'#f40':'#ff0';cx.shadowColor=cx.fillStyle;cx.shadowBlur=12;cx.font='bold 20px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('reactor critical — escape now!',W/2,52);cx.font='bold 34px MajorMonoDisplay, monospace';cx.fillText(sec+'s',W/2,84);cx.restore();}
+  if(G.st==='dead_site'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('ship destroyed',W/2,H/2);cx.restore();}
 }
 function drawSurfaceCopies(site,x,y,r,fn){
   const d=site.d,cam=site.cam||{x:0,y:0,z:1},z=cam.z||1,left=cam.x,right=cam.x+W/z;
@@ -703,12 +703,12 @@ function drawSurface(){
   drawSurfaceIndicators(site);
   drHUD(site.s.energy,site.s.maxEnergy,site.s.hp,site.s.maxHp,site.s);
   const remaining=site.dishes.filter(d=>d.alive).length,ps=planetState(G.lv);
-  cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillStyle=col;cx.fillText(d.name,W/2,18);
+  cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillStyle=col;cx.fillText((d.name||'').toLowerCase(),W/2,18);
   cx.fillStyle=remaining?'#ffdd88':'#0f8';
-  const caveTxt=d.tunnel?(ps.completedSites[d.tunnel.siteId]?'  CAVE COMPLETE':'  FIND CAVE ACCESS'):'';
-  cx.fillText((site.dishes.length?`DISHES ${remaining}`:'SURFACE')+caveTxt,W/2,36);
+  const caveTxt=d.tunnel?(ps.completedSites[d.tunnel.siteId]?'  cave complete':'  find cave access'):'';
+  cx.fillText((site.dishes.length?`dishes ${remaining}`:'surface')+caveTxt,W/2,36);
   cx.restore();
-  if(G.st==='dead_site'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('SHIP DESTROYED',W/2,H/2);cx.restore();}
+  if(G.st==='dead_site'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=14;cx.font='bold 26px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('ship destroyed',W/2,H/2);cx.restore();}
 }
 function drawSite(){
   if(G.site?.mode==='surface')drawSurface();

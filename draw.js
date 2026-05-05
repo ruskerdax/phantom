@@ -344,15 +344,15 @@ function drAimCone(s){
   cx.restore();
 }
 function drEnergy(x,y,col){cx.save();cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=8;cx.lineWidth=1.5;cx.beginPath();cx.moveTo(x,y-9);cx.lineTo(x+7,y);cx.lineTo(x,y+9);cx.lineTo(x-7,y);cx.closePath();cx.stroke();cx.fillStyle=col;cx.font='bold 9px MajorMonoDisplay, monospace';cx.textAlign='center';cx.shadowBlur=0;cx.fillText('🗲',x,y+3.5);cx.restore();}
-function drGPI(x=W-6,y=H-8,align='right'){cx.save();cx.textAlign=align;cx.font='11px MajorMonoDisplay, monospace';if(GP.connected){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=6;cx.fillText('CTRL: '+GP.id.slice(0,22),x,y);}else{cx.fillStyle='#444';cx.shadowBlur=0;cx.fillText('NO CONTROLLER',x,y);}cx.restore();}
+function drGPI(x=W-6,y=H-8,align='right'){cx.save();cx.textAlign=align;cx.font='11px MajorMonoDisplay, monospace';if(GP.connected){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=6;cx.fillText('ctrl: '+GP.id.slice(0,22).toLowerCase(),x,y);}else{cx.fillStyle='#444';cx.shadowBlur=0;cx.fillText('no controller',x,y);}cx.restore();}
 function drWalletStake(x=8,y=18){
   cx.save();
   cx.font='13px MajorMonoDisplay, monospace';
   cx.fillStyle='#aaffcc';
   cx.shadowBlur=0;
   cx.textAlign='left';
-  cx.fillText('CREDITS '+G.credits,x,y);
-  cx.fillText('STAKE '+G.stake,x,y+16);
+  cx.fillText('credits '+G.credits,x,y);
+  cx.fillText('stake '+G.stake,x,y+16);
   cx.restore();
 }
 function drHUD(energy,maxEnergy=100,hp=15,maxHp=15,ship=null){
@@ -361,10 +361,10 @@ function drHUD(energy,maxEnergy=100,hp=15,maxHp=15,ship=null){
   cx.textAlign='center';cx.fillText('',W/2,18);
   cx.textAlign='right';
   const hf=Math.max(0,hp/maxHp);
-  cx.fillText('HP '+hp,W-88,17);
+  cx.fillText('hp '+hp,W-88,17);
   cx.strokeStyle='#aaffcc';cx.lineWidth=1;cx.strokeRect(W-82,6,70,11);
   cx.fillStyle=hf>.5?'#0f8':hf>.25?'#fa0':'#f40';cx.fillRect(W-81,7,hf*68,9);
-  cx.fillStyle='#aaffcc';cx.fillText('ENERGY',W-88,32);
+  cx.fillStyle='#aaffcc';cx.fillText('energy',W-88,32);
   cx.strokeRect(W-82,21,70,11);
   cx.fillStyle=energy>maxEnergy*.2?'#0f8':'#f40';cx.fillRect(W-81,22,energy/maxEnergy*68,9);
   cx.restore();
