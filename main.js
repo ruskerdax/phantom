@@ -123,8 +123,10 @@ function drawDeadShipBanner(){
   cx.restore();
 }
 
-// Standard browser game loop: update all logic, render the current frame, advance the frame counter,
-// then schedule the next iteration via requestAnimationFrame (targets 60fps, synced to the display).
+// Display-synced render loop with fixed 60Hz simulation ticks. Gameplay values
+// are tuned per tick, so update() must not run once per high-refresh display frame.
+const SIM_STEP_MS=1000/60,SIM_MAX_FRAME_MS=250,SIM_MAX_STEPS=5;
+let simAccumMs=0,lastLoopTs=null;
 function trackFPS(ts){
   if(typeof ts!=='number') return;
   if(G.lastFrameTs){
@@ -134,7 +136,28 @@ function trackFPS(ts){
   }
   G.lastFrameTs=ts;
 }
-function loop(ts){ trackFPS(ts); update(); musicUpdate(); draw(); G.fr++; requestAnimationFrame(loop); }
+function loop(ts){
+  if(typeof ts!=='number')ts=performance.now();
+  if(lastLoopTs==null)lastLoopTs=ts;
+  trackFPS(ts);
+
+  const elapsed=Math.max(0,Math.min(SIM_MAX_FRAME_MS,ts-lastLoopTs));
+  lastLoopTs=ts;
+  simAccumMs+=elapsed;
+
+  let steps=0;
+  while(simAccumMs>=SIM_STEP_MS&&steps<SIM_MAX_STEPS){
+    update();
+    musicUpdate();
+    G.fr++;
+    simAccumMs-=SIM_STEP_MS;
+    steps++;
+  }
+  if(steps===SIM_MAX_STEPS)simAccumMs=0;
+
+  draw();
+  requestAnimationFrame(loop);
+}
 
 function shouldSaveOnUnload(){
   const activeStates=['overworld','enc_in','encounter','play','esc','base','slipgate','rebuild','dead_ow','dead_enc','dead_site'];
@@ -147,4 +170,4 @@ window.addEventListener('beforeunload',()=>{ if(shouldSaveOnUnload()) saveGame()
 {const sv=loadSave();if(sv){G.sfxVol=sv.sfxVol??7;G.musVol=sv.musVol??7;G.dynamicZoom=sv.dynamicZoom??true;G.renderQuality=normalizeRenderQuality(sv.renderQuality);G.gpAimMode=sv.gpAimMode==='absolute'?'absolute':'relative';}}
 G.seed=TUTORIAL_SEED; genWorld(G.seed);
 if(typeof uiInit === 'function') uiInit();
-loop();
+requestAnimationFrame(loop);
