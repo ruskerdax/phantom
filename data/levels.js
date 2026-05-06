@@ -1,10 +1,47 @@
 'use strict';
 
-const LV_TMPL=[
-  {name:'CAVERN PRIME',   col:'#00ff88',bg:'#000c05',grav:.004,pcol:'#00cc66',pr:32,nObs:2,nEn:3,nFu:2,rxHp:30},
-  {name:'VORTEX STATION', col:'#00ccff',bg:'#00050f',grav:.001,pcol:'#0077cc',pr:28,nObs:4,nEn:5,nFu:3,rxHp:50},
-  {name:'CORE NEXUS',     col:'#ff5533',bg:'#0e0100',grav:.008,pcol:'#cc2200',pr:35,nObs:5,nEn:7,nFu:3,rxHp:80},
-];
+function hslToHex(h,s,l){
+  const a=s*Math.min(l,1-l);
+  const f=n=>{
+    const k=(n+h/30)%12;
+    const c=l-a*Math.max(-1,Math.min(k-3,Math.min(9-k,1)));
+    return Math.round(255*c).toString(16).padStart(2,'0');
+  };
+  return `#${f(0)}${f(8)}${f(4)}`;
+}
+
+function hueDist(a,b){
+  const d=Math.abs((((a-b)%360)+540)%360-180);
+  return d;
+}
+
+function genPlanetHue(rng,prevColors){
+  let best=rng.fl(0,360),bestDist=-1;
+  for(let att=0;att<96;att++){
+    const h=rng.fl(0,360);
+    const minDist=prevColors.length?Math.min(...prevColors.map(p=>hueDist(h,p.h))):360;
+    if(minDist>=45)return h;
+    if(minDist>bestDist){best=h;bestDist=minDist;}
+  }
+  return best;
+}
+
+function genPlanetTmpl(rng,prevColors){
+  const h=genPlanetHue(rng,prevColors);
+  const s=rng.fl(.65,.92),l=rng.fl(.45,.62);
+  prevColors.push({h});
+  return{
+    pcol:hslToHex(h,s,l),
+    col:hslToHex(h,s,Math.min(.72,l+.12)),
+    bg:hslToHex(h,s,.04),
+    grav:rng.fl(.001,.008),
+    pr:rng.int(28,36),
+    nObs:rng.int(2,5),
+    nEn:rng.int(3,7),
+    nFu:rng.int(2,3),
+    rxHp:rng.int(30,80)
+  };
+}
 
 // ---- Cave terrain generator ----
 function genTerrain(rng,wH){
@@ -321,13 +358,13 @@ function genTunnel(rng,tmpl,seed){
   }
   const terrain=[...left,...right.reverse()];
   const en=_placeWallTurrets(rng,terrain,worldH,rng.int(2,4),50);
-  return{...tmpl,kind:'tunnel',name:'CAVE ACCESS',worldH,terrain,obs:[],en,fu:[],entTop:{x:W/2,y:32},entBottom:{x:W/2,y:worldH-42},grav:tmpl.grav};
+  return{...tmpl,kind:'tunnel',worldH,terrain,obs:[],en,fu:[],entTop:{x:W/2,y:32},entBottom:{x:W/2,y:worldH-42},grav:tmpl.grav};
 }
 
 function genSurface(tmpl,seed,sites){
   const rng=mkRNG(seed);
   const screens=rng.int(8,14),worldW=screens*W;
-  const surface={...tmpl,kind:'surface',name:tmpl.name+' SURFACE',screenCount:screens,worldW,worldH:Math.round(H*1.05),exitY:-90,terrain:[],dishes:[],en:[],defenses:[],fu:[],tunnel:null,ent:{x:Math.round(W*.5),y:Math.round(H*.28)}};
+  const surface={...tmpl,kind:'surface',screenCount:screens,worldW,worldH:Math.round(H*1.05),exitY:-90,terrain:[],dishes:[],en:[],defenses:[],fu:[],tunnel:null,ent:{x:Math.round(W*.5),y:Math.round(H*.28)}};
   surface.terrain=genSurfaceTerrain(rng,worldW);
   const hasTargets=sites.some(s=>s.type==='surface_targets');
   if(hasTargets)surface.dishes=genSurfaceDishes(rng,surface,rng.int(4,6),'targets');
@@ -356,7 +393,7 @@ function genPlanetSites(rng){
 function genPlanet(tmpl,seed,index=0){
   const rng=mkRNG(seedChild(seed,0x7100));
   const sites=genPlanetSites(rng);
-  const cave=genCaveLevel({...tmpl,name:'CAVE REACTOR'},seedChild(seed,0x7200));
+  const cave=genCaveLevel(tmpl,seedChild(seed,0x7200));
   const tunnel=sites.some(s=>s.type==='cave_connector')?genTunnel(mkRNG(seedChild(seed,0x7300)),tmpl,seedChild(seed,0x7301)):null;
   const surface=genSurface(tmpl,seedChild(seed,0x7400),sites);
   return{...tmpl,kind:'planet',index,sites,cave,tunnel,surface};

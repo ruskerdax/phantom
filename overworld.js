@@ -102,12 +102,12 @@ function jumpToSeed(newSeed,sourceSeed){
   G.systemStates[G.seed>>>0]={cleared:[...G.cleared],slipgateActive:G.slipgateActive,hbCleared:G.hbCleared,hbState:G.hbState,lvState:G.lvState};
   G.prevSeed=sourceSeed;
   G.seed=newSeed>>>0;
+  genWorld(G.seed);
   // Restore destination state if previously visited, else fresh.
   const prev=G.systemStates[G.seed];
-  if(prev){G.cleared=[...prev.cleared];G.slipgateActive=prev.slipgateActive;G.hbCleared=prev.hbCleared;G.hbState=prev.hbState;G.lvState=prev.lvState;}
-  else{G.cleared=[false,false,false];G.slipgateActive=false;G.hbCleared=false;G.hbState=null;G.lvState={};}
+  if(prev){G.cleared=clearedForPlanets(prev.cleared);G.slipgateActive=prev.slipgateActive;G.hbCleared=prev.hbCleared;G.hbState=prev.hbState;G.lvState=prev.lvState;}
+  else{G.cleared=clearedForPlanets();G.slipgateActive=false;G.hbCleared=false;G.hbState=null;G.lvState={};}
   G.stake=0;G.slipMsg=0;
-  genWorld(G.seed);
   if(!G.visitedSeeds.includes(G.seed))G.visitedSeeds.push(G.seed);
   const sgp=owPos(SLIPGATE);
   initOW(energy,sgp.x,sgp.y);
@@ -515,7 +515,7 @@ function drawOW(){
     cx.fillStyle=d.bg;cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.fill();
     cx.strokeStyle=d.col;cx.lineWidth=.8;cx.globalAlpha=.4;
     [[-8,-6,5],[7,4,7],[-4,9,4],[10,-8,3]].forEach(([cx2,cy,r])=>{cx.beginPath();cx.arc(p.x+cx2,p.y+cy,r,0,Math.PI*2);cx.stroke();});
-    cx.globalAlpha=1;cx.fillStyle=d.col;cx.font='bold 10px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText((d.name||'').toLowerCase(),p.x,p.y-d.pr-8);cx.restore();
+    cx.globalAlpha=1;cx.restore();
     if(ow.nearP===i){cx.save();cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=sb(10);cx.font='bold 12px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('[ fire to enter ]',p.x,p.y+d.pr+16);cx.restore();}
   }
   for(let ai=0;ai<2;ai++){const ap=owPos(AB[ai]);

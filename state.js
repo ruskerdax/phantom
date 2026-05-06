@@ -15,7 +15,7 @@ const STARTING_POWER=defaultPowerForChassisId('kestrel');
 // needs G.ctrlSel/optCol/optListen to know which action it's writing to.
 var G={
   st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,
-  cleared:[false,false,false],hbCleared:false,hbState:null,lvState:{},
+  cleared:[],hbCleared:false,hbState:null,lvState:{},
   slipgateActive:false,slipMsg:0,
   OW:null,ENC:null,site:null,
   paused:false,
@@ -490,6 +490,11 @@ function castLaserForSpace(ox,oy,a,range,targets,walls=[],space=null,hitPad=0){
 }
 
 function owPos(b){const a=b.orbitA+G.owFr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
+function clearedForPlanets(src=null){
+  const out=Array.isArray(src)?src.slice(0,PP.length):[];
+  while(out.length<PP.length)out.push(false);
+  return out.map(v=>v===true);
+}
 function recordLastLocation(kind,index=null){
   G.lastLocation=normalizeLastLocation({seed:G.seed,kind,index});
 }
@@ -535,7 +540,7 @@ function startFromSave(){
   G.visitedSeeds=sv?[...(sv.visitedSeeds??[])]:[];
   G.credits=sv?.credits??0;
   G.stake=0;
-  G.cleared=sv?[...(sv.cleared??[false,false,false])]:[false,false,false];
+  G.cleared=[];
   G.hbCleared=sv?.hbCleared??false;
   G.hbState=sv?.hbState??null;
   G.lvState=sv?.lvState??{};
@@ -552,6 +557,7 @@ function startFromSave(){
   else if(sv?.seed){G.seed=sv.seed;}
   else{G.seed=TUTORIAL_SEED;}
   genWorld(G.seed);
+  G.cleared=clearedForPlanets(sv?.cleared);
   const maxEnergy=loadoutBatteryCapacity();
   const energy=sv?.currentEnergy!=null?Math.min(sv.currentEnergy,maxEnergy):maxEnergy;
   const fallbackKind=(sv&&G.seed!==TUTORIAL_SEED)?'slipgate':'base';

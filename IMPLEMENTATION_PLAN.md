@@ -67,7 +67,7 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 ---
 
-### F-02. Variable planet count + procedural per-planet template
+### F-02. Variable planet count + procedural per-planet template ✅
 
 **Goal:** Replace fixed 3 with 2d5 (2–10) planets, each with a procedurally rolled template. Drop planet names.
 

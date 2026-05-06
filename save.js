@@ -11,7 +11,7 @@ function defaultSave() {
     stake: 0,
     licenses: ['kestrel', 'shield_std', 'mass driver', 'pulse laser'],
     loadout: {chassis:'kestrel', battery:power.battery, reactor:power.reactor, weapons:['mass driver','pulse laser'], aux:null, shield:'shield_std'},
-    cleared: [false, false, false],
+    cleared: [],
     hbCleared: false,
     hbState: null,
     lvState: {},

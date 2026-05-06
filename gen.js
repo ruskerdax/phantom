@@ -46,10 +46,10 @@ function genNeighbors(seed){
 }
 
 // ---- Overworld body orbital parameters ----
-// Returns 4 bodies: [0]=base, [1..3]=planets. Each has {orbitR, orbitA, orbitSpd}.
-function genOWBodies(rng){
+// Returns bodies: [0]=base, [1..planetCount]=planets. Each has {orbitR, orbitA, orbitSpd}.
+function genOWBodies(rng,planetCount){
   const bodies=[],minR=400,maxR=1600,minSep=440;
-  for(let b=0;b<4;b++){
+  for(let b=0;b<planetCount+1;b++){
     let orbitR,orbitA,ix,iy,att=0;
     do{
       const bMinR=b===0?825:minR;
@@ -124,8 +124,11 @@ function genSlipgateBody(rng,allBodies){
 // ---- Master world-generation entry point ----
 function genWorld(seed){
   if(typeof genBackground==='function')genBackground(seed);
-  LV=LV_TMPL.map((tmpl,i)=>genPlanet(tmpl,seedChild(seed,i),i));
-  const bodies=genOWBodies(mkRNG(seedChild(seed,99)));
+  const worldRng=mkRNG(seedChild(seed,0x3100));
+  const planetCount=worldRng.int(1,5)+worldRng.int(1,5);
+  const tmplRng=mkRNG(seedChild(seed,0x3200)),prevColors=[];
+  LV=Array.from({length:planetCount},(_,i)=>genPlanet(genPlanetTmpl(tmplRng,prevColors),seedChild(seed,i),i));
+  const bodies=genOWBodies(mkRNG(seedChild(seed,99)),planetCount);
   BASE={...bodies[0],r:22};
   PP=bodies.slice(1);
   const abData=genABodies(mkRNG(seedChild(seed,300)),bodies);
@@ -134,7 +137,7 @@ function genWorld(seed){
   SLIPGATE=genSlipgateBody(mkRNG(seedChild(seed,500)),[...bodies,HBASE]);
   const flavorRng=mkRNG(seedChild(seed,0x3000));
   G.systemFlavor={
-    levelCount:  3,                                     // placeholder: flavorRng.int(2,4) clamped to 3
+    levelCount:  planetCount,
     hasHostileBase: true,                               // placeholder: forced true
     shopSeed:    seedChild(seed,0x3001),                // for future shop variation
     encounterSeed: seedChild(seed,0x3002),              // for future encounter variation
