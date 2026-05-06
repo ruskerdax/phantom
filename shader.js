@@ -28,6 +28,8 @@ const SHADER_UI_CAPTURE_INTERVAL_MS = 1000 / 15;
 const SHADER_UI_CAPTURED_CLASS = 'shader-ui-captured';
 const SHADER_CAPTURE_BYPASS_ATTR = 'data-shader-capture-bypass';
 const SHADER_IMAGE_READY_TIMEOUT_MS = 750;
+const SHADER_IMAGE_RASTER_MIN_WIDTH = 2048;
+const SHADER_IMAGE_RASTER_MAX_WIDTH = 4096;
 const SHADER_SVG_NS = 'http://www.w3.org/2000/svg';
 const SHADER_XHTML_NS = 'http://www.w3.org/1999/xhtml';
 
@@ -321,18 +323,52 @@ function shaderSyncFormState(srcRoot, cloneRoot) {
   }
 }
 
-function shaderImageToDataUrl(img) {
+function shaderImageRasterSize(img, root = null) {
+  if (!img || !(img.naturalWidth > 0) || !(img.naturalHeight > 0)) return {w: 0, h: 0};
+  let cssW = img.naturalWidth;
+  let cssH = img.naturalHeight;
+  try {
+    const rect = img.getBoundingClientRect();
+    const rootRect = root?.getBoundingClientRect?.();
+    if (rootRect && rootRect.width > 0 && rootRect.height > 0 && rect.width > 0 && rect.height > 0) {
+      const baseW = typeof W === 'number' ? W : 800;
+      const baseH = typeof H === 'number' ? H : 580;
+      cssW = rect.width * baseW / rootRect.width;
+      cssH = rect.height * baseH / rootRect.height;
+    } else if (rect.width > 0 && rect.height > 0) {
+      cssW = rect.width;
+      cssH = rect.height;
+    }
+  } catch(e) {}
+  const ratio = typeof CANVAS_PIXEL_RATIO === 'number' && CANVAS_PIXEL_RATIO > 0 ? CANVAS_PIXEL_RATIO : 1;
+  const displayW = Math.max(1, Math.ceil(cssW * ratio));
+  const displayH = Math.max(1, Math.ceil(cssH * ratio));
+  const aspect = displayH / displayW;
+  const w = Math.min(SHADER_IMAGE_RASTER_MAX_WIDTH, Math.max(SHADER_IMAGE_RASTER_MIN_WIDTH, displayW));
+  return {w, h: Math.max(1, Math.round(w * aspect))};
+}
+
+function shaderImageRasterCacheKey(url, size) {
+  if (!url) return '';
+  return url + '@' + (size?.w || 0) + 'x' + (size?.h || 0);
+}
+
+function shaderImageToDataUrl(img, size) {
   return new Promise(resolve => {
     try {
       if (!img || !img.complete || !(img.naturalWidth > 0) || !(img.naturalHeight > 0)) {
         resolve(null);
         return;
       }
+      const w = Math.max(1, Math.round(size?.w || img.naturalWidth));
+      const h = Math.max(1, Math.round(size?.h || img.naturalHeight));
       const c = document.createElement('canvas');
-      c.width = img.naturalWidth;
-      c.height = img.naturalHeight;
+      c.width = w;
+      c.height = h;
       const r = c.getContext('2d');
-      r.drawImage(img, 0, 0);
+      r.imageSmoothingEnabled = true;
+      r.imageSmoothingQuality = 'high';
+      r.drawImage(img, 0, 0, w, h);
       resolve(c.toDataURL('image/png'));
     } catch(e) {
       resolve(null);
@@ -425,20 +461,22 @@ function shaderSetImageCaptureBypass(img, enabled) {
   else img.removeAttribute(SHADER_CAPTURE_BYPASS_ATTR);
 }
 
-async function shaderResolveImageCapture(img) {
+async function shaderResolveImageCapture(img, root = null) {
   const url = shaderImageCacheKey(img);
-  if (!url) return {url: '', data: null, loaded: false, pending: false};
+  if (!url) return {url: '', key: '', data: null, loaded: false, pending: false};
   const loaded = await shaderWaitForImage(img);
   if (!loaded) {
-    return {url, data: null, loaded: false, pending: !img.complete};
+    return {url, key: '', data: null, loaded: false, pending: !img.complete};
   }
-  if (SHADER.imageDataUrlCache.has(url)) {
-    const data = SHADER.imageDataUrlCache.get(url);
-    return {url, data, loaded: true, pending: false};
+  const size = shaderImageRasterSize(img, root);
+  const key = shaderImageRasterCacheKey(url, size);
+  if (SHADER.imageDataUrlCache.has(key)) {
+    const data = SHADER.imageDataUrlCache.get(key);
+    return {url, key, data, loaded: true, pending: false};
   }
-  const data = await shaderImageToDataUrl(img) || await shaderFetchImageDataUrl(url);
-  SHADER.imageDataUrlCache.set(url, data || null);
-  return {url, data: data || null, loaded: true, pending: false};
+  const data = await shaderImageToDataUrl(img, size) || await shaderFetchImageDataUrl(url);
+  SHADER.imageDataUrlCache.set(key, data || null);
+  return {url, key, data: data || null, loaded: true, pending: false};
 }
 
 async function shaderInlineCloneImages(srcRoot, cloneRoot) {
@@ -446,7 +484,7 @@ async function shaderInlineCloneImages(srcRoot, cloneRoot) {
   const dst = cloneRoot.querySelectorAll('img');
   let pending = false;
   for (let i = 0; i < src.length && i < dst.length; i++) {
-    const capture = await shaderResolveImageCapture(src[i]);
+    const capture = await shaderResolveImageCapture(src[i], srcRoot);
     if (capture.data) {
       shaderSetImageCaptureBypass(src[i], false);
       dst[i].setAttribute('src', capture.data);
@@ -626,30 +664,30 @@ function shaderDrawElementText(ctx, el, cs, rect, scale) {
   ctx.restore();
 }
 
-async function shaderManualImageFor(img) {
-  const capture = await shaderResolveImageCapture(img);
+async function shaderManualImageFor(img, root) {
+  const capture = await shaderResolveImageCapture(img, root);
   if (capture.pending) throw new Error('ui image pending');
   if (!capture.url) return null;
   if (!capture.data) {
     shaderSetImageCaptureBypass(img, capture.loaded);
-    SHADER.manualImageCache.set(capture.url, null);
+    SHADER.manualImageCache.set(capture.key, null);
     return null;
   }
   shaderSetImageCaptureBypass(img, false);
-  if (SHADER.manualImageCache.has(capture.url)) return SHADER.manualImageCache.get(capture.url);
+  if (SHADER.manualImageCache.has(capture.key)) return SHADER.manualImageCache.get(capture.key);
   const loaded = await new Promise(resolve => {
     const im = new Image();
     im.onload = () => resolve(im);
     im.onerror = () => resolve(null);
     im.src = capture.data;
   });
-  SHADER.manualImageCache.set(capture.url, loaded);
+  SHADER.manualImageCache.set(capture.key, loaded);
   return loaded;
 }
 
 async function shaderPrepareManualImages(root) {
   const imgs = Array.from(root.querySelectorAll('img'));
-  await Promise.all(imgs.map(img => shaderManualImageFor(img)));
+  await Promise.all(imgs.map(img => shaderManualImageFor(img, root)));
 }
 
 function shaderDrawElementBox(ctx, cs, rect, scale) {
@@ -699,7 +737,7 @@ function shaderPaintDomElement(ctx, el, root, rootRect, w, h, parentAlpha) {
 
   if (el.tagName === 'IMG') {
     const bypass = el.hasAttribute(SHADER_CAPTURE_BYPASS_ATTR);
-    const img = SHADER.manualImageCache.get(shaderImageCacheKey(el));
+    const img = SHADER.manualImageCache.get(shaderImageRasterCacheKey(shaderImageCacheKey(el), shaderImageRasterSize(el, root)));
     if (img && rect.w > 0 && rect.h > 0) {
       try { ctx.drawImage(img, rect.x, rect.y, rect.w, rect.h); } catch(e) {}
     } else if (el.alt && !bypass) {
