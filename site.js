@@ -52,6 +52,41 @@ function surfaceTerrainSegments(d){
   return segs;
 }
 
+function surfaceSlopeAt(d,x){
+  const dx=8,y0=surfaceYAt(d,x-dx),y1=surfaceYAt(d,x+dx);
+  return Math.atan2(y1-y0,dx*2);
+}
+
+function surfaceRegionAt(d,x){
+  const regions=d.regions||[];
+  if(!regions.length)return 'flat';
+  x=wrap(x,d.worldW);
+  for(const r of regions)if(x>=r.x0&&x<r.x1)return r.kind;
+  return regions[regions.length-1].kind;
+}
+
+function surfaceFlatSpans(d){
+  const flatKinds={flat:1,plateau:1,crater:1};
+  return(d.regions||[]).filter(r=>flatKinds[r.kind]).map(r=>({x0:r.x0,x1:r.x1}));
+}
+
+function surfaceFlattishSpans(d,maxSlope=Math.PI/6){
+  const spans=[],t=d.terrain||[];
+  let open=null;
+  for(let i=0;i<t.length-1;i++){
+    const a=t[i],b=t[i+1],slope=Math.abs(Math.atan2(b[1]-a[1],b[0]-a[0]||1));
+    if(slope<=maxSlope){
+      if(!open)open={x0:a[0],x1:b[0]};
+      else open.x1=b[0];
+    } else if(open){
+      if(open.x1>open.x0)spans.push(open);
+      open=null;
+    }
+  }
+  if(open&&open.x1>open.x0)spans.push(open);
+  return spans;
+}
+
 // Single source for "what walls should beams collide with in this site"
 // across surface, hbase, and cave/tunnel modes.
 function siteBeamWalls(site){
@@ -630,6 +665,15 @@ function drawSurfaceGround(site,ox){
   cx.beginPath();for(let i=0;i<d.terrain.length;i++){const p=d.terrain[i];i?cx.lineTo(ox+p[0],p[1]):cx.moveTo(ox+p[0],p[1]);}
   cx.stroke();cx.restore();
 }
+function drawTerrainRegions(d,ox=0){
+  const colors={flat:'rgba(0,255,136,.10)',hills:'rgba(100,200,255,.10)',mountains:'rgba(255,80,80,.12)',plateau:'rgba(255,220,80,.14)',crater:'rgba(170,120,255,.14)'};
+  cx.save();
+  for(const r of d.regions||[]){
+    cx.fillStyle=colors[r.kind]||'rgba(255,255,255,.08)';
+    cx.fillRect(ox+r.x0,0,r.x1-r.x0,d.worldH+80);
+  }
+  cx.restore();
+}
 function drawDish(dish){
   const pu=.5+.5*Math.sin(G.fr*.09+dish.x*.01);
   cx.save();cx.translate(dish.x,dish.y);
@@ -669,7 +713,10 @@ function drawSurface(){
   cx.save();applyWorldCamera(cam);
   const z=cam.z||1,left=cam.x,right=cam.x+W/z;
   const k0=Math.floor(left/d.worldW)-1,k1=Math.floor(right/d.worldW)+1;
-  for(let k=k0;k<=k1;k++)drawSurfaceGround(site,k*d.worldW);
+  for(let k=k0;k<=k1;k++){
+    drawSurfaceGround(site,k*d.worldW);
+    // drawTerrainRegions(d,k*d.worldW);
+  }
   const caveDone=d.tunnel?planetState(G.lv).completedSites[d.tunnel.siteId]:false;
   if(d.tunnel)drawSurfaceCopies(site,d.tunnel.x,d.tunnel.y,42,(x,y)=>drawTunnelMouth({...d.tunnel,x,y},caveDone));
   for(const f of site.fu)if(!f.got)drawSurfaceCopies(site,f.x,f.y,12,(x,y)=>drEnergy(x,y,'#0f8'));

@@ -149,7 +149,7 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 ---
 
-### F-06. Surface terrain region system
+### F-06. Surface terrain region system ✅
 
 **Goal:** Generator emits surfaces composed of labeled discrete segments; ≥3 flat segments guaranteed. Provide query helpers.
 

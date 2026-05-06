@@ -296,26 +296,231 @@ function surfaceYAt(surface,x){
   const w=surface.worldW,pts=surface.terrain;
   if(!pts.length)return H*.72;
   x=wrap(x,w);
-  const step=w/(pts.length-1);
-  const i=Math.max(0,Math.min(pts.length-2,Math.floor(x/step)));
+  let lo=0,hi=pts.length-2;
+  while(lo<hi){
+    const mid=(lo+hi+1)>>1;
+    if(pts[mid][0]<=x)lo=mid;
+    else hi=mid-1;
+  }
+  const i=Math.max(0,Math.min(pts.length-2,lo));
   const a=pts[i],b=pts[i+1],t=(x-a[0])/(b[0]-a[0]||1);
   return a[1]+(b[1]-a[1])*Math.max(0,Math.min(1,t));
 }
 
-function genSurfaceTerrain(rng,worldW){
-  const n=Math.ceil(worldW/80);
-  const terrain=[];
-  let y=H*.72+rng.fl(-20,20);
-  const p0=rng.fl(0,Math.PI*2),p1=rng.fl(0,Math.PI*2);
-  for(let i=0;i<=n;i++){
-    const x=i/n*worldW;
-    y+=rng.fl(-18,18);
-    const wave=Math.sin(i*.55+p0)*32+Math.sin(i*.17+p1)*46;
-    const gy=Math.max(H*.56,Math.min(H*.84,H*.72+wave+(y-H*.72)*.38));
-    terrain.push([Math.round(x),Math.round(gy)]);
+const SURFACE_REGION_DEFS={
+  flat:{weight:.30,minW:200,maxW:600},
+  hills:{weight:.45,minW:250,maxW:800},
+  mountains:{weight:.20,minW:320,maxW:850},
+  plateau:{weight:.025,minW:250,maxW:500},
+  crater:{weight:.025,minW:200,maxW:450}
+};
+const SURFACE_REGION_KINDS=Object.keys(SURFACE_REGION_DEFS);
+const SURFACE_MIN_REGION_WIDTH=200;
+const SURFACE_Y_MIN=H*.28;
+const SURFACE_Y_MAX=H*.94;
+
+function clampSurfaceY(y){return Math.max(SURFACE_Y_MIN,Math.min(SURFACE_Y_MAX,y));}
+
+function pickSurfaceRegionKind(rng){
+  let roll=rng.next()*SURFACE_REGION_KINDS.reduce((a,k)=>a+SURFACE_REGION_DEFS[k].weight,0);
+  for(const kind of SURFACE_REGION_KINDS){
+    roll-=SURFACE_REGION_DEFS[kind].weight;
+    if(roll<=0)return kind;
   }
-  terrain[terrain.length-1][1]=terrain[0][1];
-  return terrain;
+  return 'hills';
+}
+
+function buildSurfaceRegions(rng,worldW){
+  const regions=[];
+  let x=0,flatCount=0;
+  while(x<worldW){
+    const remaining=worldW-x,needFlat=Math.max(0,3-flatCount);
+    let kind=(needFlat&&remaining<=needFlat*SURFACE_REGION_DEFS.flat.max+SURFACE_MIN_REGION_WIDTH)?'flat':pickSurfaceRegionKind(rng);
+    const def=SURFACE_REGION_DEFS[kind];
+    let width=Math.round(rng.fl(def.minW,def.maxW));
+    if(remaining<=def.maxW&&remaining>=def.minW)width=Math.round(remaining);
+    if(remaining-width>0&&remaining-width<SURFACE_MIN_REGION_WIDTH)width=Math.round(remaining);
+    width=Math.max(1,Math.min(Math.round(remaining),width));
+    const x0=Math.round(x),x1=Math.round(x+width);
+    regions.push({x0,x1,kind});
+    if(kind==='flat')flatCount++;
+    x=x1;
+  }
+  for(let i=0;flatCount<3&&i<regions.length;i++){
+    const r=regions[i];
+    if(r.kind!=='flat'&&r.x1-r.x0>=SURFACE_REGION_DEFS.flat.minW&&r.x1-r.x0<=SURFACE_REGION_DEFS.flat.maxW){
+      r.kind='flat';
+      flatCount++;
+    }
+  }
+  return regions;
+}
+
+function addSurfaceTerrainPoint(terrain,x,y){
+  const px=Math.round(x),py=Math.round(clampSurfaceY(y));
+  const last=terrain[terrain.length-1];
+  if(last&&px<=last[0]){
+    last[1]=Math.round((last[1]+py)/2);
+    return;
+  }
+  terrain.push([px,py]);
+}
+
+function genTerrainFlat(rng,terrain,region,y0,y1){
+  const n=Math.max(2,Math.ceil((region.x1-region.x0)/55));
+  for(let i=0;i<=n;i++){
+    const t=i/n,x=region.x0+(region.x1-region.x0)*t;
+    addSurfaceTerrainPoint(terrain,x,y0+(y1-y0)*t+rng.fl(-3,3));
+  }
+}
+
+function genTerrainHills(rng,terrain,region,y0,y1){
+  const n=Math.max(4,Math.ceil((region.x1-region.x0)/38));
+  const amp=rng.fl(18,32),phase=rng.fl(0,Math.PI*2);
+  for(let i=0;i<=n;i++){
+    const t=i/n,x=region.x0+(region.x1-region.x0)*t,blend=Math.sin(Math.PI*t);
+    const wave=Math.sin(t*Math.PI*2+phase)*amp*blend;
+    addSurfaceTerrainPoint(terrain,x,y0+(y1-y0)*t+wave);
+  }
+}
+
+function emitMountainKnee(terrain,saddleX,saddleY,peakX,peakY,sharpness,rng){
+  if(rng.next()<.22)return;
+  const kneeT=rng.fl(.20,.45);
+  const kneeRiseFrac=Math.min(kneeT,rng.fl(.10,.45))*(1-sharpness*.35);
+  const kx=saddleX+(peakX-saddleX)*kneeT;
+  const ky=saddleY+(peakY-saddleY)*kneeRiseFrac;
+  addSurfaceTerrainPoint(terrain,kx,ky+rng.fl(-3,3));
+}
+
+function genTerrainMountains(rng,terrain,region,y0,y1){
+  const w=region.x1-region.x0;
+  const startY=clampSurfaceY(y0),endY=clampSurfaceY(y1);
+  const baseY=Math.max(startY,endY);
+  const peakBudget=300;
+
+  const cr=rng.next();
+  const character=cr<.40?'jagged':cr<.70?'dominant':cr<.85?'twin':'cascading';
+
+  let peakCount=Math.max(2,Math.min(5,Math.round(w/rng.fl(140,200))));
+  if(character==='twin')peakCount=2;
+
+  const peaks=[];
+  const slot=w/peakCount;
+  const edge=Math.min(35,slot*.35);
+  for(let i=0;i<peakCount;i++){
+    let x=region.x0+slot*(i+.5)+rng.fl(-slot*.30,slot*.30);
+    x=Math.max(region.x0+edge,Math.min(region.x1-edge,x));
+    peaks.push({x});
+  }
+  peaks.sort((a,b)=>a.x-b.x);
+  for(let i=1;i<peaks.length;i++)
+    if(peaks[i].x-peaks[i-1].x<60)peaks[i].x=Math.min(region.x1-edge,peaks[i-1].x+60);
+
+  if(character==='dominant'){
+    const alpha=rng.int(0,peakCount-1);
+    peaks.forEach((p,i)=>p.h=peakBudget*(i===alpha?rng.fl(.90,1.0):rng.fl(.35,.62)));
+  }else if(character==='jagged'){
+    peaks.forEach(p=>p.h=peakBudget*rng.fl(.55,1.0));
+  }else if(character==='twin'){
+    peaks.forEach(p=>p.h=peakBudget*rng.fl(.80,.95));
+  }else{
+    const desc=rng.next()<.5;
+    const denom=Math.max(1,peakCount-1);
+    peaks.forEach((p,i)=>{
+      const t=desc?i/denom:1-i/denom;
+      p.h=peakBudget*(rng.fl(.95,1.0)-t*rng.fl(.40,.55));
+    });
+  }
+  peaks.forEach(p=>{p.lSh=rng.fl(0,1);p.rSh=rng.fl(0,1);});
+
+  const maxH=Math.max(...peaks.map(p=>p.h));
+  const ridgeFloorBase=baseY-maxH*rng.fl(.40,.65);
+
+  let deepIdx=-1;
+  if(peakCount>=3&&rng.next()<.28)deepIdx=rng.int(0,peakCount-2);
+
+  const last=terrain[terrain.length-1];
+  if(last&&last[0]===region.x0)last[1]=Math.round(startY);
+  else addSurfaceTerrainPoint(terrain,region.x0,startY);
+
+  const firstPeakY=clampSurfaceY(baseY-peaks[0].h);
+  emitMountainKnee(terrain,region.x0,startY,peaks[0].x,firstPeakY,peaks[0].lSh,rng);
+  addSurfaceTerrainPoint(terrain,peaks[0].x,firstPeakY);
+
+  for(let i=0;i<peakCount-1;i++){
+    const cur=peaks[i],nxt=peaks[i+1];
+    const curPY=clampSurfaceY(baseY-cur.h),nxtPY=clampSurfaceY(baseY-nxt.h);
+    let sY;
+    if(i===deepIdx){
+      sY=baseY-maxH*rng.fl(.05,.18);
+    }else{
+      sY=ridgeFloorBase+rng.fl(-15,15);
+      sY=Math.min(sY,baseY-rng.fl(25,45));
+    }
+    sY=clampSurfaceY(sY);
+    const sX=cur.x+(nxt.x-cur.x)*rng.fl(.40,.60);
+    emitMountainKnee(terrain,sX,sY,cur.x,curPY,cur.rSh,rng);
+    addSurfaceTerrainPoint(terrain,sX,sY+rng.fl(-3,3));
+    emitMountainKnee(terrain,sX,sY,nxt.x,nxtPY,nxt.lSh,rng);
+    addSurfaceTerrainPoint(terrain,nxt.x,nxtPY);
+  }
+
+  const lastP=peaks[peakCount-1];
+  const lastPY=clampSurfaceY(baseY-lastP.h);
+  emitMountainKnee(terrain,region.x1,endY,lastP.x,lastPY,lastP.rSh,rng);
+  addSurfaceTerrainPoint(terrain,region.x1,endY);
+}
+
+function genTerrainStepRegion(rng,terrain,region,y0,y1,dir){
+  const w=region.x1-region.x0,edge=Math.max(42,w*rng.fl(.16,.24));
+  const step=rng.fl(dir<0?35:30,dir<0?60:50),top=clampSurfaceY(y0+dir*step);
+  const x0=region.x0,x1=region.x1;
+  const a=x0+edge,b=x1-edge,hard=8;
+  addSurfaceTerrainPoint(terrain,x0,y0);
+  addSurfaceTerrainPoint(terrain,Math.min(a,x1),y0+rng.fl(-2,2));
+  addSurfaceTerrainPoint(terrain,Math.min(a+hard,x1),top+rng.fl(-2,2));
+  addSurfaceTerrainPoint(terrain,Math.max(b-hard,x0),top+rng.fl(-2,2));
+  addSurfaceTerrainPoint(terrain,Math.max(b,x0),top+rng.fl(-2,2));
+  addSurfaceTerrainPoint(terrain,Math.min(b+hard,x1),y1+rng.fl(-2,2));
+  addSurfaceTerrainPoint(terrain,x1,y1);
+}
+
+function appendSurfaceRegionTerrain(rng,terrain,region,y0,y1){
+  if(region.kind==='flat')genTerrainFlat(rng,terrain,region,y0,y1);
+  else if(region.kind==='hills')genTerrainHills(rng,terrain,region,y0,y1);
+  else if(region.kind==='mountains')genTerrainMountains(rng,terrain,region,y0,y1);
+  else if(region.kind==='plateau')genTerrainStepRegion(rng,terrain,region,y0,y1,-1);
+  else genTerrainStepRegion(rng,terrain,region,y0,y1,1);
+}
+
+function smoothSurfaceRegionJoins(terrain,regions){
+  for(let i=1;i<regions.length;i++){
+    const x=regions[i].x0,idx=terrain.findIndex(p=>p[0]===x);
+    if(idx<=0||idx>=terrain.length-1)continue;
+    const y=terrain[idx][1];
+    terrain[idx-1][1]=Math.round((terrain[idx-1][1]+y)/2);
+    terrain[idx+1][1]=Math.round((terrain[idx+1][1]+y)/2);
+  }
+}
+
+function genSurfaceTerrain(rng,worldW){
+  const regions=buildSurfaceRegions(rng,worldW);
+  const terrain=[];
+  const firstY=clampSurfaceY(H*.82+rng.fl(-16,16));
+  let y=firstY;
+  for(let i=0;i<regions.length;i++){
+    let nextY=i===regions.length-1?firstY:clampSurfaceY(y+rng.fl(-24,24));
+    if(regions[i].kind==='mountains')nextY=clampSurfaceY(Math.min(nextY,y+18));
+    appendSurfaceRegionTerrain(rng,terrain,regions[i],y,nextY);
+    y=nextY;
+  }
+  terrain[0][0]=0;
+  terrain[terrain.length-1][0]=worldW;
+  smoothSurfaceRegionJoins(terrain,regions);
+  if(regions[regions.length-1]?.kind==='mountains')terrain[0][1]=terrain[terrain.length-1][1];
+  else terrain[terrain.length-1][1]=terrain[0][1];
+  return{terrain,regions};
 }
 
 function genSurfaceDishes(rng,surface,count,siteId){
@@ -364,8 +569,10 @@ function genTunnel(rng,tmpl,seed){
 function genSurface(tmpl,seed,sites){
   const rng=mkRNG(seed);
   const screens=rng.int(8,14),worldW=screens*W;
-  const surface={...tmpl,kind:'surface',screenCount:screens,worldW,worldH:Math.round(H*1.05),exitY:-90,terrain:[],dishes:[],en:[],defenses:[],fu:[],tunnel:null,ent:{x:Math.round(W*.5),y:Math.round(H*.28)}};
-  surface.terrain=genSurfaceTerrain(rng,worldW);
+  const surface={...tmpl,kind:'surface',screenCount:screens,worldW,worldH:Math.round(H*1.05),exitY:-90,terrain:[],regions:[],dishes:[],en:[],defenses:[],fu:[],tunnel:null,ent:{x:Math.round(W*.5),y:Math.round(H*.28)}};
+  const surfaceTerrain=genSurfaceTerrain(rng,worldW);
+  surface.terrain=surfaceTerrain.terrain;
+  surface.regions=surfaceTerrain.regions;
   const hasTargets=sites.some(s=>s.type==='surface_targets');
   if(hasTargets)surface.dishes=genSurfaceDishes(rng,surface,rng.int(4,6),'targets');
   surface.fu=genSurfaceEnergy(rng,surface,rng.int(2,4));
