@@ -13,6 +13,10 @@ let AB_BELT=[];
 let HBASE=null;
 let SLIPGATE=null;
 
+const MIN_SITE_SEP=440;
+const ORBIT_MIN_R=400;
+const ORBIT_MAX_R=1600;
+
 // Seeded PRNG — mulberry32
 function mkRNG(seed){
   let s=seed>>>0;
@@ -46,51 +50,52 @@ function genNeighbors(seed){
 }
 
 // ---- Overworld body orbital parameters ----
-// Returns bodies: [0]=base, [1..planetCount]=planets. Each has {orbitR, orbitA, orbitSpd}.
-function genOWBodies(rng,planetCount){
-  const bodies=[],minR=400,maxR=1600,minSep=440;
-  for(let b=0;b<planetCount+1;b++){
-    let orbitR,orbitA,ix,iy,att=0;
-    do{
-      const bMinR=b===0?825:minR;
-      orbitR=bMinR+rng.fl(0,maxR-bMinR);
-      orbitA=rng.fl(0,Math.PI*2);
-      ix=OW_W/2+Math.cos(orbitA)*orbitR;
-      iy=OW_H/2+Math.sin(orbitA)*orbitR;
-      att++;
-    }while(att<60&&bodies.some(e=>{
-      const ex=OW_W/2+Math.cos(e.orbitA)*e.orbitR,ey=OW_H/2+Math.sin(e.orbitA)*e.orbitR;
-      return Math.hypot(ix-ex,iy-ey)<minSep;
-    }));
-    const orbitSpd=0.00060-(orbitR-minR)/(maxR-minR)*0.00045;
-    bodies.push({orbitR,orbitA,orbitSpd});
+function bodyXY(b){
+  return{x:OW_W/2+Math.cos(b.orbitA)*b.orbitR,y:OW_H/2+Math.sin(b.orbitA)*b.orbitR};
+}
+function orbitSpdFor(orbitR){
+  return 0.00060-(orbitR-ORBIT_MIN_R)/(ORBIT_MAX_R-ORBIT_MIN_R)*0.00045;
+}
+function isTooCloseToPlaced(body,placed){
+  const p=bodyXY(body);
+  return placed.some(b=>{
+    const q=bodyXY(b);
+    return Math.hypot(p.x-q.x,p.y-q.y)<MIN_SITE_SEP;
+  });
+}
+function placeSite(rng,placed,label,opts={}){
+  const minR=opts.minR??ORBIT_MIN_R,maxR=opts.maxR??ORBIT_MAX_R;
+  let body=null;
+  for(let att=0;att<60;att++){
+    const orbitR=opts.orbitR??(minR+rng.fl(0,maxR-minR));
+    body={orbitR,orbitA:rng.fl(0,Math.PI*2),orbitSpd:orbitSpdFor(orbitR)};
+    if(!isTooCloseToPlaced(body,placed)){
+      placed.push(body);
+      return body;
+    }
   }
+  console.warn(`[PHANTOM] site spacing exhausted for ${label}; keeping last position`);
+  placed.push(body);
+  return body;
+}
+
+// Returns bodies: [0]=base, [1..planetCount]=planets. Each has {orbitR, orbitA, orbitSpd}.
+function genOWBodies(rng,planetCount,placed){
+  const bodies=[];
+  bodies.push(placeSite(rng,placed,'BASE',{minR:825}));
+  for(let i=0;i<planetCount;i++)bodies.push(placeSite(rng,placed,`planet ${i+1}`));
   return bodies;
 }
 
 // ---- Asteroid belt bodies + belt particles ----
-function genABodies(rng,planetBodies){
+function genABodies(rng,placed){
   const count=rng.int(1,4)-1;
   if(count===0)return{bodies:[],belt:[]};
-  const minR=400,maxR=1600;
-  let orbitR,att=0;
-  do{orbitR=minR+rng.fl(0,maxR-minR);att++;}
-  while(att<60&&planetBodies.some(b=>Math.abs(b.orbitR-orbitR)<100));
-  const orbitSpd=0.00060-(orbitR-minR)/(maxR-minR)*0.00045;
-  // minimum angle so trigger zones (r+28=78px each) don't overlap
-  const minDa=2*Math.asin(Math.min(1,78/orbitR));
-  const angles=[];
+  const bodies=[];
   for(let i=0;i<count;i++){
-    let a,att=0;
-    do{a=rng.fl(0,Math.PI*2);att++;}
-    while(att<60&&angles.some(aa=>{
-      const da=Math.abs(Math.atan2(Math.sin(a-aa),Math.cos(a-aa)));
-      return da<minDa;
-    }));
-    if(att>=60)a=(angles[0]+i*Math.PI*2/count)%(Math.PI*2);
-    angles.push(a);
+    const body=placeSite(rng,placed,`asteroid field ${i+1}`);
+    bodies.push({...body,r:50});
   }
-  const bodies=angles.map(a=>({orbitR,orbitA:a,orbitSpd,r:50}));
   const belt=[],spread=20,N=160;
   for(let i=0;i<N;i++){
     belt.push({a:rng.fl(0,Math.PI*2),dr:rng.fl(-spread,spread),rv:1.5+rng.fl(0,3),sides:rng.int(5,8),rot:rng.fl(0,Math.PI*2)});
@@ -98,38 +103,12 @@ function genABodies(rng,planetBodies){
   return{bodies,belt};
 }
 // ---- Hostile base orbital parameters ----
-function genHBaseBody(rng,allBodies){
-  const minR=400,maxR=1600;
-  let orbitR,orbitA,ix,iy,att=0;
-  do{
-    orbitR=minR+rng.fl(0,maxR-minR);
-    orbitA=rng.fl(0,Math.PI*2);
-    ix=OW_W/2+Math.cos(orbitA)*orbitR;
-    iy=OW_H/2+Math.sin(orbitA)*orbitR;
-    att++;
-  }while(att<80&&allBodies.some(b=>{
-    const bx=OW_W/2+Math.cos(b.orbitA)*b.orbitR,by=OW_H/2+Math.sin(b.orbitA)*b.orbitR;
-    return Math.hypot(ix-bx,iy-by)<440;
-  }));
-  const orbitSpd=0.00060-(orbitR-minR)/(maxR-minR)*0.00045;
-  return{orbitR,orbitA,orbitSpd,r:20};
+function genHBaseBody(rng,placed){
+  return{...placeSite(rng,placed,'HBASE'),r:20};
 }
 // ---- Slipgate orbital parameters — always at maximum orbit radius ----
-function genSlipgateBody(rng,allBodies){
-  const minR=400,maxR=1600;
-  const orbitR=1600;
-  let orbitA,ix,iy,att=0;
-  do{
-    orbitA=rng.fl(0,Math.PI*2);
-    ix=OW_W/2+Math.cos(orbitA)*orbitR;
-    iy=OW_H/2+Math.sin(orbitA)*orbitR;
-    att++;
-  }while(att<80&&allBodies.some(b=>{
-    const bx=OW_W/2+Math.cos(b.orbitA)*b.orbitR,by=OW_H/2+Math.sin(b.orbitA)*b.orbitR;
-    return Math.hypot(ix-bx,iy-by)<440;
-  }));
-  const orbitSpd=0.00060-(orbitR-minR)/(maxR-minR)*0.00045;
-  return{orbitR,orbitA,orbitSpd,r:26};
+function genSlipgateBody(rng,placed){
+  return{...placeSite(rng,placed,'SLIPGATE',{orbitR:ORBIT_MAX_R}),r:26};
 }
 // ---- Master world-generation entry point ----
 function genWorld(seed){
@@ -138,13 +117,14 @@ function genWorld(seed){
   const planetCount=worldRng.int(1,5)+worldRng.int(1,5);
   const tmplRng=mkRNG(seedChild(seed,0x3200)),prevColors=[];
   LV=Array.from({length:planetCount},(_,i)=>genPlanet(genPlanetTmpl(tmplRng,prevColors),seedChild(seed,i),i));
-  const bodies=genOWBodies(mkRNG(seedChild(seed,99)),planetCount);
+  const placed=[];
+  const bodies=genOWBodies(mkRNG(seedChild(seed,99)),planetCount,placed);
   BASE={...bodies[0],r:22};
   PP=bodies.slice(1);
-  const abData=genABodies(mkRNG(seedChild(seed,300)),bodies);
+  const abData=genABodies(mkRNG(seedChild(seed,300)),placed);
   AB=abData.bodies;AB_BELT=abData.belt;
-  HBASE=genHBaseBody(mkRNG(seedChild(seed,400)),[bodies[0]]);
-  SLIPGATE=genSlipgateBody(mkRNG(seedChild(seed,500)),[...bodies,HBASE]);
+  HBASE=genHBaseBody(mkRNG(seedChild(seed,400)),placed);
+  SLIPGATE=genSlipgateBody(mkRNG(seedChild(seed,500)),placed);
   const flavorRng=mkRNG(seedChild(seed,0x3000));
   G.systemFlavor={
     levelCount:  planetCount,

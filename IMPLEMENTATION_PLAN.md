@@ -104,7 +104,7 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 ---
 
-### F-04. Uniform site-spacing pass
+### F-04. Uniform site-spacing pass ✅
 
 **Goal:** Single `MIN_SITE_SEP = 440` enforced across all sites (planets, asteroids, hbase, slipgate) — no two within that radius.
 
