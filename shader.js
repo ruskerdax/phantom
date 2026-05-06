@@ -228,6 +228,13 @@ function shaderEnsureCompositor(w, h) {
   }
 }
 
+function shaderReplaceUiCaptureCanvas(w, h) {
+  SHADER.uiCaptureCanvas = document.createElement('canvas');
+  SHADER.uiCaptureCtx = SHADER.uiCaptureCanvas.getContext('2d');
+  SHADER.uiCaptureCanvas.width = w;
+  SHADER.uiCaptureCanvas.height = h;
+}
+
 function shaderStripCssUrl(raw) {
   return String(raw || '').trim().replace(/^['"]|['"]$/g, '');
 }
@@ -744,6 +751,7 @@ async function shaderPaintUiCapture(root, w, h, generation) {
 
 function shaderFallbackToManualCapture(root, w, h, generation, _reason) {
   SHADER.uiCaptureUseManual = true;
+  shaderReplaceUiCaptureCanvas(w, h);
   shaderPaintUiCapture(root, w, h, generation).catch(e => {
     shaderFailUiCapture(e?.message || 'ui capture failed', generation);
   });
