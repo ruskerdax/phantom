@@ -119,6 +119,9 @@ function siteExplodeMissile(site, m, isEnemy){
     for(const e of site.en){if(!e.alive)continue;
       if(Math.hypot(m.x-e.x,m.y-e.y)<r+defenseRadius(e))damageDefense(site,e,d,m.x,m.y);
     }
+    for(const b of siteBuildings(site)){
+      if(b.alive&&Math.hypot(m.x-b.x,m.y-b.y)<r+buildingTargetRadius(b))damageBuilding(site,b,d,m.x,m.y);
+    }
     const rx=site.rx;
     if(rx?.alive&&Math.hypot(m.x-rx.x,m.y-rx.y)<r+18){
       rx.hp-=d;addStake(100);tone(350,.1,'square',.08);boomAt(site.pts,rx.x,rx.y,lvc,4);
@@ -157,6 +160,9 @@ function updSiteMissiles(site, mis, isEnemy){
           if(Math.hypot(m.x-e.x,m.y-e.y)<defenseRadius(e)){damageDefense(site,e,m.dmg,m.x,m.y);det=true;break;}
         }
         if(!det){
+          for(const b of siteBuildings(site)){if(b.alive&&pointInBuildingHitBox(b,m.x,m.y)){damageBuilding(site,b,m.dmg,m.x,m.y);det=true;break;}}
+        }
+        if(!det){
           const rx=site.rx;
           if(rx?.alive&&Math.hypot(m.x-rx.x,m.y-rx.y)<18){
             rx.hp-=m.dmg;addStake(100);tone(350,.1,'square',.08);
@@ -191,12 +197,14 @@ function updSiteMissiles(site, mis, isEnemy){
 function siteBeamTargets(site){
   const tgts=[];
   site.en.forEach((e,i)=>{if(e.alive)tgts.push(defenseBeamTarget(e,i,'defense'));});
+  siteBuildings(site).forEach((b,i)=>{if(b.alive)tgts.push(buildingBeamTarget(b,i));});
   if(site.rx?.alive)tgts.push({x:site.rx.x,y:site.rx.y,r:18,kind:'reactor',idx:0});
   return tgts;
 }
 function siteHandleBeamHit(site,tg,wp,res){
   const d=site.d;
   if(tg.kind==='defense')damageDefense(site,site.en[tg.idx],wp.dmg,res.x2,res.y2);
+  else if(tg.kind==='building')damageBuilding(site,siteBuildings(site)[tg.idx],wp.dmg,res.x2,res.y2);
   else if(tg.kind==='reactor'){
     const rx=site.rx;rx.hp-=wp.dmg;addStake(100);tone(350,.1,'square',.08);boomAt(site.pts,res.x2,res.y2,d.col,4);
     if(rx.hp<=0){rx.alive=false;site.rdone=true;site.esc=1200;G.st='esc';addStake(2000);boomAt(site.pts,rx.x,rx.y,d.col,40);boomAt(site.pts,rx.x,rx.y,'#fff',20);tone(150,.8,'sawtooth',.18);}
@@ -238,13 +246,55 @@ function gotStateArray(arr,len){
   while(out.length<len)out.push(false);
   return out.map(v=>!!v);
 }
+function planetBuildingRefs(p){
+  const refs=[],counts={};
+  const add=(mode,d)=>{
+    (d?.buildings||[]).forEach((b,i)=>{
+      const classId=b.classId;
+      const bitIndex=counts[classId]||0;
+      counts[classId]=bitIndex+1;
+      refs.push({mode,siteIndex:i,classId,bitIndex,b});
+    });
+  };
+  add('surface',p.surface);
+  add('tunnel',p.tunnel);
+  add('cave',p.cave);
+  return refs;
+}
+function defaultBuildingBits(p){
+  const bits={};
+  for(const ref of planetBuildingRefs(p))bits[ref.classId]=(bits[ref.classId]||0)|(1<<ref.bitIndex);
+  return bits;
+}
+function normalizeBuildingBits(bits,p){
+  const out=bits&&typeof bits==='object'?{...bits}:{};
+  for(const ref of planetBuildingRefs(p)){
+    if(!Number.isFinite(out[ref.classId]))out[ref.classId]=0;
+    if(!(out[ref.classId]&(1<<ref.bitIndex)) && !(ref.classId in (bits||{})))out[ref.classId]|=1<<ref.bitIndex;
+  }
+  return out;
+}
+function initSiteBuildings(p,mode,ps){
+  return planetBuildingRefs(p).filter(ref=>ref.mode===mode).map(ref=>{
+    const alive=!!(ps.buildings?.[ref.classId]&(1<<ref.bitIndex));
+    return mkBuilding(ref.classId,ref.b.x,ref.b.y,{...ref.b,alive,bitIndex:ref.bitIndex});
+  });
+}
+function saveSiteBuildings(site,ps){
+  ps.buildings=normalizeBuildingBits(ps.buildings,site.planet);
+  for(const b of siteBuildings(site)){
+    const bit=1<<b.bitIndex;
+    if(b.alive)ps.buildings[b.classId]|=bit;
+    else ps.buildings[b.classId]&=~bit;
+  }
+}
 function defaultPlanetState(p){
   const completedSites={};
   for(const site of p.sites||[])completedSites[site.id]=false;
   return{
     completedSites,
+    buildings:defaultBuildingBits(p),
     surface:{
-      dishAlive:(p.surface?.dishes||[]).map(()=>true),
       enemyAlive:(p.surface?.en||[]).map(()=>true),
       defenseAlive:(p.surface?.defenses||[]).map(()=>true),
       fuGot:(p.surface?.fu||[]).map(()=>false),
@@ -263,8 +313,8 @@ function planetState(pi=G.lv){
   if(!ps||typeof ps!=='object')ps=defaultPlanetState(p);
   ps.completedSites=ps.completedSites&&typeof ps.completedSites==='object'?ps.completedSites:{};
   for(const site of p.sites||[])if(typeof ps.completedSites[site.id]!=='boolean')ps.completedSites[site.id]=false;
+  ps.buildings=normalizeBuildingBits(ps.buildings,p);
   ps.surface=ps.surface&&typeof ps.surface==='object'?ps.surface:{};
-  ps.surface.dishAlive=boolStateArray(ps.surface.dishAlive,(p.surface?.dishes||[]).length,true);
   ps.surface.enemyAlive=boolStateArray(ps.surface.enemyAlive,(p.surface?.en||[]).length,true);
   ps.surface.defenseAlive=boolStateArray(ps.surface.defenseAlive,(p.surface?.defenses||[]).length,true);
   ps.surface.fuGot=gotStateArray(ps.surface.fuGot,(p.surface?.fu||[]).length);
@@ -289,13 +339,15 @@ function saveActiveSiteState(){
   const site=G.site;if(!site)return;
   const ps=planetState(G.lv);
   if(site.mode==='surface'){
-    ps.surface.dishAlive=site.dishes.map(d=>d.alive);
+    saveSiteBuildings(site,ps);
     ps.surface.enemyAlive=site.en.map(e=>e.alive);
     ps.surface.defenseAlive=site.defenses.map(d=>d.alive);
     ps.surface.fuGot=site.fu.map(f=>f.got);
   }else if(site.mode==='tunnel'){
+    saveSiteBuildings(site,ps);
     ps.tunnel.enemyAlive=site.en.map(e=>e.alive);
   }else if(site.mode==='cave'){
+    saveSiteBuildings(site,ps);
     ps.cave.en=site.en.map(e=>e.alive);
     ps.cave.fu=site.fu.map(f=>f.got);
     ps.cave.rx={hp:site.rx.hp,alive:site.rx.alive};
@@ -322,7 +374,7 @@ function enterSurface(ship=null,opts={}){
   const s=ship||siteShipAt(x,y);
   s.x=x;s.y=y;if(opts.a!=null)s.a=opts.a;
   G.site={mode:'surface',planet:p,d,s,
-    dishes:d.dishes.map((di,i)=>({...di,alive:ps.surface.dishAlive[i]})),
+    buildings:initSiteBuildings(p,'surface',ps),
     en:d.en.map((e,i)=>initSurfaceEnemy(e,ps.surface.enemyAlive[i])),
     defenses:(d.defenses||[]).map((df,i)=>initDefense(df,ps.surface.defenseAlive[i],DEFENSE_CLASS_IDS.SURFACE_SENTINEL)),
     fu:d.fu.map((f,i)=>({...f,got:ps.surface.fuGot[i]})),
@@ -339,6 +391,7 @@ function enterTunnel(dir='down',ship=null){
   s.x=ent.x;s.y=ent.y;if(!ship)s.a=dir==='up'?0:Math.PI;s.vx*=.35;s.vy*=.35;
   G.site={mode:'tunnel',tunnelDir:dir,planet:p,d,s,
     en:d.en.map((e,i)=>initDefense(e,ps.tunnel.enemyAlive[i])),
+    buildings:initSiteBuildings(p,'tunnel',ps),
     fu:[],rx:{alive:false,hp:0},bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:dir==='up'?Math.max(0,d.worldH-H):0,z:1}};
   G.absAimTarget=null;G.st='play';
   saveGame();
@@ -349,6 +402,7 @@ function enterCaveFromTunnel(ship=null){
   s.x=d.ent.x;s.y=d.ent.y;if(!ship)s.a=0;s.vx*=.3;s.vy*=.3;
   G.site={mode:'cave',planet:p,d,s,
     en:d.en.map((e,i)=>initDefense(e,ps.cave.en[i])),
+    buildings:initSiteBuildings(p,'cave',ps),
     fu:d.fu.map((f,i)=>({...f,got:ps.cave.fu[i]})),
     rx:{...d.rx,hp:ps.cave.rx.hp,alive:ps.cave.rx.alive},
     bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:0,z:1}};
@@ -410,6 +464,7 @@ function updCaveSite(){
     const consumed=stepBullet(b,0,0,4,()=>{
       if(b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,G.lv))return true;
       for(const e of site.en){if(!e.alive)continue;if(Math.hypot(b.x-e.x,b.y-e.y)<defenseRadius(e)){damageDefense(site,e,b.dmg,b.x,b.y);return true;}}
+      for(const bd of siteBuildings(site)){if(bd.alive&&pointInBuildingHitBox(bd,b.x,b.y)){damageBuilding(site,bd,b.dmg,b.x,b.y);return true;}}
       for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){siteExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
       const rx=site.rx;if(rx?.alive&&Math.hypot(b.x-rx.x,b.y-rx.y)<18){rx.hp-=10;addStake(100);tone(350,.1,'square',.08);if(rx.hp<=0){rx.alive=false;site.rdone=true;site.esc=1200;G.st='esc';addStake(2000);boomAt(site.pts,rx.x,rx.y,d.col,40);boomAt(site.pts,rx.x,rx.y,'#fff',20);tone(150,.8,'sawtooth',.18);}return true;}
       return false;
@@ -477,26 +532,23 @@ function surfaceBounce(site){
   applyShipBounce(s,n.nx,n.ny,{x:s.x-n.nx*12,y:s.y-n.ny*12});
   return true;
 }
-function damageSurfaceDish(site,dish,dmg,x=dish.x,y=dish.y){
-  dish.hp-=dmg;
-  boomAt(site.pts,x,y,'#ffdd88',4);
-  tone(350,.08,'square',.06);
-  if(dish.hp<=0){
-    dish.alive=false;addStake(500);
-    boomAt(site.pts,dish.x,dish.y,'#ffdd88',22);boomAt(site.pts,dish.x,dish.y,'#fff',8);
-    if(site.dishes.every(d=>!d.alive)){completePlanetSite('targets');}
-  }
+function surfaceBuildingHit(site,b,x,y){
+  const bx=surfaceNearX(site.d,b.x,x);
+  return pointInBuildingHitBox({...b,x:bx},x,y);
+}
+function buildingBeamTarget(b,i){
+  return {x:b.x,y:b.y,r:buildingTargetRadius(b),kind:'building',idx:i};
 }
 function surfaceBeamTargets(site){
   const tgts=[];
-  site.dishes.forEach((d,i)=>{if(d.alive)tgts.push({x:d.x,y:d.y,r:17,kind:'dish',idx:i});});
+  siteBuildings(site).forEach((b,i)=>{if(b.alive)tgts.push(buildingBeamTarget(b,i));});
   site.en.forEach((e,i)=>{if(e.alive)tgts.push(surfaceEnemyBeamTarget(e,i));});
   site.defenses.forEach((d,i)=>{if(d.alive)tgts.push(defenseBeamTarget(d,i,'defense'));});
   site.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));
   return tgts;
 }
 function surfaceHandleBeamHit(site,tg,wp,res){
-  if(tg.kind==='dish')damageSurfaceDish(site,site.dishes[tg.idx],wp.dmg,res.x2,res.y2);
+  if(tg.kind==='building')damageBuilding(site,siteBuildings(site)[tg.idx],wp.dmg,res.x2,res.y2);
   else if(tg.kind==='enemy')damageSurfaceEnemy(site,site.en[tg.idx],wp.dmg,res.x2,res.y2);
   else if(tg.kind==='defense')damageDefense(site,site.defenses[tg.idx],wp.dmg,res.x2,res.y2);
   else if(tg.kind==='missile'){
@@ -507,7 +559,7 @@ function surfaceHandleBeamHit(site,tg,wp,res){
 function surfaceExplodeMissile(site,m,isEnemy){
   const d=site.d,r=m.expR,dm=m.expDmg,s=site.s;
   if(!isEnemy){
-    for(const dish of site.dishes)if(dish.alive&&surfaceDist(d,m.x,m.y,dish.x,dish.y)<r+18)damageSurfaceDish(site,dish,dm,m.x,m.y);
+    for(const b of siteBuildings(site))if(b.alive&&surfaceDist(d,m.x,m.y,b.x,b.y)<r+buildingTargetRadius(b))damageBuilding(site,b,dm,m.x,m.y);
     for(const e of site.en)if(e.alive&&surfaceDist(d,m.x,m.y,e.x,e.y)<r+surfaceEnemyRadius(e))damageSurfaceEnemy(site,e,dm,m.x,m.y);
     for(const df of site.defenses)if(df.alive&&surfaceDist(d,m.x,m.y,df.x,df.y)<r+defenseRadius(df))damageDefense(site,df,dm,m.x,m.y);
   }else if(s.alive&&surfaceDist(d,m.x,m.y,s.x,s.y)<r+shipHitRadius(s)){
@@ -526,7 +578,7 @@ function updSurfaceMissiles(site,mis,isEnemy){
     if(--m.trailTimer<=0){m.trailTimer=2;site.pts.push({x:m.x-Math.sin(m.a)*5,y:m.y+Math.cos(m.a)*5,vx:-Math.sin(m.a)*.4,vy:Math.cos(m.a)*.4,l:12,ml:18,c:'#fa0'});}
     let det=m.l<=0||m.y<d.exitY-160||m.y>surfaceYAt(d,m.x)+18;
     if(!det&&!isEnemy){
-      for(const dish of site.dishes){if(dish.alive&&surfaceDist(d,m.x,m.y,dish.x,dish.y)<17){damageSurfaceDish(site,dish,m.dmg,m.x,m.y);det=true;break;}}
+      for(const b of siteBuildings(site)){if(b.alive&&surfaceBuildingHit(site,b,m.x,m.y)){damageBuilding(site,b,m.dmg,m.x,m.y);det=true;break;}}
       if(!det)for(const e of site.en){if(e.alive&&surfaceDist(d,m.x,m.y,e.x,e.y)<surfaceEnemyRadius(e)){damageSurfaceEnemy(site,e,m.dmg,m.x,m.y);det=true;break;}}
       if(!det)for(const df of site.defenses){if(df.alive&&surfaceDist(d,m.x,m.y,df.x,df.y)<defenseRadius(df)){damageDefense(site,df,m.dmg,m.x,m.y);det=true;break;}}
     }else if(!det&&s.alive&&surfaceDist(d,m.x,m.y,s.x,s.y)<shipHitRadius(s)){
@@ -543,7 +595,7 @@ function updSurfaceProjectiles(site){
     const b=site.bul[i];
     const consumed=stepBullet(b,d.worldW,0,4,()=>{
       if(b.y<d.exitY-160||b.y>surfaceYAt(d,b.x))return true;
-      for(const dish of site.dishes){if(dish.alive&&surfaceDist(d,b.x,b.y,dish.x,dish.y)<17){damageSurfaceDish(site,dish,b.dmg,b.x,b.y);return true;}}
+      for(const bd of siteBuildings(site)){if(bd.alive&&surfaceBuildingHit(site,bd,b.x,b.y)){damageBuilding(site,bd,b.dmg,b.x,b.y);return true;}}
       for(const e of site.en){if(e.alive&&surfaceDist(d,b.x,b.y,e.x,e.y)<surfaceEnemyRadius(e)){damageSurfaceEnemy(site,e,b.dmg,b.x,b.y);return true;}}
       for(const df of site.defenses){if(df.alive&&surfaceDist(d,b.x,b.y,df.x,df.y)<defenseRadius(df)){damageDefense(site,df,b.dmg,b.x,b.y);return true;}}
       for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(surfaceDist(d,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){surfaceExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
@@ -629,6 +681,7 @@ function drawCaveSite(){
     else{const pu=.5+.5*Math.sin(G.fr*.35);cx.strokeStyle='#f50';cx.shadowColor='#f50';cx.shadowBlur=sb(10+pu*25);cx.lineWidth=2;cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3+G.fr*.07;i?cx.lineTo(rx.x+Math.cos(a)*14,rx.y+Math.sin(a)*14):cx.moveTo(rx.x+Math.cos(a)*14,rx.y+Math.sin(a)*14);}cx.closePath();cx.stroke();}
     cx.restore();
   }
+  for(const b of siteBuildings(site))if(b.alive)drawBuildingTunnel(b,site);
   for(const e of site.en){if(e.alive)drawDefense(e);}
   for(const b of site.bul){cx.save();cx.fillStyle='#fff';cx.shadowColor='#fff';cx.shadowBlur=sb(6);cx.beginPath();cx.arc(b.x,b.y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
   for(const b of site.ebu){cx.save();cx.fillStyle='#f66';cx.shadowColor='#f66';cx.shadowBlur=sb(6);cx.beginPath();cx.arc(b.x,b.y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
@@ -695,7 +748,7 @@ function drawSurfaceIndicators(site){
   if(G.st!=='play'||!site.s.alive)return;
   const d=site.d,cam=site.cam||{x:0,y:0,z:1};
   const targets=[
-    ...site.dishes.map(o=>({x:o.x,y:o.y,r:16,col:'#ffdd88',alive:o.alive})),
+    ...siteBuildings(site).map(o=>({x:o.x,y:o.y,r:buildingTargetRadius(o),col:buildingDef(o).col,alive:o.alive})),
     ...site.en.map(o=>({x:o.x,y:o.y,r:surfaceEnemyRadius(o),col:surfaceEnemyColor(o),alive:o.alive})),
     ...site.defenses.map(o=>({x:o.x,y:o.y,r:defenseRadius(o),col:defenseColor(o),alive:o.alive})),
     ...site.fu.map(o=>({x:o.x,y:o.y,r:12,col:'#0f8',alive:!o.got,kind:'energy'})),
@@ -720,7 +773,7 @@ function drawSurface(){
   const caveDone=d.tunnel?planetState(G.lv).completedSites[d.tunnel.siteId]:false;
   if(d.tunnel)drawSurfaceCopies(site,d.tunnel.x,d.tunnel.y,42,(x,y)=>drawTunnelMouth({...d.tunnel,x,y},caveDone));
   for(const f of site.fu)if(!f.got)drawSurfaceCopies(site,f.x,f.y,12,(x,y)=>drEnergy(x,y,'#0f8'));
-  for(const dish of site.dishes)if(dish.alive)drawSurfaceCopies(site,dish.x,dish.y,22,(x,y)=>drawDish({...dish,x,y}));
+  for(const b of siteBuildings(site))if(b.alive)drawSurfaceCopies(site,b.x,b.y,buildingTargetRadius(b)+5,(x,y)=>drawBuildingSurface({...b,x,y},site));
   for(const df of site.defenses)if(df.alive)drawSurfaceCopies(site,df.x,df.y,22,(x,y)=>drawDefense({...df,x,y}));
   for(const e of site.en)if(e.alive)drawSurfaceCopies(site,e.x,e.y,22,(x,y)=>drawSurfaceEnemy({...e,x,y}));
   for(const b of site.bul)drawSurfaceCopies(site,b.x,b.y,5,(x,y)=>drBullet(x,y,'#fff'));
@@ -735,11 +788,12 @@ function drawSurface(){
   drawSurfaceIndicators(site);
   drHUD(site.s.energy,site.s.maxEnergy,site.s.hp,site.s.maxHp,site.s);
   drawObjectivesPanel({layout:'planet',planetIdx:G.lv});
-  const remaining=site.dishes.filter(d=>d.alive).length,ps=planetState(G.lv);
+  const dishes=siteBuildings(site).filter(b=>b.classId===BUILDING_CLASS_IDS.DISH);
+  const remaining=dishes.filter(d=>d.alive).length,ps=planetState(G.lv);
   cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillStyle=col;cx.fillText('surface',W/2,18);
   cx.fillStyle=remaining?'#ffdd88':'#0f8';
   const caveTxt=d.tunnel?(ps.completedSites[d.tunnel.siteId]?'  cave complete':'  find cave access'):'';
-  cx.fillText((site.dishes.length?`dishes ${remaining}`:'surface')+caveTxt,W/2,36);
+  cx.fillText((dishes.length?`dishes ${remaining}`:'surface')+caveTxt,W/2,36);
   cx.restore();
   if(G.st==='dead_site'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=sb(14);cx.font='bold 26px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('ship destroyed',W/2,H/2);cx.restore();}
 }

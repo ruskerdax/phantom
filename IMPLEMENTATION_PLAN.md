@@ -19,11 +19,13 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 ## Conventions
 
 **Registries** follow the existing `DEFENSE_CLASSES` / `SURFACE_ENEMY_CLASSES` pattern. New files:
-- `data/buildings.js` — `BUILDING_CLASSES` registry (NEW)
+- `data/building-types.js` — `BUILDING_CLASSES` registry (NEW)
 - `buildings.js` — building runtime (NEW)
 - `data/objective-types.js` — objective type defs (NEW)
 - `objectives.js` — objective tracking runtime (NEW)
 - `branching-tunnel.js` — generator + site mode (NEW, Phase 2)
+
+**File naming:** Avoid creating files with the same basename in different directories. Data-only registries/type definitions should use an explicit suffix such as `*-types.js` or the already-established `*-classes.js`; runtime modules keep the plain domain name (`objectives.js`, `buildings.js`). Before adding a new file, scan for existing basenames and choose a distinct name.
 
 **Save format:** Per-planet building state lives in `lvState[pi].buildings = {<classId>: <aliveBitfield>}` — bit `i` = whether the i-th building of this class on this site is alive. **Comment must be added in `save.js`** explaining the bitfield format. No save migration; playtesters wipe.
 
@@ -181,11 +183,11 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 ---
 
-### F-07. Building registry framework
+### F-07. Building registry framework ✅
 
 **Goal:** `BUILDING_CLASSES` registry + runtime; migrate dishes into it.
 
-**Files:** `data/buildings.js` (NEW), `buildings.js` (NEW), `site.js`, `data/levels.js`, `save.js`
+**Files:** `data/building-types.js` (NEW), `buildings.js` (NEW), `site.js`, `data/levels.js`, `save.js`
 
 **Outline:**
 - `BUILDING_CLASS_IDS` constants. `BUILDING_CLASSES` array with rows shaped:
@@ -240,7 +242,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 **Goal:** Add `TOWER` building (HP 100, mounts a turret on top, paired-with-structures + 2–5 random per surface).
 
-**Files:** `data/buildings.js`, `data/levels.js`, `buildings.js`, `defenses.js`, `site.js`
+**Files:** `data/building-types.js`, `data/levels.js`, `buildings.js`, `defenses.js`, `site.js`
 
 **Outline:**
 - `TOWER` row: `hp:100, footprint:{w:18,h:34}, requiresFlat:true, drawSurface:drawTower`. Visual: wide-short rectangle base + tapered narrower rectangle top + turret rendered at top.
@@ -261,7 +263,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 **Goal:** Add `POWER_STATION` (HP 50). 1–3 per surface; each spawns a paired tower.
 
-**Files:** `data/buildings.js`, `data/levels.js`, `buildings.js`
+**Files:** `data/building-types.js`, `data/levels.js`, `buildings.js`
 
 **Outline:**
 - Row: `hp:50, requiresFlat:true, drawSurface:…` (rectangle with electrical detail).
@@ -279,7 +281,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 **Goal:** Add `AIR_DEFENSE_BASE` (HP 500); 20s skimmer/diver spawn cycle; cap `SURFACE_ENEMY_CAP=12`; pre-spawned guard skimmer with role-flagged respawn priority; 1–2 paired towers; re-enter top-up to 60% if alive.
 
-**Files:** `data/buildings.js`, `data/levels.js`, `data/surface-enemy-classes.js`, `surface-enemies.js`, `buildings.js`
+**Files:** `data/building-types.js`, `data/levels.js`, `data/surface-enemy-classes.js`, `surface-enemies.js`, `buildings.js`
 
 **Outline:**
 - Building row: `hp:500, requiresFlat:true, requiresPower:false`.
@@ -300,7 +302,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 **Goal:** Add `DRONE_FACTORY` (HP 300). New `SURFACE_DRONE` enemy type / `BASE_DEFENSE_DRONE` class. 8-cap drones per site (independent from surface enemy cap).
 
-**Files:** `data/buildings.js`, `data/surface-enemy-classes.js`, `surface-enemies.js`, `buildings.js`, `data/levels.js`
+**Files:** `data/building-types.js`, `data/surface-enemy-classes.js`, `surface-enemies.js`, `buildings.js`, `data/levels.js`
 
 **Outline:**
 - Building row: `hp:300, requiresFlat:true, requiresPower:false`.
@@ -320,7 +322,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 **Goal:** 8 residence + 8 infrastructure classes; per-planet population class roll; city-zone placement; 50%-by-points objective wiring.
 
-**Files:** `data/buildings.js`, `data/levels.js`, `objectives.js`
+**Files:** `data/building-types.js`, `data/levels.js`, `objectives.js`
 
 **Outline:**
 - Population class roll: 20% none / 20% sparse / 40% moderate / 20% dense (deterministic from seed).
@@ -360,7 +362,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 **Goal:** `ORBITAL_GUN` building (HP 500) with surface placeholder visual + overworld firing logic. Forbidden on `DEADB33F`.
 
-**Files:** `data/buildings.js`, `data/levels.js`, `overworld.js`, `state.js`
+**Files:** `data/building-types.js`, `data/levels.js`, `overworld.js`, `state.js`
 
 **Outline:**
 - Building row: `hp:500, requiresFlat:true, requiresPower:false`.
@@ -384,7 +386,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 **Goal:** Indestructible fence-style laser; 60-tick/s × 2dmg = 120dmg/s contact damage; cave/tunnel only; powered.
 
-**Files:** `data/buildings.js`, `data/levels.js`, `buildings.js`, `site.js`
+**Files:** `data/building-types.js`, `data/levels.js`, `buildings.js`, `site.js`
 
 **Outline:**
 - `LASER_DEFENSE` row: `indestructible:true, requiresPower:true, drawTunnel:drawLaserFence`. Stores `{a:{x,y}, b:{x,y}}` anchors.
@@ -403,7 +405,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 **Goal:** Indestructible domes covering civilian groups; geometric collision against ship + projectiles + beams; drops when planet unpowered.
 
-**Files:** `data/buildings.js`, `data/levels.js`, `buildings.js`, `site.js`
+**Files:** `data/building-types.js`, `data/levels.js`, `buildings.js`, `site.js`
 
 **Outline:**
 - Two classes: `SHIELD_DOME_SMALL` (radius 200), `SHIELD_DOME_LARGE` (radius 400). Both `indestructible:true, requiresPower:true`.
@@ -523,7 +525,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ### P3-01. Visual polish
 
-**Files:** `data/buildings.js`, `data/levels.js`
+**Files:** `data/building-types.js`, `data/levels.js`
 
 **Outline:** Refine each building silhouette per spec (Eiffel-tower-arcology, etc.); subtle region tinting at plateau/crater edges; dome scanline shimmer; laser-defense pulsing.
 

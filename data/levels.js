@@ -524,14 +524,14 @@ function genSurfaceTerrain(rng,worldW){
 }
 
 function genSurfaceDishes(rng,surface,count,siteId){
-  const dishes=[];
+  const buildings=[];
   for(let i=0;i<count;i++){
     const zone=(i+.5)/count;
     const x=wrap(zone*surface.worldW+rng.fl(-W*.28,W*.28),surface.worldW);
     const y=surfaceYAt(surface,x)-13;
-    dishes.push({x:Math.round(x),y:Math.round(y),hp:30,siteId});
+    buildings.push(mkBuilding(BUILDING_CLASS_IDS.DISH,Math.round(x),Math.round(y),{siteId}));
   }
-  return dishes;
+  return buildings;
 }
 
 function genSurfaceEnergy(rng,surface,count){
@@ -569,12 +569,12 @@ function genTunnel(rng,tmpl,seed){
 function genSurface(tmpl,seed,sites){
   const rng=mkRNG(seed);
   const screens=rng.int(8,14),worldW=screens*W;
-  const surface={...tmpl,kind:'surface',screenCount:screens,worldW,worldH:Math.round(H*1.05),exitY:-90,terrain:[],regions:[],dishes:[],en:[],defenses:[],fu:[],tunnel:null,ent:{x:Math.round(W*.5),y:Math.round(H*.28)}};
+  const surface={...tmpl,kind:'surface',screenCount:screens,worldW,worldH:Math.round(H*1.05),exitY:-90,terrain:[],regions:[],buildings:[],en:[],defenses:[],fu:[],tunnel:null,ent:{x:Math.round(W*.5),y:Math.round(H*.28)}};
   const surfaceTerrain=genSurfaceTerrain(rng,worldW);
   surface.terrain=surfaceTerrain.terrain;
   surface.regions=surfaceTerrain.regions;
   const hasTargets=sites.some(s=>s.type==='surface_targets');
-  if(hasTargets)surface.dishes=genSurfaceDishes(rng,surface,rng.int(4,6),'targets');
+  if(hasTargets)surface.buildings=genSurfaceDishes(rng,surface,rng.int(4,6),'targets');
   surface.fu=genSurfaceEnergy(rng,surface,rng.int(2,4));
   const threatSlots=rng.int(6,10),defenseCount=Math.max(1,Math.round(threatSlots*.34));
   surface.defenses=genSurfaceDefenses(rng,surface,defenseCount);
@@ -588,10 +588,10 @@ function genSurface(tmpl,seed,sites){
 }
 
 function genPlanetSites(rng){
-  const hasTargets=rng.next()<.72;
+  const hasTargets=rng.next()<.25;
   const hasCave=rng.next()<.72;
   const sites=[];
-  if(hasTargets||!hasCave)sites.push({id:'targets',type:'surface_targets',label:'SURFACE TARGETS',required:true});
+  if(hasTargets)sites.push({id:'targets',type:'surface_targets',label:'SURFACE TARGETS',required:true});
   if(hasCave||!hasTargets)sites.push({id:'cave',type:'cave_connector',label:'CAVE ACCESS',required:true});
   return sites;
 }

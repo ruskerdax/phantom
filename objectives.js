@@ -25,6 +25,10 @@ function sortObjectives(list) {
   });
 }
 
+function siteDataHasBuilding(d, classId) {
+  return (d?.buildings || []).some(b => b.classId === classId);
+}
+
 function genObjectives(rng) {
   const out = [];
   for(let pi = 0; pi < LV.length; pi++) {
@@ -32,7 +36,7 @@ function genObjectives(rng) {
     if((p.sites || []).some(s => s.id === 'cave' || s.type === 'cave_connector')) {
       out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.CAVE_REACTOR, pi), type:OBJECTIVE_TYPE_IDS.CAVE_REACTOR, planetIdx:pi, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.CAVE_REACTOR, pi)});
     }
-    if((p.sites || []).some(s => s.id === 'targets' || s.type === 'surface_targets') && (p.surface?.dishes || []).length) {
+    if((p.sites || []).some(s => s.id === 'targets' || s.type === 'surface_targets') && siteDataHasBuilding(p.surface, BUILDING_CLASS_IDS.DISH)) {
       out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, pi), type:OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, planetIdx:pi, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, pi)});
     }
   }

@@ -152,6 +152,8 @@ function buildSaveData() {
     cleared: [...G.cleared],
     hbCleared: G.hbCleared,
     hbState: G.hbState,
+    // Per-planet buildings are stored at lvState[pi].buildings[classId] as an
+    // alive bitfield: bit i is 1 while the i-th building of that class is alive.
     lvState: G.lvState ?? {},
     slipgateActive: G.slipgateActive,
     objectives: (G.objectives || []).map(o => ({id:o.id, type:o.type, planetIdx:o.planetIdx, complete:!!o.complete, label:o.label})),
