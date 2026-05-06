@@ -33,14 +33,13 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 **Combat-design memory (preserve at all times):**
 - Delta-V coasting is sacred — don't add sustained-thrust energy costs.
-- Don't propose blanket per-weapon range falloff.
+- Don't propose blanket per-weapon range falloff; ships always use weapons as defined in `weapons.js`.
 - Don't rework `ec.spd` or fighter AI overrides.
-- Reinforcements come from existing fleet system, not arbitrary spawns.
 - The new mechanics in this plan respect those rules; don't violate them while implementing.
 
-**Assumptions made during planning** (correct in-place if any are wrong):
+**Assumptions made during planning**:
 - Reactor 25% means 75% of planets have no `cave_reactor` objective. Some planets may end up with zero objectives. Required count is per-system, not per-planet.
-- Dishes stay an independent surface roll (current 72% probability). They migrate into `BUILDING_CLASSES` as the first entry in F-07.
+- Dishes stay an independent surface roll (modify to be 25% probability). They migrate into `BUILDING_CLASSES` as the first entry in F-07.
 - Tower placement order: structures-with-paired-towers first; the "2–5 random" pass runs last on remaining flat-ish ground.
 - Drone caps are per-site: `SURFACE_DRONE_CAP=8`, `TUNNEL_DRONE_CAP=8`, independent of each other and of `SURFACE_ENEMY_CAP=12`.
 - DEADB33F: procedural under the new system except orbital guns are forbidden.
