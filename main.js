@@ -8,6 +8,7 @@ function resizeGameCanvas(cssScale=GAME_CSS_SCALE){
   if(sizeChanged){CV.width=bw;CV.height=bh;}
   CV.style.width=W+'px';
   CV.style.height=H+'px';
+  if(typeof effectsResize==='function')effectsResize(CV);
   if(typeof shaderResize==='function')shaderResize();
   if(ratioChanged&&typeof clearStarLayers==='function')clearStarLayers();
   return ratioChanged||sizeChanged;
@@ -149,6 +150,7 @@ function loop(ts){
   let steps=0;
   while(simAccumMs>=SIM_STEP_MS&&steps<SIM_MAX_STEPS){
     update();
+    if(typeof effectsTick==='function')effectsTick();
     musicUpdate();
     G.fr++;
     simAccumMs-=SIM_STEP_MS;
@@ -156,7 +158,9 @@ function loop(ts){
   }
   if(steps===SIM_MAX_STEPS)simAccumMs=0;
 
+  if(typeof effectsBeginFrame==='function')effectsBeginFrame(CV);
   draw();
+  if(typeof effectsEndFrame==='function')effectsEndFrame();
   if(typeof shaderPresentFrame==='function')shaderPresentFrame();
   requestAnimationFrame(loop);
 }
@@ -177,8 +181,10 @@ window.addEventListener('beforeunload',()=>{ if(shouldSaveOnUnload()) saveGame()
     G.shaderEnabled=typeof sv.shaderEnabled==='boolean'?sv.shaderEnabled:shaderDefault;
     G.shaderUiEnabled=sv.shaderUiEnabled!==false;
     G.shaderPresetId=normalizeShaderPresetId(sv.shaderPresetId);G.shaderParams=normalizeShaderParams(sv.shaderParams);
+    G.effectsEnabled=sv.effectsEnabled!==false;G.effectSettings=normalizeEffectSettings(sv.effectSettings);
   }else{
     G.shaderEnabled=shaderDefault;G.shaderUiEnabled=true;G.shaderPresetId=SHADER_DEFAULT_PRESET_ID;G.shaderParams=normalizeShaderParams(null);
+    G.effectsEnabled=true;G.effectSettings=normalizeEffectSettings(null);
   }
 }
 G.seed=TUTORIAL_SEED; genWorld(G.seed);

@@ -40,6 +40,8 @@ function defaultSave() {
     shaderUiEnabled: true,
     shaderPresetId: SHADER_DEFAULT_PRESET_ID,
     shaderParams: normalizeShaderParams(null),
+    effectsEnabled: true,
+    effectSettings: normalizeEffectSettings(null),
   };
 }
 
@@ -101,6 +103,8 @@ function loadSave() {
     if (typeof d.shaderUiEnabled !== 'boolean') d.shaderUiEnabled = true;
     d.shaderPresetId = normalizeShaderPresetId(d.shaderPresetId);
     d.shaderParams = normalizeShaderParams(d.shaderParams);
+    if (typeof d.effectsEnabled !== 'boolean') d.effectsEnabled = def.effectsEnabled;
+    d.effectSettings = normalizeEffectSettings(d.effectSettings);
     if (!d.settingsVersion) {
       if (d.sfxVol === 10) d.sfxVol = DEFAULT_VOLUME;
       if (d.musVol === 10) d.musVol = DEFAULT_VOLUME;
@@ -166,6 +170,8 @@ function buildSaveData() {
     shaderUiEnabled: G.shaderUiEnabled !== false,
     shaderPresetId: normalizeShaderPresetId(G.shaderPresetId),
     shaderParams: normalizeShaderParams(G.shaderParams),
+    effectsEnabled: G.effectsEnabled !== false,
+    effectSettings: normalizeEffectSettings(G.effectSettings),
   };
 }
 
@@ -181,5 +187,7 @@ function saveSettings() {
   d.shaderUiEnabled = G.shaderUiEnabled !== false;
   d.shaderPresetId = normalizeShaderPresetId(G.shaderPresetId);
   d.shaderParams = normalizeShaderParams(G.shaderParams);
+  d.effectsEnabled = G.effectsEnabled !== false;
+  d.effectSettings = normalizeEffectSettings(G.effectSettings);
   writeSave(d);
 }

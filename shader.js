@@ -1018,10 +1018,28 @@ function shaderDeleteCompiled(compiled) {
   }
 }
 
-function shaderLoadCurrentPreset() {
+function shaderPresentationRequested() {
+  return !!(
+    typeof G !== 'undefined' &&
+    (G.shaderEnabled || (typeof effectsRequireShaderPresent === 'function' && effectsRequireShaderPresent()))
+  );
+}
+
+function shaderActivePresetId() {
+  if (typeof G === 'undefined') return SHADER_DEFAULT_PRESET_ID;
+  if (G.shaderEnabled) return normalizeShaderPresetId(G.shaderPresetId);
+  if (typeof effectsRequireShaderPresent === 'function' && effectsRequireShaderPresent()) return 'stock';
+  return normalizeShaderPresetId(G.shaderPresetId);
+}
+
+function shaderOutputActive() {
+  return !!(shaderPresentationRequested() && SHADER.supported && SHADER.compiled && !SHADER.failed);
+}
+
+function shaderLoadCurrentPreset(idOverride = null) {
   const gl = SHADER.gl;
   if (!gl || !shaderSupported()) return false;
-  const id = normalizeShaderPresetId(typeof G !== 'undefined' ? G.shaderPresetId : SHADER_DEFAULT_PRESET_ID);
+  const id = normalizeShaderPresetId(idOverride || shaderActivePresetId());
   shaderDeleteCompiled(SHADER.compiled);
   SHADER.compiled = null;
   SHADER.compiledPresetId = null;
@@ -1098,8 +1116,8 @@ function shaderEnsureTargets(passCount, w, h) {
 }
 
 function shaderCurrentParamValues() {
-  const id = normalizeShaderPresetId(typeof G !== 'undefined' ? G.shaderPresetId : SHADER_DEFAULT_PRESET_ID);
-  const values = typeof G !== 'undefined' ? G.shaderParams?.[id] : null;
+  const id = normalizeShaderPresetId(SHADER.compiled?.id || shaderActivePresetId());
+  const values = typeof G !== 'undefined' && G.shaderEnabled ? G.shaderParams?.[id] : null;
   return normalizeShaderParamsForPreset(id, values);
 }
 
@@ -1133,7 +1151,7 @@ function shaderSetUniforms(pass, inputW, inputH, outputW, outputH, sourceW, sour
 
 function shaderApplyVisibility() {
   if (!SHADER.source || !SHADER.canvas) return;
-  const active = !!(typeof G !== 'undefined' && G.shaderEnabled && SHADER.supported && SHADER.compiled && !SHADER.failed);
+  const active = shaderOutputActive();
   SHADER.source.style.visibility = active ? 'hidden' : 'visible';
   SHADER.canvas.style.display = active ? 'block' : 'none';
   const uiRoot = shaderUiRoot();
@@ -1142,7 +1160,7 @@ function shaderApplyVisibility() {
 
 function shaderPresentFrame() {
   if (!SHADER.source || !SHADER.canvas) return;
-  if (!(typeof G !== 'undefined' && G.shaderEnabled)) {
+  if (!shaderPresentationRequested()) {
     shaderApplyVisibility();
     return;
   }
@@ -1150,8 +1168,9 @@ function shaderPresentFrame() {
     shaderApplyVisibility();
     return;
   }
-  if (!SHADER.compiled || SHADER.compiledPresetId !== normalizeShaderPresetId(G.shaderPresetId)) {
-    shaderLoadCurrentPreset();
+  const activePresetId = shaderActivePresetId();
+  if (!SHADER.compiled || SHADER.compiledPresetId !== activePresetId) {
+    shaderLoadCurrentPreset(activePresetId);
   }
   if (!SHADER.compiled || SHADER.failed) {
     shaderApplyVisibility();
@@ -1189,6 +1208,18 @@ function shaderPresentFrame() {
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
 
     let inputTexture = SHADER.sourceTexture;
+    if (typeof effectsBeforeShaderPasses === 'function') {
+      const effectInput = effectsBeforeShaderPasses({
+        gl,
+        inputTexture,
+        sourceTexture: SHADER.sourceTexture,
+        sourceCanvas: source,
+        frameSource,
+        w,
+        h,
+      });
+      if (effectInput) inputTexture = effectInput.texture || effectInput;
+    }
     const params = shaderCurrentParamValues();
     for (let i = 0; i < SHADER.compiled.passes.length; i++) {
       const pass = SHADER.compiled.passes[i];
@@ -1220,7 +1251,7 @@ function shaderPresentFrame() {
 
 function shaderSetEnabled(enabled) {
   G.shaderEnabled = !!enabled && shaderSupported();
-  if (G.shaderEnabled && (!SHADER.compiled || SHADER.failed)) shaderLoadCurrentPreset();
+  if (G.shaderEnabled && (!SHADER.compiled || SHADER.compiledPresetId !== shaderActivePresetId() || SHADER.failed)) shaderLoadCurrentPreset();
   shaderResetUiCapture();
   shaderApplyVisibility();
 }
