@@ -253,28 +253,29 @@ function dustVelocityForShip(s,cam){
   return{x:(s?.vx||0)*z*(cam?.dustX??1),y:(s?.vy||0)*z*(cam?.dustY??1)};
 }
 function drDust(vx,vy,cam){
-  const spd=Math.sqrt(vx*vx+vy*vy);if(spd>6){const s=6/spd;vx*=s;vy*=s;}
+  let spd=Math.sqrt(vx*vx+vy*vy);if(spd>6){const s=6/spd;vx*=s;vy*=s;spd=6;}
   const p=renderProfile(),n=Math.min(p.dustCount,DUST.length);
   if(n<=0)return;
   const z=Math.max(.001,cam?.z||1),hw=W*.5,hh=H*.5;
+  const screenVx=vx*z,screenVy=vy*z,screenSpd=Math.hypot(screenVx,screenVy);
   cx.strokeStyle='#cce4ff';cx.fillStyle='#cce4ff';cx.lineCap='round';
   for(let i=0;i<n;i++){
     const d=DUST[i];
     d.x=((d.x-vx*d.depth)%W+W)%W;
     d.y=((d.y-vy*d.depth)%H+H)%H;
     cx.globalAlpha=.12+d.depth*.2;
-    const r=d.r*z,pad=Math.max(r+2,spd*d.depth*2.5+2);
+    const streak=screenSpd*d.depth,trailX=screenVx*d.depth*2.5,trailY=screenVy*d.depth*2.5;
+    const r=d.r*z,pad=Math.max(r+2,Math.hypot(trailX,trailY)+2);
     const minX=hw+(-pad-hw)/z,maxX=hw+(W+pad-hw)/z;
     const minY=hh+(-pad-hh)/z,maxY=hh+(H+pad-hh)/z;
     const kx0=Math.ceil((minX-d.x)/W),kx1=Math.floor((maxX-d.x)/W);
     const ky0=Math.ceil((minY-d.y)/H),ky1=Math.floor((maxY-d.y)/H);
     for(let kx=kx0;kx<=kx1;kx++)for(let ky=ky0;ky<=ky1;ky++){
       const x=hw+(d.x+kx*W-hw)*z,y=hh+(d.y+ky*H-hh)*z;
-      const streak=spd*d.depth;
       if(streak>1){
-        // Draw the trail in screen space so velocity streaks keep their current feel.
+        // Use projected screen motion so streaks match the dust's visible speed.
         cx.lineWidth=r*.9;
-        cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+vx*d.depth*2.5,y+vy*d.depth*2.5);cx.stroke();
+        cx.beginPath();cx.moveTo(x,y);cx.lineTo(x+trailX,y+trailY);cx.stroke();
       } else {
         cx.beginPath();cx.arc(x,y,r,0,Math.PI*2);cx.fill();
       }
