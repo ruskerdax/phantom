@@ -5,7 +5,7 @@ let DPR=window.devicePixelRatio||1;
 let GAME_CSS_SCALE=1;
 let CANVAS_PIXEL_RATIO=1;
 const EW=Math.round(W*3.9),EH=Math.round(W*3.9);
-const OW_W=Math.round(W*5),OW_H=Math.round(W*5);
+const OW_W=6000,OW_H=6000;
 const RENDER_QUALITY_VALUES=['full','reduced','minimal'];
 const RENDER_QUALITY_LABELS={full:'FULL',reduced:'REDUCED',minimal:'MINIMAL'};
 

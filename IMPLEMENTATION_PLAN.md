@@ -49,7 +49,7 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 ## Phase 0 — Foundations (sequential)
 
-### F-01. World size bump
+### F-01. World size bump ✅
 
 **Goal:** `OW_W = OW_H = 6000`; max orbital radius 1600.
 
