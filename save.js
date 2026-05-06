@@ -16,6 +16,9 @@ function defaultSave() {
     hbState: null,
     lvState: {},
     slipgateActive: false,
+    objectives: [],
+    objectivesRequired: 0,
+    cheatSlipgateUnlocked: false,
     seed: 0,
     visitedSeeds: [],
     tutorialDone: false,
@@ -96,6 +99,9 @@ function loadSave() {
     if (!d.systemStates || typeof d.systemStates !== 'object') d.systemStates = {};
     if (typeof d.needsRebuild !== 'boolean') d.needsRebuild = false;
     if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
+    if (!Array.isArray(d.objectives))        d.objectives = def.objectives;
+    if (!Number.isFinite(d.objectivesRequired)) d.objectivesRequired = def.objectivesRequired;
+    if (typeof d.cheatSlipgateUnlocked !== 'boolean') d.cheatSlipgateUnlocked = false;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
     if (typeof d.dynamicZoom !== 'boolean')  d.dynamicZoom = true;
     if (d.gpAimMode !== 'absolute')          d.gpAimMode = 'relative';
@@ -132,6 +138,8 @@ function buildSaveData() {
   if (typeof saveActiveSiteState === 'function') saveActiveSiteState();
   const s = G.ENC?.s ?? G.site?.s ?? G.OW?.s;
   if (s) syncShipEnergyProfile(s);
+  const systemStates = {...(G.systemStates ?? {})};
+  if (typeof currentSystemState === 'function') systemStates[G.seed >>> 0] = currentSystemState();
   const power = defaultPowerForChassisId(G.loadout.chassis);
   const fallbackPower = defaultPowerForChassisId('kestrel');
   const battery = isBatteryId(G.loadout.battery) ? G.loadout.battery : (isBatteryId(power.battery) ? power.battery : fallbackPower.battery);
@@ -146,11 +154,14 @@ function buildSaveData() {
     hbState: G.hbState,
     lvState: G.lvState ?? {},
     slipgateActive: G.slipgateActive,
+    objectives: (G.objectives || []).map(o => ({id:o.id, type:o.type, planetIdx:o.planetIdx, complete:!!o.complete, label:o.label})),
+    objectivesRequired: G.objectivesRequired || 0,
+    cheatSlipgateUnlocked: !!G.cheatSlipgateUnlocked,
     seed: G.seed,
     visitedSeeds: [...G.visitedSeeds],
     tutorialDone: G.tutorialDone,
     prevSeed: G.prevSeed,
-    systemStates: G.systemStates,
+    systemStates,
     needsRebuild: !!G.needsRebuild,
     lastLocation: normalizeLastLocation(G.lastLocation),
     currentHp: (s?.alive && s.hp > 0) ? s.hp : null,

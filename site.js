@@ -242,22 +242,6 @@ function planetState(pi=G.lv){
   G.lvState[pi]=ps;
   return ps;
 }
-function syncPlanetCleared(pi=G.lv){
-  const p=LV[pi],ps=planetState(pi);
-  if(G.cleared.length!==PP.length)G.cleared=clearedForPlanets(G.cleared);
-  G.cleared[pi]=(p.sites||[]).every(site=>!site.required||ps.completedSites[site.id]);
-  if(G.cleared.every(c=>c)){G.slipgateActive=true;G.slipMsg=Math.max(G.slipMsg||0,360);}
-}
-function completePlanetSite(siteId,pi=G.lv){
-  const ps=planetState(pi);
-  if(!ps.completedSites[siteId]){
-    ps.completedSites[siteId]=true;
-    addStake(1500);
-    tone(880,.25,'sine',.08);
-  }
-  syncPlanetCleared(pi);
-  saveGame();
-}
 function siteShipAt(x,y,from=null){
   const src=from||G.OW?.s;
   const ship={...mkShip(x,y),hp:src?src.hp:activeChassisObj().maxHp,maxHp:src?src.maxHp:activeChassisObj().maxHp};
@@ -703,6 +687,7 @@ function drawSurface(){
   cx.restore();
   drawSurfaceIndicators(site);
   drHUD(site.s.energy,site.s.maxEnergy,site.s.hp,site.s.maxHp,site.s);
+  drawObjectivesPanel({layout:'planet',planetIdx:G.lv});
   const remaining=site.dishes.filter(d=>d.alive).length,ps=planetState(G.lv);
   cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillStyle=col;cx.fillText('surface',W/2,18);
   cx.fillStyle=remaining?'#ffdd88':'#0f8';

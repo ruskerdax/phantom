@@ -51,7 +51,7 @@ function encWin(){
   const enc=G.ENC,ow=G.OW;
   const keepVelocity=enc.fleetIdx!=null;
   rechargeShieldFromEnergy(enc.s,true);
-  if(enc.isHBase){G.hbCleared=true;G.hbState=null;}
+  if(enc.isHBase){G.hbState=null;completeObjective(objectiveId(OBJECTIVE_TYPE_IDS.HBASE));}
   if(enc.fleetIdx!=null)ow.fleets[enc.fleetIdx].alive=false;
   copyShipEnergyState(enc.s,ow.s);
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
@@ -59,6 +59,7 @@ function encWin(){
   if(keepVelocity){ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;}
   ow.s.inv=80;
   G.ENC=null;G.absAimTarget=null;returnToOverworld({keepVelocity});
+  saveGame();
   tone(660,.12,'sine',.09);setTimeout(()=>tone(880,.25,'sine',.09),140);
 }
 function splitRock(enc,ri){
@@ -251,7 +252,11 @@ function updEnc(){
   }
   const alive=enc.en.filter(e=>e.alive);
   if(alive.length===0&&!enc.cleared&&!enc.isHBase){enc.cleared=true;clampEncCameraForExit(enc);tone(880,.3,'sine',.07);}
-  if(enc.isHBase&&!enc.cleared&&enc.hbase.softpts.every(sp=>!sp.alive)){enc.cleared=true;tone(880,.3,'sine',.07);}
+  if(enc.isHBase&&!enc.cleared&&enc.hbase.softpts.every(sp=>!sp.alive)){
+    enc.cleared=true;
+    completeObjective(objectiveId(OBJECTIVE_TYPE_IDS.HBASE));
+    tone(880,.3,'sine',.07);
+  }
   for(const e of alive){if(enemyUpdate(e,s,enc,ew,eh))return;}
   if(enc.isHBase&&!enc.cleared){
     for(const t of enc.hbase.turrets)updateDefense(enc,t);

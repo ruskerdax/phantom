@@ -99,14 +99,14 @@ function doRebuildFinalize(){
 function jumpToSeed(newSeed,sourceSeed){
   const energy=G.OW.s.energy;
   // Snapshot departing system state.
-  G.systemStates[G.seed>>>0]={cleared:[...G.cleared],slipgateActive:G.slipgateActive,hbCleared:G.hbCleared,hbState:G.hbState,lvState:G.lvState};
+  G.systemStates[G.seed>>>0]=currentSystemState();
   G.prevSeed=sourceSeed;
   G.seed=newSeed>>>0;
   genWorld(G.seed);
   // Restore destination state if previously visited, else fresh.
   const prev=G.systemStates[G.seed];
-  if(prev){G.cleared=clearedForPlanets(prev.cleared);G.slipgateActive=prev.slipgateActive;G.hbCleared=prev.hbCleared;G.hbState=prev.hbState;G.lvState=prev.lvState;}
-  else{G.cleared=clearedForPlanets();G.slipgateActive=false;G.hbCleared=false;G.hbState=null;G.lvState={};}
+  if(prev)applySystemObjectiveState(prev);
+  else applySystemObjectiveState({});
   G.stake=0;G.slipMsg=0;
   if(!G.visitedSeeds.includes(G.seed))G.visitedSeeds.push(G.seed);
   const sgp=owPos(SLIPGATE);
@@ -548,6 +548,7 @@ function drawOW(){
     }));
   }
   drHUD(s.energy,s.maxEnergy,s.hp,s.maxHp,s);
+  drawObjectivesPanel({layout:'planet',planetIdx:ow.nearP});
   if(G.slipMsg>0){
     const alpha=Math.min(1,G.slipMsg/40);
     const msgY=46;

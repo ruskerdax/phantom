@@ -17,6 +17,7 @@ var G={
   st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,
   cleared:[],hbCleared:false,hbState:null,lvState:{},
   slipgateActive:false,slipMsg:0,
+  objectives:[],objectivesRequired:0,cheatSlipgateUnlocked:false,
   OW:null,ENC:null,site:null,
   paused:false,
   cheatSub:false,
@@ -541,10 +542,13 @@ function startFromSave(){
   G.credits=sv?.credits??0;
   G.stake=0;
   G.cleared=[];
-  G.hbCleared=sv?.hbCleared??false;
-  G.hbState=sv?.hbState??null;
-  G.lvState=sv?.lvState??{};
-  G.slipgateActive=sv?.slipgateActive??false;
+  G.hbCleared=false;
+  G.hbState=null;
+  G.lvState={};
+  G.slipgateActive=false;
+  G.objectives=[];
+  G.objectivesRequired=0;
+  G.cheatSlipgateUnlocked=false;
   G.slipMsg=0;
   G.tutorialDone=sv?.tutorialDone??false;
   G.prevSeed=sv?.prevSeed??null;
@@ -557,7 +561,15 @@ function startFromSave(){
   else if(sv?.seed){G.seed=sv.seed;}
   else{G.seed=TUTORIAL_SEED;}
   genWorld(G.seed);
-  G.cleared=clearedForPlanets(sv?.cleared);
+  const sys=G.systemStates[G.seed>>>0] || (sv ? {
+    objectives: sv.objectives,
+    objectivesRequired: sv.objectivesRequired,
+    cheatSlipgateUnlocked: sv.cheatSlipgateUnlocked,
+    hbCleared: sv.hbCleared,
+    hbState: sv.hbState,
+    lvState: sv.lvState,
+  } : {});
+  applySystemObjectiveState(sys);
   const maxEnergy=loadoutBatteryCapacity();
   const energy=sv?.currentEnergy!=null?Math.min(sv.currentEnergy,maxEnergy):maxEnergy;
   const fallbackKind=(sv&&G.seed!==TUTORIAL_SEED)?'slipgate':'base';

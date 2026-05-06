@@ -40,10 +40,10 @@ function makeCheatsScreen() {
     onConfirm: () => { showSeedInput(v => { if (v != null) { exit(); jumpToSeed(v, null); } }); },
   }));
   screen.add(new Button({
-    label: 'clear all sectors',
+    label: 'unlock slipgate',
     onConfirm: () => {
-      G.cleared = [true, true, true]; G.slipgateActive = true; G.slipMsg = 360;
-      G.ENC = null; G.site = null; returnToOverworld(); exit();
+      G.cheatSlipgateUnlocked = true; syncSlipgateFromObjectives();
+      G.ENC = null; G.site = null; returnToOverworld(); saveGame(); exit();
     },
   }));
   screen.add(new Button({

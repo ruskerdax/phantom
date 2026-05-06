@@ -21,7 +21,7 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 **Registries** follow the existing `DEFENSE_CLASSES` / `SURFACE_ENEMY_CLASSES` pattern. New files:
 - `data/buildings.js` — `BUILDING_CLASSES` registry (NEW)
 - `buildings.js` — building runtime (NEW)
-- `data/objectives.js` — objective type defs (NEW)
+- `data/objective-types.js` — objective type defs (NEW)
 - `objectives.js` — objective tracking runtime (NEW)
 - `branching-tunnel.js` — generator + site mode (NEW, Phase 2)
 
@@ -120,11 +120,11 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 ---
 
-### F-05. Objective system
+### F-05. Objective system ✅
 
 **Goal:** Replace `cleared`/`slipgateActive` aggregation with an objective registry. Render objective panel under credit/stake. Wire HBASE as an objective. Rename cheat.
 
-**Files:** `data/objectives.js` (NEW), `objectives.js` (NEW), `state.js`, `site.js`, `overworld.js`, `ui/screens/cheats.js`, `save.js`, `draw.js`
+**Files:** `data/objective-types.js` (NEW), `objectives.js` (NEW), `state.js`, `site.js`, `overworld.js`, `ui/screens/cheats.js`, `save.js`, `draw.js`
 
 **Outline:**
 - `OBJECTIVE_TYPES`:
