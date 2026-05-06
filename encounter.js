@@ -289,7 +289,7 @@ function drawEnc(){
   const camX=enc.cam?enc.cam.x:0,camY=enc.cam?enc.cam.y:0;
   cx.fillStyle='#030408';cx.fillRect(0,0,W,H);drStars();
   const dustV=dustVelocityForShip(enc.s,enc.cam);
-  drDust(dustV.x,dustV.y);
+  drDust(dustV.x,dustV.y,enc.cam);
   cx.save();applyWorldCamera(enc.cam||{x:camX,y:camY,z:1});
   const tierCol=['#667','#556','#445'];
   const tor=encToroidalActive(enc),cam=enc.cam||{x:camX,y:camY,z:1};

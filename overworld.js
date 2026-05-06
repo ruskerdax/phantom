@@ -492,7 +492,7 @@ function drawOW(){
   const ow=G.OW,s=ow.s;
   const cam=updateWorldCamera(ow.cam||(ow.cam={x:Math.max(0,Math.min(OW_W-W,s.x-W/2)),y:Math.max(0,Math.min(OW_H-H,s.y-H/2)),z:1}),s.x,s.y,OW_W,OW_H,cameraZoomTarget('overworld',s),.5,.5,dynZoomOn()?.12:1);
   const dustV=dustVelocityForShip(s,cam);
-  drDust(dustV.x,dustV.y);
+  drDust(dustV.x,dustV.y,cam);
   cx.save();applyWorldCamera(cam);
   drawOWOrbitGuides();
   drawOWAsteroidBelt();

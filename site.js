@@ -680,7 +680,7 @@ function drawSurface(){
   const site=G.site,d=site.d,col=d.col,cam=site.cam||{x:0,y:0,z:1};
   cx.fillStyle=d.bg;cx.fillRect(0,0,W,H);
   drStars(-(cam.x||0)*.035);
-  const dustV=dustVelocityForShip(site.s,cam);drDust(dustV.x,0);
+  const dustV=dustVelocityForShip(site.s,cam);drDust(dustV.x,0,cam);
   cx.save();applyWorldCamera(cam);
   const z=cam.z||1,left=cam.x,right=cam.x+W/z;
   const k0=Math.floor(left/d.worldW)-1,k1=Math.floor(right/d.worldW)+1;
