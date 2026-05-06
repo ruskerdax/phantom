@@ -19,6 +19,12 @@
 }
 #ui-root.is-active { pointer-events: auto; }
 #ui-root * { box-sizing: border-box; }
+#ui-root.shader-ui-captured * { visibility: hidden !important; }
+#ui-root.shader-ui-captured [data-shader-capture-bypass],
+#ui-root.shader-ui-captured [data-shader-capture-bypass] * {
+  visibility: visible !important;
+  pointer-events: none;
+}
 
 /* ---- Screen container ------------------------------------------------------ */
 .screen {

@@ -25,6 +25,9 @@ const SHADER_QUAD = new Float32Array([
 ]);
 
 const SHADER_UI_CAPTURE_INTERVAL_MS = 1000 / 15;
+const SHADER_UI_CAPTURED_CLASS = 'shader-ui-captured';
+const SHADER_CAPTURE_BYPASS_ATTR = 'data-shader-capture-bypass';
+const SHADER_IMAGE_READY_TIMEOUT_MS = 750;
 const SHADER_SVG_NS = 'http://www.w3.org/2000/svg';
 const SHADER_XHTML_NS = 'http://www.w3.org/1999/xhtml';
 
@@ -61,6 +64,8 @@ const SHADER = {
   uiCaptureStatus: '',
   uiCaptureUseManual: false,
   cssUrlCache: new Map(),
+  imageDataUrlCache: new Map(),
+  imageWatchCache: new WeakSet(),
   manualImageCache: new Map(),
 };
 
@@ -190,6 +195,22 @@ function shaderResetUiCapture() {
   SHADER.uiCaptureStatus = '';
   SHADER.uiCaptureNextRetryMs = 0;
   shaderApplyVisibility();
+}
+
+function shaderSetUiCaptureVisible(root, visible) {
+  if (!root) return;
+  root.classList.toggle(SHADER_UI_CAPTURED_CLASS, !visible);
+  root.style.opacity = '';
+}
+
+function shaderWithUiCaptureVisible(root, fn) {
+  const hidden = !!(root && root.classList.contains(SHADER_UI_CAPTURED_CLASS));
+  if (hidden) root.classList.remove(SHADER_UI_CAPTURED_CLASS);
+  try {
+    return fn();
+  } finally {
+    if (hidden) root.classList.add(SHADER_UI_CAPTURED_CLASS);
+  }
 }
 
 function shaderEnsureCompositor(w, h) {
@@ -338,26 +359,109 @@ async function shaderFetchImageDataUrl(url) {
   }
 }
 
+function shaderImageCacheKey(img) {
+  const src = img?.currentSrc || img?.src || img?.getAttribute?.('src') || '';
+  if (!src) return '';
+  try { return new URL(src, document.baseURI).href; } catch(e) { return src; }
+}
+
+function shaderImageLoaded(img) {
+  return !!(img && img.complete && img.naturalWidth > 0 && img.naturalHeight > 0);
+}
+
+function shaderWatchImageReady(img) {
+  if (!img || SHADER.imageWatchCache.has(img)) return;
+  SHADER.imageWatchCache.add(img);
+  const mark = () => {
+    if (typeof shaderMarkUiDirty === 'function') shaderMarkUiDirty();
+    shaderResetUiCapture();
+  };
+  try {
+    img.addEventListener('load', mark, {once: true});
+    img.addEventListener('error', mark, {once: true});
+  } catch(e) {}
+}
+
+function shaderWaitForImage(img) {
+  if (!img) return Promise.resolve(false);
+  if (shaderImageLoaded(img)) return Promise.resolve(true);
+  shaderWatchImageReady(img);
+  return new Promise(resolve => {
+    let done = false;
+    let timer = null;
+    const finish = ok => {
+      if (done) return;
+      done = true;
+      try {
+        img.removeEventListener('load', onLoad);
+        img.removeEventListener('error', onError);
+      } catch(e) {}
+      if (timer != null) clearTimeout(timer);
+      resolve(!!ok && shaderImageLoaded(img));
+    };
+    const onLoad = () => finish(true);
+    const onError = () => finish(false);
+    try {
+      img.addEventListener('load', onLoad, {once: true});
+      img.addEventListener('error', onError, {once: true});
+    } catch(e) {}
+    timer = setTimeout(() => finish(shaderImageLoaded(img)), SHADER_IMAGE_READY_TIMEOUT_MS);
+    try {
+      if (img.decode) img.decode().then(() => finish(true), () => {});
+    } catch(e) {}
+  });
+}
+
+function shaderSetImageCaptureBypass(img, enabled) {
+  if (!img || !img.setAttribute) return;
+  if (enabled) img.setAttribute(SHADER_CAPTURE_BYPASS_ATTR, '1');
+  else img.removeAttribute(SHADER_CAPTURE_BYPASS_ATTR);
+}
+
+async function shaderResolveImageCapture(img) {
+  const url = shaderImageCacheKey(img);
+  if (!url) return {url: '', data: null, loaded: false, pending: false};
+  const loaded = await shaderWaitForImage(img);
+  if (!loaded) {
+    return {url, data: null, loaded: false, pending: !img.complete};
+  }
+  if (SHADER.imageDataUrlCache.has(url)) {
+    const data = SHADER.imageDataUrlCache.get(url);
+    return {url, data, loaded: true, pending: false};
+  }
+  const data = await shaderImageToDataUrl(img) || await shaderFetchImageDataUrl(url);
+  SHADER.imageDataUrlCache.set(url, data || null);
+  return {url, data: data || null, loaded: true, pending: false};
+}
+
 async function shaderInlineCloneImages(srcRoot, cloneRoot) {
   const src = srcRoot.querySelectorAll('img');
   const dst = cloneRoot.querySelectorAll('img');
+  let pending = false;
   for (let i = 0; i < src.length && i < dst.length; i++) {
-    const url = src[i].currentSrc || src[i].src;
-    const data = await shaderImageToDataUrl(src[i]) || await shaderFetchImageDataUrl(url);
-    if (data) dst[i].setAttribute('src', data);
+    const capture = await shaderResolveImageCapture(src[i]);
+    if (capture.data) {
+      shaderSetImageCaptureBypass(src[i], false);
+      dst[i].setAttribute('src', capture.data);
+    }
     else {
+      if (capture.pending) pending = true;
+      shaderSetImageCaptureBypass(src[i], capture.loaded);
       dst[i].removeAttribute('src');
       dst[i].style.visibility = 'hidden';
     }
   }
+  if (pending) throw new Error('ui image pending');
 }
 
-async function shaderBuildUiCaptureSvg(root, w, h) {
+async function shaderBuildUiCaptureSvg(root) {
   const cssW = typeof W === 'number' ? W : 800;
   const cssH = typeof H === 'number' ? H : 580;
   const clone = root.cloneNode(true);
+  clone.classList.remove(SHADER_UI_CAPTURED_CLASS);
   clone.setAttribute('xmlns', SHADER_XHTML_NS);
   clone.style.opacity = '1';
+  clone.style.visibility = 'visible';
   clone.style.width = cssW + 'px';
   clone.style.height = cssH + 'px';
   clone.style.transform = 'none';
@@ -368,8 +472,8 @@ async function shaderBuildUiCaptureSvg(root, w, h) {
 
   const svg = document.createElementNS(SHADER_SVG_NS, 'svg');
   svg.setAttribute('xmlns', SHADER_SVG_NS);
-  svg.setAttribute('width', String(w));
-  svg.setAttribute('height', String(h));
+  svg.setAttribute('width', String(cssW));
+  svg.setAttribute('height', String(cssH));
   svg.setAttribute('viewBox', '0 0 ' + cssW + ' ' + cssH);
 
   const style = document.createElementNS(SHADER_SVG_NS, 'style');
@@ -392,7 +496,11 @@ async function shaderBuildUiCaptureSvg(root, w, h) {
   fo.appendChild(wrapper);
   svg.appendChild(fo);
 
-  return new XMLSerializer().serializeToString(svg);
+  return {
+    text: new XMLSerializer().serializeToString(svg),
+    cssW,
+    cssH,
+  };
 }
 
 function shaderFailUiCapture(message, generation) {
@@ -461,12 +569,13 @@ function shaderApplyCanvasShadow(ctx, shadow, scale) {
   ctx.shadowBlur = shadow.blur * scale;
 }
 
-function shaderCanvasFont(cs) {
+function shaderCanvasFont(cs, scale = 1) {
+  const size = Math.max(1, shaderCssPx(cs.fontSize, 14) * scale);
   return [
     cs.fontStyle || 'normal',
     cs.fontVariant || 'normal',
     cs.fontWeight || 'normal',
-    cs.fontSize || '14px',
+    size.toFixed(2) + 'px',
     cs.fontFamily || 'monospace',
   ].join(' ');
 }
@@ -497,7 +606,7 @@ function shaderDrawElementText(ctx, el, cs, rect, scale) {
   ctx.beginPath();
   ctx.rect(rect.x, rect.y, Math.max(1, rect.w), Math.max(1, rect.h));
   ctx.clip();
-  ctx.font = shaderCanvasFont(cs);
+  ctx.font = shaderCanvasFont(cs, scale);
   ctx.fillStyle = color;
   ctx.textBaseline = 'middle';
   ctx.textAlign = cs.textAlign === 'center' ? 'center' : cs.textAlign === 'right' || cs.textAlign === 'end' ? 'right' : 'left';
@@ -511,21 +620,23 @@ function shaderDrawElementText(ctx, el, cs, rect, scale) {
 }
 
 async function shaderManualImageFor(img) {
-  const url = img.currentSrc || img.src;
-  if (!url) return null;
-  if (SHADER.manualImageCache.has(url)) return SHADER.manualImageCache.get(url);
-  const data = await shaderImageToDataUrl(img) || await shaderFetchImageDataUrl(url);
-  if (!data) {
-    SHADER.manualImageCache.set(url, null);
+  const capture = await shaderResolveImageCapture(img);
+  if (capture.pending) throw new Error('ui image pending');
+  if (!capture.url) return null;
+  if (!capture.data) {
+    shaderSetImageCaptureBypass(img, capture.loaded);
+    SHADER.manualImageCache.set(capture.url, null);
     return null;
   }
+  shaderSetImageCaptureBypass(img, false);
+  if (SHADER.manualImageCache.has(capture.url)) return SHADER.manualImageCache.get(capture.url);
   const loaded = await new Promise(resolve => {
     const im = new Image();
     im.onload = () => resolve(im);
     im.onerror = () => resolve(null);
-    im.src = data;
+    im.src = capture.data;
   });
-  SHADER.manualImageCache.set(url, loaded);
+  SHADER.manualImageCache.set(capture.url, loaded);
   return loaded;
 }
 
@@ -580,10 +691,11 @@ function shaderPaintDomElement(ctx, el, root, rootRect, w, h, parentAlpha) {
   shaderDrawElementBox(ctx, cs, rect, scale);
 
   if (el.tagName === 'IMG') {
-    const img = SHADER.manualImageCache.get(el.currentSrc || el.src);
+    const bypass = el.hasAttribute(SHADER_CAPTURE_BYPASS_ATTR);
+    const img = SHADER.manualImageCache.get(shaderImageCacheKey(el));
     if (img && rect.w > 0 && rect.h > 0) {
       try { ctx.drawImage(img, rect.x, rect.y, rect.w, rect.h); } catch(e) {}
-    } else if (el.alt) {
+    } else if (el.alt && !bypass) {
       ctx.save();
       const accent = getComputedStyle(root).getPropertyValue('--accent').trim() || '#00ff88';
       ctx.font = 'bold ' + Math.max(18, rect.h * 0.42) + 'px ' + (cs.fontFamily || 'monospace');
@@ -616,8 +728,10 @@ async function shaderPaintUiCapture(root, w, h, generation) {
   const ctx = SHADER.uiCaptureCtx;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, w, h);
-  const rootRect = root.getBoundingClientRect();
-  shaderPaintDomElement(ctx, root, root, rootRect, w, h, 1);
+  shaderWithUiCaptureVisible(root, () => {
+    const rootRect = root.getBoundingClientRect();
+    shaderPaintDomElement(ctx, root, root, rootRect, w, h, 1);
+  });
   if (!shaderCaptureHasVisiblePixels(ctx, w, h)) throw new Error('ui capture blank');
 
   SHADER.uiCapturePending = false;
@@ -662,9 +776,9 @@ function shaderStartUiCapture(now, w, h) {
     return;
   }
 
-  shaderBuildUiCaptureSvg(root, w, h).then(svgText => {
+  shaderBuildUiCaptureSvg(root).then(capture => {
     if (generation !== SHADER.uiCaptureGeneration) return;
-    const blob = new Blob([svgText], {type: 'image/svg+xml;charset=utf-8'});
+    const blob = new Blob([capture.text], {type: 'image/svg+xml;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const img = new Image();
     const finish = () => { try { URL.revokeObjectURL(url); } catch(e) {} };
@@ -675,7 +789,7 @@ function shaderStartUiCapture(now, w, h) {
         const ctx = SHADER.uiCaptureCtx;
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, w, h);
-        ctx.drawImage(img, 0, 0, w, h);
+        ctx.drawImage(img, 0, 0, capture.cssW, capture.cssH, 0, 0, w, h);
         if (!shaderCaptureHasVisiblePixels(ctx, w, h)) throw new Error('ui capture blank');
         SHADER.uiCapturePending = false;
         SHADER.uiCaptureReady = true;
@@ -977,7 +1091,7 @@ function shaderApplyVisibility() {
   SHADER.source.style.visibility = active ? 'hidden' : 'visible';
   SHADER.canvas.style.display = active ? 'block' : 'none';
   const uiRoot = shaderUiRoot();
-  if (uiRoot) uiRoot.style.opacity = active && shaderUiCaptureRequested() && SHADER.uiCaptureReady ? '0' : '';
+  if (uiRoot) shaderSetUiCaptureVisible(uiRoot, !(active && shaderUiCaptureRequested() && SHADER.uiCaptureReady));
 }
 
 function shaderPresentFrame() {
