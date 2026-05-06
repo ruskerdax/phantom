@@ -87,7 +87,7 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 ---
 
-### F-03. Asteroid fields = 1d4 − 1
+### F-03. Asteroid fields = 1d4 − 1 ✅
 
 **Goal:** 0–3 asteroid fields per system.
 

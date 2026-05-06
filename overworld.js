@@ -253,7 +253,7 @@ function updOW(){
   ow.nearP=-1;
   for(let i=0;i<LV.length;i++){if(G.cleared[i])continue;const pp=owPos(PP[i]);if(Math.hypot(s.x-pp.x,s.y-pp.y)<LV[i].pr+28){ow.nearP=i;break;}}
   ow.nearAst=-1;
-  for(let ai=0;ai<2;ai++){const ap=owPos(AB[ai]);if(Math.hypot(s.x-ap.x,s.y-ap.y)<AB[ai].r+28){ow.nearAst=ai;break;}}
+  for(let ai=0;ai<AB.length;ai++){const ap=owPos(AB[ai]);if(Math.hypot(s.x-ap.x,s.y-ap.y)<AB[ai].r+28){ow.nearAst=ai;break;}}
   ow.nearHBase=false;
   if(!G.hbCleared){const hbp=owPos(HBASE);if(Math.hypot(s.x-hbp.x,s.y-hbp.y)<HBASE.r+28)ow.nearHBase=true;}
   {const sgp=owPos(SLIPGATE);ow.nearSlipgate=Math.hypot(s.x-sgp.x,s.y-sgp.y)<SLIPGATE.r+28;}
@@ -451,8 +451,10 @@ function drawOWOrbitGuides(){
     cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=sb(prof.orbitBlur);
     cx.beginPath();cx.arc(OW_W/2,OW_H/2,r,0,Math.PI*2);cx.stroke();
   }
-  cx.strokeStyle='#998877';cx.shadowColor='#998877';cx.shadowBlur=sb(prof.orbitBlur);
-  cx.beginPath();cx.arc(OW_W/2,OW_H/2,AB[0].orbitR,0,Math.PI*2);cx.stroke();
+  if(AB.length>0){
+    cx.strokeStyle='#998877';cx.shadowColor='#998877';cx.shadowBlur=sb(prof.orbitBlur);
+    cx.beginPath();cx.arc(OW_W/2,OW_H/2,AB[0].orbitR,0,Math.PI*2);cx.stroke();
+  }
   cx.setLineDash([]);
   if(prof.arrows>0){
     const arrowSpd=0.00173,N=prof.arrows,arrowGap=renderQuality()==='full'?0.2:0.35;
@@ -474,6 +476,7 @@ function drawOWOrbitGuides(){
   cx.globalAlpha=1;cx.shadowBlur=0;cx.restore();
 }
 function drawOWAsteroidBelt(){
+  if(AB.length===0)return;
   const prof=owOrbitProfile();
   cx.save();cx.globalAlpha=prof.asteroidAlpha;cx.strokeStyle='#776655';cx.lineWidth=0.8;cx.shadowColor='#554433';cx.shadowBlur=sb(prof.asteroidBlur);
   const abOrbitR=AB[0].orbitR,abSpd=AB[0].orbitSpd,step=prof.asteroidStep;
@@ -518,7 +521,7 @@ function drawOW(){
     cx.globalAlpha=1;cx.restore();
     if(ow.nearP===i){cx.save();cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=sb(10);cx.font='bold 12px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('[ fire to enter ]',p.x,p.y+d.pr+16);cx.restore();}
   }
-  for(let ai=0;ai<2;ai++){const ap=owPos(AB[ai]);
+  for(let ai=0;ai<AB.length;ai++){const ap=owPos(AB[ai]);
     cx.save();cx.strokeStyle='#998877';cx.shadowColor='#776655';cx.shadowBlur=sb(5);cx.lineWidth=1.2;
     for(const[ox,oy,r2]of[[-14,-9,11],[9,-16,8],[16,6,10],[-9,13,9],[19,-5,7],[1,17,6],[-17,5,8],[8,11,7]]){
       cx.beginPath();

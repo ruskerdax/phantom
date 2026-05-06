@@ -70,6 +70,8 @@ function genOWBodies(rng,planetCount){
 
 // ---- Asteroid belt bodies + belt particles ----
 function genABodies(rng,planetBodies){
+  const count=rng.int(1,4)-1;
+  if(count===0)return{bodies:[],belt:[]};
   const minR=400,maxR=1600;
   let orbitR,att=0;
   do{orbitR=minR+rng.fl(0,maxR-minR);att++;}
@@ -77,10 +79,18 @@ function genABodies(rng,planetBodies){
   const orbitSpd=0.00060-(orbitR-minR)/(maxR-minR)*0.00045;
   // minimum angle so trigger zones (r+28=78px each) don't overlap
   const minDa=2*Math.asin(Math.min(1,78/orbitR));
-  const a1=rng.fl(0,Math.PI*2);
-  const da=minDa+rng.fl(0,Math.PI*2-2*minDa);
-  const a2=(a1+da)%(Math.PI*2);
-  const bodies=[{orbitR,orbitA:a1,orbitSpd,r:50},{orbitR,orbitA:a2,orbitSpd,r:50}];
+  const angles=[];
+  for(let i=0;i<count;i++){
+    let a,att=0;
+    do{a=rng.fl(0,Math.PI*2);att++;}
+    while(att<60&&angles.some(aa=>{
+      const da=Math.abs(Math.atan2(Math.sin(a-aa),Math.cos(a-aa)));
+      return da<minDa;
+    }));
+    if(att>=60)a=(angles[0]+i*Math.PI*2/count)%(Math.PI*2);
+    angles.push(a);
+  }
+  const bodies=angles.map(a=>({orbitR,orbitA:a,orbitSpd,r:50}));
   const belt=[],spread=20,N=160;
   for(let i=0;i<N;i++){
     belt.push({a:rng.fl(0,Math.PI*2),dr:rng.fl(-spread,spread),rv:1.5+rng.fl(0,3),sides:rng.int(5,8),rot:rng.fl(0,Math.PI*2)});
