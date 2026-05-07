@@ -144,11 +144,14 @@ function updateDefense(site, d) {
     d.x = tower.x;
     d.y = towerTopY(tower);
   } else if(site.mode === 'surface' && dc.groundOffset != null) d.y = surfaceYAt(site.d, d.x) - dc.groundOffset;
+  if(defenseRequiresPower(d, def) && !defenseIsPowered(site, d)) {
+    if(--d.timer <= 0) d.timer = 8 + Math.floor(Math.random() * 12);
+    return;
+  }
   const aim = defenseAim(site, d);
   d.a += angDiff(d.a, aim.a) * (dc.turn ?? .04);
   if(--d.timer <= 0) {
-    if(defenseRequiresPower(d, def) && !defenseIsPowered(site, d)) d.timer = 8 + Math.floor(Math.random() * 12);
-    else if(defenseCanFire(d, def, aim.dist, aim.a)) fireDefenseWeapon(site, d, def, aim.a);
+    if(defenseCanFire(d, def, aim.dist, aim.a)) fireDefenseWeapon(site, d, def, aim.a);
     else d.timer = 8 + Math.floor(Math.random() * 12);
   }
 }
