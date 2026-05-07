@@ -710,7 +710,7 @@ function genSurface(tmpl,seed,sites){
   }
   genSurfacePowerStations(rng,surface,rng.int(1,3));
   const threatSlots=rng.int(6,10);
-  surface.defenses=genSurfaceDefenses(rng,surface,0);
+  surface.defenses.push(...genSurfaceDefenses(rng,surface,0));
   surface.en=genSurfaceEnemies(rng,surface,threatSlots);
   genSurfaceAirDefenseBase(rng,surface);
   placeRandomSurfaceTowers(rng,surface);
