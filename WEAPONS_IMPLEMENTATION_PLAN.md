@@ -136,7 +136,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### F-02. Per-weapon input model + runtime split
+### F-02. Per-weapon input model + runtime split ✅
 
 **Goal:** Move runtime helpers out of `data/weapons.js` into `weapon-mechanics.js` (NEW). Add per-slot input tracking inside `runPlayerWeaponSlot` so weapons can react to tap vs. hold vs. release.
 

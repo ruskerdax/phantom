@@ -452,7 +452,6 @@ function killShip(s,pts,deadState,orangeCount=16){
   setTimeout(()=>{enterRebuild();},1800);
   return true;
 }
-function beamHitPadding(wp){return wp?.beamHitPadding??Math.max(2,(wp?.beamWidth??2)*.5);}
 function beamMotionPadding(o){return Math.min(4,Math.hypot(o?.vx||0,o?.vy||0));}
 function laserTargetRadius(tg,basePad=0){return tg.r+(tg.beamPad||0)+basePad;}
 function laserTargetHit(tg,ox,oy,ex,ey,hitPad=0){
