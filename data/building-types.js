@@ -3,6 +3,7 @@
 const BUILDING_CLASS_IDS = {
   DISH: 'DISH',
   TOWER: 'TOWER',
+  POWER_STATION: 'POWER_STATION',
 };
 
 const BUILDING_CLASSES = [
@@ -39,6 +40,19 @@ const BUILDING_CLASSES = [
       const turret=site?.defenses?.[b.turretId];
       if(turret)turret.alive=false;
     },
+    placement:{contexts:['surface']},
+  },
+  {
+    id:BUILDING_CLASS_IDS.POWER_STATION,
+    name:'POWER STATION',
+    hp:50,
+    footprint:{w:42,h:28},
+    requiresFlat:true,
+    requiresPower:false,
+    indestructible:false,
+    col:'#66ddff',
+    sc:0,
+    drawSurface(b,site){drawPowerStation(b,site);},
     placement:{contexts:['surface']},
   },
 ];

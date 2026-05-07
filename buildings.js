@@ -74,3 +74,40 @@ function drawBuildingTunnel(b, site) {
   b.powered = buildingIsPowered(site, b);
   if(def.drawTunnel) def.drawTunnel(b, site, b.powered);
 }
+
+function drawPowerStation(station) {
+  const pulse = .5 + .5 * Math.sin(G.fr * .12 + station.x * .02);
+  cx.save();
+  cx.translate(station.x, station.y);
+  cx.strokeStyle = '#66ddff';
+  cx.fillStyle = 'rgba(4,28,34,.88)';
+  cx.shadowColor = '#66ddff';
+  cx.shadowBlur = sb(8 + pulse * 8);
+  cx.lineWidth = 1.5;
+  cx.beginPath();
+  cx.rect(-21, -12, 42, 24);
+  cx.fill();
+  cx.stroke();
+  cx.beginPath();
+  cx.moveTo(-14, 12);
+  cx.lineTo(-14, 18);
+  cx.moveTo(14, 12);
+  cx.lineTo(14, 18);
+  cx.stroke();
+  cx.beginPath();
+  cx.moveTo(-4, -7);
+  cx.lineTo(4, -7);
+  cx.lineTo(-2, 0);
+  cx.lineTo(5, 0);
+  cx.lineTo(-5, 9);
+  cx.lineTo(-1, 2);
+  cx.lineTo(-7, 2);
+  cx.closePath();
+  cx.stroke();
+  cx.fillStyle = '#66ddff';
+  cx.font = 'bold 8px MajorMonoDisplay, monospace';
+  cx.textAlign = 'center';
+  cx.shadowBlur = 0;
+  cx.fillText(station.hp, 0, 5);
+  cx.restore();
+}

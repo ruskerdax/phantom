@@ -607,6 +607,26 @@ function placeRandomSurfaceTowers(rng,surface){
   }
 }
 
+function genSurfacePowerStations(rng,surface,count){
+  const spans=surfaceFlatSpans(surface).filter(s=>s.x1-s.x0>=180);
+  if(!spans.length)return;
+  for(let i=0;i<count;i++){
+    let placed=false;
+    for(let attempt=0;attempt<160&&!placed;attempt++){
+      const span=rng.pick(spans);
+      const x=wrap(rng.fl(span.x0+90,span.x1-90),surface.worldW);
+      if(!surfacePlacementClear(surface,x,90))continue;
+      const ground=surfaceYAt(surface,x);
+      const station=mkBuilding(BUILDING_CLASS_IDS.POWER_STATION,Math.round(x),Math.round(ground-14));
+      surface.buildings.push(station);
+      const side=rng.next()<.5?'left':'right';
+      const tower=placePairedTower(rng,surface,station.x,side)||placePairedTower(rng,surface,station.x,side==='left'?'right':'left');
+      if(tower)placed=true;
+      else surface.buildings.pop();
+    }
+  }
+}
+
 function genSurfaceEnergy(rng,surface,count){
   const fu=[];
   for(let i=0;i<count;i++){
@@ -649,14 +669,15 @@ function genSurface(tmpl,seed,sites){
   const hasTargets=sites.some(s=>s.type==='surface_targets');
   if(hasTargets)surface.buildings=genSurfaceDishes(rng,surface,rng.int(4,6),'targets');
   surface.fu=genSurfaceEnergy(rng,surface,rng.int(2,4));
-  const threatSlots=rng.int(6,10);
-  surface.defenses=genSurfaceDefenses(rng,surface,0);
-  surface.en=genSurfaceEnemies(rng,surface,threatSlots);
   const caveSite=sites.find(s=>s.type==='cave_connector');
   if(caveSite){
     const tx=wrap(rng.fl(W*.8,worldW-W*.8),worldW);
     surface.tunnel={x:Math.round(tx),y:Math.round(surfaceYAt(surface,tx)),siteId:caveSite.id};
   }
+  genSurfacePowerStations(rng,surface,rng.int(1,3));
+  const threatSlots=rng.int(6,10);
+  surface.defenses=genSurfaceDefenses(rng,surface,0);
+  surface.en=genSurfaceEnemies(rng,surface,threatSlots);
   placeRandomSurfaceTowers(rng,surface);
   return surface;
 }

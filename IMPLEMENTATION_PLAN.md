@@ -259,7 +259,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P1-02. Power station
+### P1-02. Power station ✅
 
 **Goal:** Add `POWER_STATION` (HP 50). 1–3 per surface; each spawns a paired tower.
 
