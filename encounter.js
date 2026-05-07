@@ -207,7 +207,7 @@ function updEnc(){
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}
   else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;rechargeShieldFromEnergy(s,true);copyShipEnergyState(s,ow.s);ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;copyShieldState(s,ow.s);ow.s.inv=80;G.ENC=null;returnToOverworld();return;}}
   else{s.x=wrap(s.x+s.vx,ew);s.y=wrap(s.y+s.vy,eh);}
-  if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
+  tickWeaponCooldowns(s);if(s.inv>0)s.inv--;
   // Lerp the camera toward the player (clamped to world bounds). The 0.12 multiplier controls follow speed —
   // smaller values add more lag; 1.0 would snap instantly. Same pattern is used in the site level.
   enc.cam=encToroidalActive(enc)?updateToroidalWorldCamera(enc.cam,s.x,s.y,ew,eh,encounterZoomTarget(enc),.5,.5,dynZoomOn()?.12:1):updateWorldCamera(enc.cam,s.x,s.y,ew,eh,encounterZoomTarget(enc),.5,.5,dynZoomOn()?.12:1);

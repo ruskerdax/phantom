@@ -11,18 +11,19 @@ function surfaceEnemyCooldown(def) {
 
 function mkSurfaceEnemy(typeOrClass, x, y, extra = {}, rng = null) {
   const def = surfaceEnemySpawnDef(typeOrClass, rng), sf = def.surf;
-  return {x, y, vx:0, vy:0, a:Math.PI/2, hp:sf.hp, mhp:sf.hp, alive:true, t:def.id, ...extra};
+  return {x, y, vx:0, vy:0, a:Math.PI/2, hp:sf.hp, mhp:sf.hp, alive:true, t:def.id, weapons:[mkWeaponSlot()], ...extra};
 }
 
 function initSurfaceEnemy(e, alive = true) {
   const def = surfaceEnemyDef(e), sf = def.surf;
+  const baseSlot = e.weapons?.[0] || {};
   return {
     ...e,
     t:def.id,
     hp:e.hp ?? sf.hp,
     mhp:e.mhp ?? sf.hp,
     alive,
-    timer:e.timer ?? surfaceEnemyCooldown(def),
+    weapons:[mkWeaponSlot({...baseSlot, cd:e.timer ?? baseSlot.cd ?? surfaceEnemyCooldown(def)})],
     phase:e.phase ?? Math.random() * Math.PI * 2,
   };
 }
@@ -281,13 +282,14 @@ function fireSurfaceEnemyWeapon(site, e, def, aimAngle) {
   if(wp.fireMode === 'missile') fireSurfaceEnemyMissile(site, e, def, aimAngle);
   else if(wp.fireMode === 'beam') fireSurfaceEnemyBeam(site, e, def, aimAngle);
   else fireSurfaceEnemyKinetic(site, e, def, aimAngle);
-  e.timer = surfaceEnemyCooldown(def);
+  weaponSlot(e,0).cd = surfaceEnemyCooldown(def);
 }
 
 function maybeFireSurfaceEnemy(site, e, def, dist, aimAngle) {
-  if(--e.timer > 0) return;
+  const sw = weaponSlot(e,0);
+  if(--sw.cd > 0) return;
   if(surfaceEnemyCanFire(e, def, dist, aimAngle)) fireSurfaceEnemyWeapon(site, e, def, aimAngle);
-  else e.timer = 8 + Math.floor(Math.random() * 12);
+  else sw.cd = 8 + Math.floor(Math.random() * 12);
 }
 
 function updSurfaceEnemy(site, e) {

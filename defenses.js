@@ -12,18 +12,20 @@ function defenseCooldown(def) {
 
 function mkDefense(typeOrClass, x, y, extra = {}, rng = null) {
   const def = defenseSpawnDef(typeOrClass, rng), dc = def.defense;
-  return {x, y, a:0, hp:dc.hp, mhp:dc.hp, alive:true, t:def.id, timer:defenseCooldown(def), ...extra};
+  const {timer, ...rest} = extra;
+  return {x, y, a:0, hp:dc.hp, mhp:dc.hp, alive:true, t:def.id, weapons:[mkWeaponSlot({cd:timer ?? defenseCooldown(def)})], ...rest};
 }
 
 function initDefense(d, alive = true, defaultClass = DEFENSE_CLASS_IDS.CAVE_TURRET) {
   const def = defenseDef(d.t ?? defaultClass), dc = def.defense;
+  const baseSlot = d.weapons?.[0] || {};
   return {
     ...d,
     t:def.id,
     hp:d.hp ?? dc.hp,
     mhp:d.mhp ?? dc.hp,
     alive,
-    timer:d.timer ?? defenseCooldown(def),
+    weapons:[mkWeaponSlot({...baseSlot, cd:d.timer ?? baseSlot.cd ?? defenseCooldown(def)})],
   };
 }
 
@@ -129,7 +131,7 @@ function fireDefenseWeapon(site, d, def, aimAngle) {
   if(wp.fireMode === 'missile') fireDefenseMissile(site, d, def, aimAngle);
   else if(wp.fireMode === 'beam') fireDefenseBeam(site, d, def, aimAngle);
   else fireDefenseKinetic(site, d, def, aimAngle);
-  d.timer = defenseCooldown(def);
+  weaponSlot(d,0).cd = defenseCooldown(def);
 }
 
 function updateDefense(site, d) {
@@ -145,14 +147,16 @@ function updateDefense(site, d) {
     d.y = towerTopY(tower);
   } else if(site.mode === 'surface' && dc.groundOffset != null) d.y = surfaceYAt(site.d, d.x) - dc.groundOffset;
   if(defenseRequiresPower(d, def) && !defenseIsPowered(site, d)) {
-    if(--d.timer <= 0) d.timer = 8 + Math.floor(Math.random() * 12);
+    const sw = weaponSlot(d,0);
+    if(--sw.cd <= 0) sw.cd = 8 + Math.floor(Math.random() * 12);
     return;
   }
   const aim = defenseAim(site, d);
   d.a += angDiff(d.a, aim.a) * (dc.turn ?? .04);
-  if(--d.timer <= 0) {
+  const sw = weaponSlot(d,0);
+  if(--sw.cd <= 0) {
     if(defenseCanFire(d, def, aim.dist, aim.a)) fireDefenseWeapon(site, d, def, aim.a);
-    else d.timer = 8 + Math.floor(Math.random() * 12);
+    else sw.cd = 8 + Math.floor(Math.random() * 12);
   }
 }
 

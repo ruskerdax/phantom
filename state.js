@@ -423,7 +423,7 @@ function applyShipBounce(s,nx,ny,source,opts={}){
 }
 function mkShip(x,y){
   const ch=activeChassisObj(),sh=activeShieldObj(),bat=activeBatteryObj(),rx=activeReactorObj();
-  const s={x,y,chassisId:ch.id,batteryId:bat?.id??null,reactorId:rx?.id??null,vx:0,vy:0,va:0,a:0,energy:0,maxEnergy:0,alive:true,inv:120,scd:0,scd2:0,hp:0,maxHp:0,pulsesLeft:0,pulseTimer:0,pulsesLeft2:0,pulseTimer2:0,misLeft:0,misTimer:0,misLeft2:0,misTimer2:0};
+  const s={x,y,chassisId:ch.id,batteryId:bat?.id??null,reactorId:rx?.id??null,vx:0,vy:0,va:0,a:0,energy:0,maxEnergy:0,alive:true,inv:120,hp:0,maxHp:0,weapons:[mkWeaponSlot(),mkWeaponSlot()]};
   fillShipHull(s);
   fillShipEnergy(s);
   resetShipShield(s,sh);

@@ -4,7 +4,7 @@ let NEXT_ENC_ENEMY_ID = 1;
 
 function mkEncEnemy(typeOrClass, x, y, timer) {
   const et=enemySpawnDef(typeOrClass),ec=et.enc;
-  return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, timer, alive:true, t:et.id, eid:NEXT_ENC_ENEMY_ID++, spin:0, pulsesLeft:0, pulseTimer:0, misLeft:0, misTimer:0};
+  return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, alive:true, t:et.id, eid:NEXT_ENC_ENEMY_ID++, spin:0, weapons:[mkWeaponSlot({cd:timer ?? 0})]};
 }
 
 function enemyInitialCooldown(typeOrClass, stagger=0) {
@@ -71,7 +71,8 @@ function enemyUpdate(e, s, enc, ew, eh) {
 
   const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1;
   const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn],ta=enemyAimAngle(e,s,ew,eh,fw,ewp);
-  if(ewp.fireMode==='beam'&&e.pulsesLeft>0&&--e.pulseTimer<=0){
+  const sw=weaponSlot(e,0);
+  if(ewp.fireMode==='beam'&&sw.pulsesLeft>0&&--sw.pulseTimer<=0){
     const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;
     const src=tor?toroidalPointNear(ox,oy,s.x,s.y,ew,eh):{x:ox,y:oy};
     const beamHit={source:src,kind:'beam',weapon:ewp};
@@ -102,18 +103,18 @@ function enemyUpdate(e, s, enc, ew, eh) {
         if(m.hp<=0){encExplodeMissile(enc,m,false);enc.mis.splice(tg.idx,1);if(s.hp<=0){encKillShip();return true;}}
       }
     }
-    e.pulsesLeft--;
-    if(e.pulsesLeft>0)e.pulseTimer=ewp.pulseCd;else e.timer=weaponCooldownFrames(ewp);
-  } else if(e.pulsesLeft===0&&--e.timer<=0){
+    sw.pulsesLeft--;
+    if(sw.pulsesLeft>0)sw.pulseTimer=ewp.pulseCd;else sw.cd=weaponCooldownFrames(ewp);
+  } else if(sw.pulsesLeft===0&&--sw.cd<=0){
     if(!enemyCanStartFire(e,dist,ta,fw,ewp)){
-      e.timer=8+Math.floor(Math.random()*12);
+      sw.cd=8+Math.floor(Math.random()*12);
     } else if(ewp.fireMode==='beam'){
       e.a=ta;
-      e.pulsesLeft=ewp.pulses;
-      e.pulseTimer=1;
+      sw.pulsesLeft=ewp.pulses;
+      sw.pulseTimer=1;
     }
     else if(ewp.fireMode==='missile'){
-      e.timer=weaponCooldownFrames(ewp);
+      sw.cd=weaponCooldownFrames(ewp);
       const cnt=fw.count||1;
       const bas=Array.from({length:cnt},(_,k)=>ta+(k-(cnt-1)/2)*(fw.spread||0));
       const md=MISSILE_TYPES[ewp.missileType]||MISSILE_TYPES['standard'];
@@ -131,7 +132,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
       tone(360,.10,'square',.06);
     }
     else{
-      e.timer=weaponCooldownFrames(ewp);
+      sw.cd=weaponCooldownFrames(ewp);
       const cnt=fw.count||1,spread=fw.spread||0;
       const bas=fw.mode==='spin'?Array.from({length:cnt},(_,k)=>e.spin+k*Math.PI*2/cnt):Array.from({length:cnt},(_,k)=>ta+(k-(cnt-1)/2)*spread);
       for(const ba of bas)enc.ebu.push({x:e.x+Math.sin(ba)*fw.offset,y:e.y-Math.cos(ba)*fw.offset,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,dmg:ewp.dmg,col:ecDef.col});

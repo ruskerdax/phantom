@@ -117,7 +117,7 @@ An enemy enters disengage when no equipped weapon is currently usable (insuffici
 
 Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parallel.
 
-### F-01. Slot state consolidation
+### F-01. Slot state consolidation ✅
 
 **Goal:** Replace per-slot top-level ship fields (`s.scd`, `s.scd2`, `s.pulsesLeft`, `s.pulsesLeft2`, `s.pulseTimer`, `s.pulseTimer2`, `s.misLeft`, `s.misLeft2`, `s.misTimer`, `s.misTimer2`, `s.pb`, `s.pb2`) with a single `s.weapons[]` array. Mirror the same shape on enemies.
 

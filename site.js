@@ -433,7 +433,7 @@ function updCaveSite(){
   thrusterSound(thrustIn,'site',s.energy<=0);
   s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;const sp=Math.hypot(s.vx,s.vy);if(sp>SITE_CAP_CAVE){s.vx=s.vx/sp*SITE_CAP_CAVE;s.vy=s.vy/sp*SITE_CAP_CAVE;}
   s.x+=s.vx;s.y+=s.vy;
-  if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
+  tickWeaponCooldowns(s);if(s.inv>0)s.inv--;
   const wH=d.worldH||H;
   site.cam=updateWorldCamera(site.cam,s.x,s.y,W,wH,cameraZoomTarget('site',s),.5,.45,dynZoomOn()?.12:1);
   if(s.y<0){
@@ -648,7 +648,7 @@ function updSurface(){
   s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;
   const sp=Math.hypot(s.vx,s.vy);if(sp>SITE_CAP_SURFACE){s.vx=s.vx/sp*SITE_CAP_SURFACE;s.vy=s.vy/sp*SITE_CAP_SURFACE;}
   s.x=wrap(s.x+s.vx,d.worldW);s.y+=s.vy;
-  if(s.scd>0)s.scd--;if(s.scd2>0)s.scd2--;if(s.inv>0)s.inv--;
+  tickWeaponCooldowns(s);if(s.inv>0)s.inv--;
   site.cam=updateSurfaceCamera(site.cam,s,d);
   if(s.y<d.exitY){returnPlanetToOverworld();return;}
   surfaceBounce(site);if(s.hp<=0){siteKillShip();return;}

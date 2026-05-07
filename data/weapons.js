@@ -6,6 +6,42 @@ const MISSILE_TYPES = {
   'standard': { col:'#ff8800', fin:'#888', length:8, width:3 },
 };
 
+function mkWeaponSlot(overrides = {}) {
+  return {
+    cd:0,
+    ammo:null,
+    mag:null,
+    charge:0,
+    chargeFrames:0,
+    pulsesLeft:0,
+    pulseTimer:0,
+    misLeft:0,
+    misTimer:0,
+    persistBeam:null,
+    spool:0,
+    reloading:false,
+    reloadFrames:0,
+    lockedTargetId:null,
+    lockCooldowns:new Map(),
+    stickyMissileId:null,
+    input:{pressed:false, pressedFrames:0, justReleased:false, releasedAfterFrames:0},
+    ...overrides,
+  };
+}
+
+function weaponSlot(s, slot) {
+  if(!s.weapons) s.weapons = [];
+  if(!s.weapons[slot]) s.weapons[slot] = mkWeaponSlot();
+  const w = s.weapons[slot];
+  if(!w.input) w.input = {pressed:false, pressedFrames:0, justReleased:false, releasedAfterFrames:0};
+  if(!w.lockCooldowns) w.lockCooldowns = new Map();
+  return w;
+}
+
+function tickWeaponCooldowns(s) {
+  for(const w of s.weapons || []) if(w && w.cd > 0) w.cd--;
+}
+
 // Build a missile object from a weapon config + ship pose. Fires from the ship's nose,
 // inheriting a fraction of ship velocity. The owner ship's heading sets the missile's
 // initial heading; speed starts at wp.spd and ramps to wp.maxSpd via wp.accel each frame.
@@ -31,27 +67,28 @@ const WEAPON_TYPES = {
   'projectile': {
     fire(wp, s, slot, bul) {
       bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*wp.spd+s.vx*.3,vy:-Math.cos(s.a)*wp.spd+s.vy*.3,l:wp.life*wp.spd,dmg:wp.dmg});
-      if(slot===0)s.scd=Math.round(wp.cd*60);else s.scd2=Math.round(wp.cd*60);
+      weaponSlot(s, slot).cd = Math.round(wp.cd*60);
       tone(900,.04,'square',.05);
     }
   },
   'beam': {
     fire(wp, s, slot) {
-      if(slot===0){s.pulsesLeft=wp.pulses;s.pulseTimer=wp.chargeDelay??1;}
-      else{s.pulsesLeft2=wp.pulses;s.pulseTimer2=wp.chargeDelay??1;}
+      const sw = weaponSlot(s, slot);
+      sw.pulsesLeft = wp.pulses;
+      sw.pulseTimer = wp.chargeDelay ?? 1;
     },
     // Advances one laser pulse; returns castLaser result or null if timer not ready.
     // Caller is responsible for building tgts (context-specific) and handling the hit.
     // If wp.persist is set and a pulse misses, the same ray is re-cast for that many
     // additional frames so targets moving through the beam path still register hits.
     tick(wp, s, slot, tgts, lsb, walls=[], space=null) {
-      const[plK,ptK,cdK,pbK]=slot===0?['pulsesLeft','pulseTimer','scd','pb']:['pulsesLeft2','pulseTimer2','scd2','pb2'];
-      if(--s[ptK]>0){
-        if(wp.chargeTone&&s[ptK]===wp.chargeDelay-1)toneRise(wp.chargeTone[0],wp.chargeTone[1],wp.chargeDelay/60,wp.chargeTone[2],wp.chargeTone[3]);
-        if(s[pbK]&&s[pbK].l-->0){
-          const{ox,oy,a,range,hitPad}=s[pbK];
+      const sw = weaponSlot(s, slot);
+      if(--sw.pulseTimer>0){
+        if(wp.chargeTone&&sw.pulseTimer===wp.chargeDelay-1)toneRise(wp.chargeTone[0],wp.chargeTone[1],wp.chargeDelay/60,wp.chargeTone[2],wp.chargeTone[3]);
+        if(sw.persistBeam&&sw.persistBeam.l-->0){
+          const{ox,oy,a,range,hitPad}=sw.persistBeam;
           const res=castLaserForSpace(ox,oy,a,range,tgts,walls,space,hitPad);
-          if(res.hitIdx>=0){s[pbK].l=0;return res;}
+          if(res.hitIdx>=0){sw.persistBeam.l=0;return res;}
         }
         return null;
       }
@@ -60,25 +97,26 @@ const WEAPON_TYPES = {
       const res=castLaserForSpace(ox,oy,s.a,wp.range,tgts,walls,space,hitPad);
       lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:wp.beamColor??'#0cf',w:wp.beamWidth??2});
       if(wp.beamSound)tone(...wp.beamSound);else tone(1200,.08,'sine',.05);
-      if(wp.persist&&res.hitIdx<0)s[pbK]={ox,oy,a:s.a,range:wp.range,hitPad,l:wp.persist};
-      else s[pbK]=null;
-      s[plK]--;
-      if(s[plK]>0)s[ptK]=wp.pulseCd;else s[cdK]=Math.round(wp.cd*60);
+      if(wp.persist&&res.hitIdx<0)sw.persistBeam={ox,oy,a:s.a,range:wp.range,hitPad,l:wp.persist};
+      else sw.persistBeam=null;
+      sw.pulsesLeft--;
+      if(sw.pulsesLeft>0)sw.pulseTimer=wp.pulseCd;else sw.cd=Math.round(wp.cd*60);
       return res;
     }
   },
   'missile': {
     fire(wp, s, slot) {
       // Same pattern as beam gun: fire() only arms the volley; tick() spawns each missile.
-      if(slot===0){s.misLeft=wp.salvo;s.misTimer=1;}
-      else{s.misLeft2=wp.salvo;s.misTimer2=1;}
+      const sw = weaponSlot(s, slot);
+      sw.misLeft = wp.salvo;
+      sw.misTimer = 1;
     },
     tick(wp, s, slot, mis) {
-      const[mlK,mtK,cdK]=slot===0?['misLeft','misTimer','scd']:['misLeft2','misTimer2','scd2'];
-      if(--s[mtK]>0)return;
+      const sw = weaponSlot(s, slot);
+      if(--sw.misTimer>0)return;
       spawnMissile(wp,s,mis);
-      s[mlK]--;
-      if(s[mlK]>0)s[mtK]=wp.salvoCd;else s[cdK]=Math.round(wp.cd*60);
+      sw.misLeft--;
+      if(sw.misLeft>0)sw.misTimer=wp.salvoCd;else sw.cd=Math.round(wp.cd*60);
     }
   }
 };
@@ -127,15 +165,13 @@ function tryFire(wp, wt, s, slot, bul) {
 function runPlayerWeaponSlot(s, slot, ctx) {
   const wp = wpSlot(slot); if (!wp) return;
   const wt = WEAPON_TYPES[wp.fireMode];
-  const plK = slot === 0 ? 'pulsesLeft' : 'pulsesLeft2';
-  const mlK = slot === 0 ? 'misLeft' : 'misLeft2';
-  const cdK = slot === 0 ? 'scd' : 'scd2';
-  if (s[plK] > 0 && wt.tick) {
+  const sw = weaponSlot(s, slot);
+  if (sw.pulsesLeft > 0 && wt.tick) {
     const tgts = ctx.tgts();
     const res = wt.tick(wp, s, slot, tgts, ctx.lsb, ctx.walls || [], ctx.space || null);
     if (res && res.hitIdx >= 0) ctx.onBeamHit(tgts[res.hitIdx], wp, res);
   }
-  if (s[mlK] > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis);
+  if (sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis);
   const fireBtn = slot === 0 ? iFir() : iFireSec();
-  if (fireBtn && !s[cdK] && !s[plK] && !s[mlK]) tryFire(wp, wt, s, slot, ctx.bul);
+  if (fireBtn && !sw.cd && !sw.pulsesLeft && !sw.misLeft) tryFire(wp, wt, s, slot, ctx.bul);
 }
