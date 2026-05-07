@@ -277,7 +277,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P1-03. Air defense base
+### P1-03. Air defense base ✅
 
 **Goal:** Add `AIR_DEFENSE_BASE` (HP 500); 20s skimmer/diver spawn cycle; cap `SURFACE_ENEMY_CAP=12`; pre-spawned guard skimmer with role-flagged respawn priority; 1–2 paired towers; re-enter top-up to 60% if alive.
 

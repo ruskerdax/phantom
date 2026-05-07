@@ -111,3 +111,40 @@ function drawPowerStation(station) {
   cx.fillText(station.hp, 0, 5);
   cx.restore();
 }
+
+function drawAirDefenseBase(base) {
+  const pulse = .5 + .5 * Math.sin(G.fr * .07 + base.x * .01);
+  cx.save();
+  cx.translate(base.x, base.y);
+  cx.strokeStyle = '#ff8844';
+  cx.fillStyle = 'rgba(46,18,8,.88)';
+  cx.shadowColor = '#ff8844';
+  cx.shadowBlur = sb(6 + pulse * 7);
+  cx.lineWidth = 1.5;
+  cx.beginPath();
+  cx.rect(-38, -8, 76, 24);
+  cx.fill();
+  cx.stroke();
+  cx.beginPath();
+  cx.rect(-23, -21, 46, 13);
+  cx.fill();
+  cx.stroke();
+  cx.beginPath();
+  cx.moveTo(-31, 16);
+  cx.lineTo(-31, 22);
+  cx.moveTo(31, 16);
+  cx.lineTo(31, 22);
+  cx.moveTo(-8, -21);
+  cx.lineTo(-14, -29);
+  cx.moveTo(8, -21);
+  cx.lineTo(14, -29);
+  cx.moveTo(-14, -29);
+  cx.lineTo(14, -29);
+  cx.stroke();
+  cx.fillStyle = '#ff8844';
+  cx.font = 'bold 8px MajorMonoDisplay, monospace';
+  cx.textAlign = 'center';
+  cx.shadowBlur = 0;
+  cx.fillText(base.hp, 0, 6);
+  cx.restore();
+}

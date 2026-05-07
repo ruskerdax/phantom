@@ -7,6 +7,8 @@ const SURFACE_ENEMY_TYPES = {
   DIVER: 'diver',
 };
 
+const SURFACE_ENEMY_CAP = 12;
+
 const SURFACE_ENEMY_CLASS_IDS = {
   GLIDER: 'surface-glider',
   PIERCER: 'surface-piercer',

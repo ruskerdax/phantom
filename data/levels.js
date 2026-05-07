@@ -627,6 +627,40 @@ function genSurfacePowerStations(rng,surface,count){
   }
 }
 
+function genSurfaceAirDefenseBase(rng,surface){
+  if(rng.next()>=.30)return;
+  const spans=surfaceFlatSpans(surface).filter(s=>s.x1-s.x0>=260);
+  if(!spans.length)return;
+  for(let attempt=0;attempt<180;attempt++){
+    const span=rng.pick(spans);
+    const x=wrap(rng.fl(span.x0+110,span.x1-110),surface.worldW);
+    if(!surfacePlacementClear(surface,x,120))continue;
+    const ground=surfaceYAt(surface,x),idx=surface.buildings.length;
+    const base=mkBuilding(BUILDING_CLASS_IDS.AIR_DEFENSE_BASE,Math.round(x),Math.round(ground-17),{
+      idx,
+      spawnTimer:1200,
+      guardAlive:true,
+    });
+    surface.buildings.push(base);
+    const side=rng.next()<.5?'left':'right';
+    const firstTower=placePairedTower(rng,surface,base.x,side)||placePairedTower(rng,surface,base.x,side==='left'?'right':'left');
+    if(!firstTower){
+      surface.buildings.pop();
+      continue;
+    }
+    if(rng.next()<.5)placePairedTower(rng,surface,base.x,side==='left'?'right':'left');
+    const guardGround=surfaceYAt(surface,base.x);
+    surface.en.push(mkSurfaceEnemy(SURFACE_ENEMY_TYPES.SKIMMER,base.x,Math.round(guardGround-105),{
+      vx:rng.fl(-.6,.6),
+      vy:0,
+      phase:rng.fl(0,Math.PI*2),
+      role:'guard',
+      guardOf:base.idx,
+    },rng));
+    return;
+  }
+}
+
 function genSurfaceEnergy(rng,surface,count){
   const fu=[];
   for(let i=0;i<count;i++){
@@ -678,6 +712,7 @@ function genSurface(tmpl,seed,sites){
   const threatSlots=rng.int(6,10);
   surface.defenses=genSurfaceDefenses(rng,surface,0);
   surface.en=genSurfaceEnemies(rng,surface,threatSlots);
+  genSurfaceAirDefenseBase(rng,surface);
   placeRandomSurfaceTowers(rng,surface);
   return surface;
 }

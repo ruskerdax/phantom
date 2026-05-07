@@ -4,6 +4,7 @@ const BUILDING_CLASS_IDS = {
   DISH: 'DISH',
   TOWER: 'TOWER',
   POWER_STATION: 'POWER_STATION',
+  AIR_DEFENSE_BASE: 'AIR_DEFENSE_BASE',
 };
 
 const BUILDING_CLASSES = [
@@ -53,6 +54,20 @@ const BUILDING_CLASSES = [
     col:'#66ddff',
     sc:0,
     drawSurface(b,site){drawPowerStation(b,site);},
+    placement:{contexts:['surface']},
+  },
+  {
+    id:BUILDING_CLASS_IDS.AIR_DEFENSE_BASE,
+    name:'AIR DEFENSE BASE',
+    hp:500,
+    footprint:{w:76,h:34},
+    requiresFlat:true,
+    requiresPower:false,
+    indestructible:false,
+    col:'#ff8844',
+    sc:0,
+    drawSurface(b,site){drawAirDefenseBase(b,site);},
+    update(b,site){updateAirDefenseBase(b,site);},
     placement:{contexts:['surface']},
   },
 ];

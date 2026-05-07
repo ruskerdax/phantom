@@ -41,6 +41,93 @@ function genSurfaceEnemies(rng, surface, count) {
   return en;
 }
 
+function surfaceLiveSkimmersAndDivers(site) {
+  return (site?.en || []).filter(e => {
+    if(!e.alive) return false;
+    const type = surfaceEnemyDef(e).type;
+    return type === SURFACE_ENEMY_TYPES.SKIMMER || type === SURFACE_ENEMY_TYPES.DIVER;
+  });
+}
+
+function surfaceSkimmerDiverCounts(site) {
+  const out = {skimmers:0, divers:0, total:0};
+  for(const e of surfaceLiveSkimmersAndDivers(site)) {
+    const type = surfaceEnemyDef(e).type;
+    if(type === SURFACE_ENEMY_TYPES.SKIMMER) out.skimmers++;
+    else if(type === SURFACE_ENEMY_TYPES.DIVER) out.divers++;
+    out.total++;
+  }
+  return out;
+}
+
+function airDefenseBaseGround(site, base) {
+  return surfaceYAt(site.d, base.x);
+}
+
+function spawnAirDefenseEnemy(site, base, type = null, guard = false) {
+  const count = surfaceSkimmerDiverCounts(site).total;
+  if(count >= SURFACE_ENEMY_CAP) return null;
+  const spawnType = guard ? SURFACE_ENEMY_TYPES.SKIMMER : (type || (Math.random() < .5 ? SURFACE_ENEMY_TYPES.SKIMMER : SURFACE_ENEMY_TYPES.DIVER));
+  const ground = airDefenseBaseGround(site, base);
+  const y = guard ? ground - 105 : base.y - 28;
+  const e = mkSurfaceEnemy(spawnType, base.x, y, {
+    vx:(Math.random() - .5) * 1.2,
+    vy:-2.2,
+    phase:Math.random() * Math.PI * 2,
+    ...(guard ? {role:'guard', guardOf:base.idx} : {}),
+  });
+  site.en.push(initSurfaceEnemy(e, true));
+  if(guard) base.guardAlive = true;
+  return e;
+}
+
+function liveGuardForBase(site, base) {
+  return (site?.en || []).some(e => e.alive && e.role === 'guard' && e.guardOf === base.idx);
+}
+
+function refreshAirDefenseGuardState(site, base) {
+  base.guardAlive = liveGuardForBase(site, base);
+}
+
+function spawnNextAirDefenseEnemy(site, base) {
+  if(base.guardAlive === false) return spawnAirDefenseEnemy(site, base, SURFACE_ENEMY_TYPES.SKIMMER, true);
+  return spawnAirDefenseEnemy(site, base, Math.random() < .5 ? SURFACE_ENEMY_TYPES.SKIMMER : SURFACE_ENEMY_TYPES.DIVER, false);
+}
+
+function topUpAirDefenseBase(site, base) {
+  const target = Math.ceil(SURFACE_ENEMY_CAP * .6);
+  refreshAirDefenseGuardState(site, base);
+  let counts = surfaceSkimmerDiverCounts(site);
+  const startSkimmers = counts.skimmers, startTotal = counts.total;
+  while(counts.total < target && counts.total < SURFACE_ENEMY_CAP) {
+    let spawned = null;
+    if(base.guardAlive === false) spawned = spawnAirDefenseEnemy(site, base, SURFACE_ENEMY_TYPES.SKIMMER, true);
+    else if(startTotal <= 0) spawned = spawnAirDefenseEnemy(site, base, Math.random() < .5 ? SURFACE_ENEMY_TYPES.SKIMMER : SURFACE_ENEMY_TYPES.DIVER, false);
+    else {
+      const desiredSkimmers = Math.round(target * (startSkimmers / Math.max(1, startTotal)));
+      const type = counts.skimmers < desiredSkimmers ? SURFACE_ENEMY_TYPES.SKIMMER : SURFACE_ENEMY_TYPES.DIVER;
+      spawned = spawnAirDefenseEnemy(site, base, type, false);
+    }
+    if(!spawned) break;
+    counts = surfaceSkimmerDiverCounts(site);
+  }
+}
+
+function updateAirDefenseBase(base, site) {
+  if(site?.mode !== 'surface' || !base?.alive) return;
+  if(!base._enteredTopUpDone) {
+    base._enteredTopUpDone = true;
+    topUpAirDefenseBase(site, base);
+  }
+  if(!Number.isFinite(base.spawnTimer)) base.spawnTimer = 1200;
+  const counts = surfaceSkimmerDiverCounts(site);
+  if(counts.total >= SURFACE_ENEMY_CAP) return;
+  if(--base.spawnTimer <= 0) {
+    spawnNextAirDefenseEnemy(site, base);
+    base.spawnTimer = 1200;
+  }
+}
+
 function surfaceEnemyCanFire(e, def, dist, aimAngle) {
   const fw = def.surf.fire, wp = surfaceEnemyWeapon(def);
   if(dist > Math.min(weaponEffectiveRange(wp), fw.senseRange ?? Infinity)) return false;
@@ -55,6 +142,10 @@ function damageSurfaceEnemy(site, e, dmg, x = e.x, y = e.y) {
   tone(360, .05, 'square', .05);
   if(e.hp <= 0) {
     e.alive = false;
+    if(e.role === 'guard') {
+      const base = siteBuildings(site).find(b => b.classId === BUILDING_CLASS_IDS.AIR_DEFENSE_BASE && b.idx === e.guardOf);
+      if(base) base.guardAlive = false;
+    }
     addStake(def.sc);
     boomAt(site.pts, e.x, e.y, site.d.col, 14);
     boomAt(site.pts, e.x, e.y, def.col2, 8);
@@ -137,7 +228,23 @@ function updSurfaceEnemy(site, e) {
   const d = site.d, s = site.s, def = surfaceEnemyDef(e), sf = def.surf, ground = surfaceYAt(d, e.x);
   const delta = surfaceDelta(d, s.x, s.y, e.x, e.y), dist = Math.hypot(delta.dx, delta.dy) || 1, aimAngle = Math.atan2(delta.dx, -delta.dy);
 
-  if(def.type === SURFACE_ENEMY_TYPES.SKIMMER) {
+  if(e.role === 'guard') {
+    const base = siteBuildings(site).find(b => b.alive && b.classId === BUILDING_CLASS_IDS.AIR_DEFENSE_BASE && b.idx === e.guardOf);
+    if(base) {
+      const orbitA = G.fr * .018 + e.phase;
+      const tx = wrap(base.x + Math.sin(orbitA) * 120, d.worldW);
+      const ty = Math.max(35, surfaceYAt(d, base.x) - 120 + Math.cos(orbitA) * 28);
+      const guardDelta = surfaceDelta(d, tx, ty, e.x, e.y);
+      const baseDelta = surfaceDelta(d, base.x, surfaceYAt(d, base.x) - 105, e.x, e.y);
+      const baseDist = Math.hypot(baseDelta.dx, baseDelta.dy) || 1;
+      e.vx += guardDelta.dx * .004;
+      e.vy += guardDelta.dy * .004;
+      if(baseDist > 200) {
+        e.vx += baseDelta.dx / baseDist * .08;
+        e.vy += baseDelta.dy / baseDist * .08;
+      }
+    }
+  } else if(def.type === SURFACE_ENEMY_TYPES.SKIMMER) {
     const targetY = surfaceYAt(d, e.x) - 92 + Math.sin(G.fr * .035 + e.phase) * 26;
     e.vx += Math.sign(delta.dx || 1) * .025;
     e.vy += (targetY - e.y) * .006;
