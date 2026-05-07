@@ -557,7 +557,7 @@ function addTowerAt(surface,x){
   const towerIdx=surface.buildings.length;
   const turretId=surface.defenses.length;
   const tower=mkBuilding(BUILDING_CLASS_IDS.TOWER,Math.round(x),Math.round(ground-17),{turretId});
-  const turret=mkDefense(DEFENSE_CLASS_IDS.SURFACE_SENTINEL,tower.x,Math.round(towerTopY(tower)),{a:-Math.PI/2,requiresPower:true,towerId:towerIdx});
+  const turret=mkDefense(DEFENSE_CLASS_IDS.SURFACE_SENTINEL,tower.x,Math.round(towerTopY(tower)),{a:-Math.PI/2,towerId:towerIdx});
   surface.buildings.push(tower);
   surface.defenses.push(turret);
   return tower;
