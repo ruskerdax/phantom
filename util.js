@@ -9,6 +9,16 @@ const OW_W=6000,OW_H=6000;
 const RENDER_QUALITY_VALUES=['full','reduced','minimal'];
 const RENDER_QUALITY_LABELS={full:'FULL',reduced:'REDUCED',minimal:'MINIMAL'};
 
+// TODO: Temporary UI font workaround. Remove this once the uppercase glyphs are fixed.
+function uiLowerText(text){return typeof text==='string'?text.toLowerCase():text;}
+{
+  const p=CanvasRenderingContext2D.prototype;
+  const fillText=p.fillText,strokeText=p.strokeText,measureText=p.measureText;
+  p.fillText=function(text,x,y,maxWidth){return arguments.length>3?fillText.call(this,uiLowerText(text),x,y,maxWidth):fillText.call(this,uiLowerText(text),x,y);};
+  p.strokeText=function(text,x,y,maxWidth){return arguments.length>3?strokeText.call(this,uiLowerText(text),x,y,maxWidth):strokeText.call(this,uiLowerText(text),x,y);};
+  p.measureText=function(text){return measureText.call(this,uiLowerText(text));};
+}
+
 function setCanvasPixelRatio(cssScale=GAME_CSS_SCALE){
   DPR=window.devicePixelRatio||1;
   GAME_CSS_SCALE=Number.isFinite(cssScale)&&cssScale>0?cssScale:1;
