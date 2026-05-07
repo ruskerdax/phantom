@@ -128,6 +128,7 @@ function makeEquipConfigScreen() {
         s.batteryId = power.battery;
         s.reactorId = power.reactor;
         fillShipHull(s); fillShipEnergy(s); resetShipShield(s);
+        refillAmmoForLoadout(s);
       }
       G.equipFlow = null;
       G.shopActionId = null;

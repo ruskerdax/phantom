@@ -71,6 +71,7 @@ function openBaseMenu(){
   G.shopActionId=null;
   G.equipFlow=null;
   fillShipEnergy(G.OW?.s);
+  refillAmmoForLoadout(G.OW?.s);
   G.st='base';
 }
 function openSlipgateMenu(){
@@ -424,6 +425,7 @@ function applyShipBounce(s,nx,ny,source,opts={}){
 function mkShip(x,y){
   const ch=activeChassisObj(),sh=activeShieldObj(),bat=activeBatteryObj(),rx=activeReactorObj();
   const s={x,y,chassisId:ch.id,batteryId:bat?.id??null,reactorId:rx?.id??null,vx:0,vy:0,va:0,a:0,energy:0,maxEnergy:0,alive:true,inv:120,hp:0,maxHp:0,weapons:[mkWeaponSlot(),mkWeaponSlot()]};
+  refillAmmoForLoadout(s);
   fillShipHull(s);
   fillShipEnergy(s);
   resetShipShield(s,sh);
@@ -669,6 +671,7 @@ function startFromSave(){
   if(savedSp)G.lastLocation=savedLoc;
   else recordLastLocation(fallbackKind);
   initOW(energy,sp.x,sp.y);
+  restoreAmmoForLoadout(G.OW.s, sv?.currentAmmo);
   if(sv?.currentHp!=null)G.OW.s.hp=Math.min(sv.currentHp,G.OW.s.maxHp);
   if(sv?.currentShieldHp!=null)G.OW.s.shieldHp=wholeShieldHp(sv.currentShieldHp,G.OW.s.shieldMaxHp);
   G.OW.s.shieldRechargeProgress=shieldProgress(sv?.currentShieldRechargeProgress);

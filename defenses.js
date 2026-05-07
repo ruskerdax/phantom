@@ -12,20 +12,22 @@ function defenseCooldown(def) {
 
 function mkDefense(typeOrClass, x, y, extra = {}, rng = null) {
   const def = defenseSpawnDef(typeOrClass, rng), dc = def.defense;
+  const wp = defenseWeapon(def);
   const {timer, ...rest} = extra;
-  return {x, y, a:0, hp:dc.hp, mhp:dc.hp, alive:true, t:def.id, weapons:[mkWeaponSlot({cd:timer ?? defenseCooldown(def)})], ...rest};
+  return {x, y, a:0, hp:dc.hp, mhp:dc.hp, alive:true, t:def.id, weapons:[mkWeaponSlot({cd:timer ?? defenseCooldown(def), ammo:ammoForMountedWeapon(wp)})], ...rest};
 }
 
 function initDefense(d, alive = true, defaultClass = DEFENSE_CLASS_IDS.CAVE_TURRET) {
   const def = defenseDef(d.t ?? defaultClass), dc = def.defense;
   const baseSlot = d.weapons?.[0] || {};
+  const wp = defenseWeapon(def);
   return {
     ...d,
     t:def.id,
     hp:d.hp ?? dc.hp,
     mhp:d.mhp ?? dc.hp,
     alive,
-    weapons:[mkWeaponSlot({...baseSlot, cd:d.timer ?? baseSlot.cd ?? defenseCooldown(def)})],
+    weapons:[mkWeaponSlot({...baseSlot, cd:d.timer ?? baseSlot.cd ?? defenseCooldown(def), ammo:ammoForMountedWeapon(wp, baseSlot)})],
   };
 }
 
@@ -66,8 +68,10 @@ function defenseBeamSpace(site) {
 
 function fireDefenseKinetic(site, d, def, aimAngle) {
   const wp = defenseWeapon(def), fw = def.defense.fire, cnt = fw.count || 1, spread = fw.spread || 0;
-  for(let k = 0; k < cnt; k++) {
-    const a = aimAngle + (k - (cnt - 1) / 2) * spread;
+  const shots = weaponHasAmmo(wp) ? Math.min(cnt, currentAmmoForSlot(d, 0)) : cnt;
+  if(weaponHasAmmo(wp)) consumeAmmo(d, 0, shots);
+  for(let k = 0; k < shots; k++) {
+    const a = aimAngle + (k - (shots - 1) / 2) * spread;
     site.ebu.push({
       x:d.x + Math.sin(a) * fw.offset, y:d.y - Math.cos(a) * fw.offset,
       vx:Math.sin(a) * wp.spd, vy:-Math.cos(a) * wp.spd,
@@ -79,6 +83,7 @@ function fireDefenseKinetic(site, d, def, aimAngle) {
 
 function fireDefenseMissile(site, d, def, aimAngle) {
   const wp = defenseWeapon(def), fw = def.defense.fire, md = MISSILE_TYPES[wp.missileType] || MISSILE_TYPES['standard'];
+  if(weaponHasAmmo(wp)) consumeAmmo(d, 0, 1);
   site.emi.push({
     x:d.x + Math.sin(aimAngle) * fw.offset, y:d.y - Math.cos(aimAngle) * fw.offset, a:aimAngle,
     vx:Math.sin(aimAngle) * wp.spd, vy:-Math.cos(aimAngle) * wp.spd,
@@ -127,6 +132,10 @@ function fireDefenseBeam(site, d, def, aimAngle) {
 
 function fireDefenseWeapon(site, d, def, aimAngle) {
   const wp = defenseWeapon(def);
+  if(weaponHasAmmo(wp) && currentAmmoForSlot(d, 0) <= 0) {
+    weaponSlot(d,0).cd = 8 + Math.floor(Math.random() * 12);
+    return;
+  }
   d.a = aimAngle;
   if(wp.fireMode === 'missile') fireDefenseMissile(site, d, def, aimAngle);
   else if(wp.fireMode === 'beam') fireDefenseBeam(site, d, def, aimAngle);

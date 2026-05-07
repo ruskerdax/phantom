@@ -108,6 +108,7 @@ function equipWeaponInSlot(item, slotIdx) {
   const slots = G.loadout.weapons;
   while (slots.length <= slotIdx) slots.push(null);
   slots[slotIdx] = item.id;
+  if (G.OW?.s) weaponSlot(G.OW.s, slotIdx).ammo = ammoForWeapon(item);
   return true;
 }
 

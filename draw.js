@@ -379,6 +379,32 @@ function drWalletStake(x=8,y=18){
   cx.fillText('stake '+G.stake,x,y+16);
   cx.restore();
 }
+function ammoHUD(s, x, y) {
+  if(!s || G.st === 'overworld') return;
+  cx.save();
+  cx.font='12px MajorMonoDisplay, monospace';
+  cx.textAlign='right';
+  cx.shadowBlur=0;
+  const full='\u25ae', empty='\u25af';
+  let shown=0;
+  for(let slot=0;slot<2;slot++){
+    const wp=wpSlot(slot);
+    if(!weaponHasAmmo(wp)) continue;
+    const ammo=currentAmmoForSlot(s, slot);
+    if(ammo === null || ammo >= wp.ammoMax) continue;
+    const rowY=y + shown * 27;
+    const ratio=wp.ammoMax>0?Math.max(0,Math.min(1,ammo/wp.ammoMax)):0;
+    const filled=Math.floor(ratio*8);
+    let bar='';
+    for(let i=0;i<8;i++)bar+=i<filled?full:empty;
+    cx.fillStyle='#aaffcc';
+    cx.fillText(`${wp.name} ${ammo}/${wp.ammoMax}`, x, rowY);
+    cx.fillStyle=ammo>wp.ammoMax*.2?'#0f8':'#f40';
+    cx.fillText(bar, x, rowY+13);
+    shown++;
+  }
+  cx.restore();
+}
 function drHUD(energy,maxEnergy=100,hp=15,maxHp=15,ship=null){
   drWalletStake();
   cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.fillStyle='#aaffcc';cx.shadowBlur=0;
@@ -392,6 +418,7 @@ function drHUD(energy,maxEnergy=100,hp=15,maxHp=15,ship=null){
   cx.strokeRect(W-82,21,70,11);
   cx.fillStyle=energy>maxEnergy*.2?'#0f8':'#f40';cx.fillRect(W-81,22,energy/maxEnergy*68,9);
   cx.restore();
+  ammoHUD(ship, W-12, 47);
 }
 function drBullet(x,y,col='#fff'){cx.save();cx.fillStyle=col;cx.shadowColor=col;cx.shadowBlur=sb(6);cx.beginPath();cx.arc(x,y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
 function drMissile(x,y,a,type='standard'){

@@ -93,15 +93,66 @@ function beamHitPadding(wp) {
   return wp?.beamHitPadding??Math.max(2,(wp?.beamWidth??2)*.5);
 }
 
+function weaponHasAmmo(wp) {
+  return wp?.ammoMax !== undefined;
+}
+
+function currentAmmoForSlot(s, slot) {
+  const ammo = s?.weapons?.[slot]?.ammo;
+  return ammo ?? null;
+}
+
+function consumeAmmo(s, slot, n=1) {
+  const sw = weaponSlot(s, slot);
+  if(sw.ammo === null || sw.ammo === undefined) return null;
+  sw.ammo = Math.max(0, sw.ammo - Math.max(0, n));
+  return sw.ammo;
+}
+
+function ammoForWeapon(wp, savedAmmo=undefined) {
+  if(!weaponHasAmmo(wp)) return null;
+  if(savedAmmo === undefined || savedAmmo === null || !Number.isFinite(savedAmmo)) return wp.ammoMax;
+  return Math.max(0, Math.min(wp.ammoMax, Math.floor(savedAmmo)));
+}
+
+function refillAmmoForLoadout(s) {
+  if(!s) return;
+  const count = Math.max(2, s.weapons?.length ?? 0, G.loadout?.weapons?.length ?? 0);
+  for(let i=0;i<count;i++) weaponSlot(s, i).ammo = ammoForWeapon(wpSlot(i));
+}
+
+function restoreAmmoForLoadout(s, currentAmmo) {
+  if(!s) return;
+  const count = Math.max(2, s.weapons?.length ?? 0, G.loadout?.weapons?.length ?? 0);
+  for(let i=0;i<count;i++) weaponSlot(s, i).ammo = ammoForWeapon(wpSlot(i), Array.isArray(currentAmmo) ? currentAmmo[i] : undefined);
+}
+
+function copyAmmoStateForLoadout(src, dst) {
+  if(!src || !dst) return;
+  const count = Math.max(2, dst.weapons?.length ?? 0, G.loadout?.weapons?.length ?? 0);
+  for(let i=0;i<count;i++) weaponSlot(dst, i).ammo = ammoForWeapon(wpSlot(i), currentAmmoForSlot(src, i));
+}
+
+function ammoForMountedWeapon(wp, slotState=null) {
+  if(!weaponHasAmmo(wp)) return null;
+  const ammo = slotState?.ammo;
+  return ammo === undefined || ammo === null ? wp.ammoMax : ammoForWeapon(wp, ammo);
+}
+
 // Fire a weapon, deducting energyCost if defined and the ship tracks energy.
 // Returns false if the ship lacks energy, true otherwise.
 // Enemies (no s.energy) ignore energyCost and always fire.
 function tryFire(wp, wt, s, slot, bul) {
+  if (weaponHasAmmo(wp)) {
+    const ammo = currentAmmoForSlot(s, slot);
+    if (ammo === null || ammo <= 0) return false;
+  }
   if (wp.energyCost !== undefined && s.energy !== undefined) {
     if (typeof syncShipEnergyProfile === 'function') syncShipEnergyProfile(s);
     if (s.energy < wp.energyCost) return false;
     s.energy = Math.max(0, s.energy - wp.energyCost);
   }
+  if (weaponHasAmmo(wp)) consumeAmmo(s, slot, 1);
   wt.fire(wp, s, slot, bul);
   return true;
 }

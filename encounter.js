@@ -56,6 +56,7 @@ function encWin(){
   copyShipEnergyState(enc.s,ow.s);
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
   copyShieldState(enc.s,ow.s);
+  refillAmmoForLoadout(ow.s);
   if(keepVelocity){ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;}
   ow.s.inv=80;
   G.ENC=null;G.absAimTarget=null;returnToOverworld({keepVelocity});

@@ -11,19 +11,21 @@ function surfaceEnemyCooldown(def) {
 
 function mkSurfaceEnemy(typeOrClass, x, y, extra = {}, rng = null) {
   const def = surfaceEnemySpawnDef(typeOrClass, rng), sf = def.surf;
-  return {x, y, vx:0, vy:0, a:Math.PI/2, hp:sf.hp, mhp:sf.hp, alive:true, t:def.id, weapons:[mkWeaponSlot()], ...extra};
+  const wp = surfaceEnemyWeapon(def);
+  return {x, y, vx:0, vy:0, a:Math.PI/2, hp:sf.hp, mhp:sf.hp, alive:true, t:def.id, weapons:[mkWeaponSlot({ammo:ammoForMountedWeapon(wp)})], ...extra};
 }
 
 function initSurfaceEnemy(e, alive = true) {
   const def = surfaceEnemyDef(e), sf = def.surf;
   const baseSlot = e.weapons?.[0] || {};
+  const wp = surfaceEnemyWeapon(def);
   return {
     ...e,
     t:def.id,
     hp:e.hp ?? sf.hp,
     mhp:e.mhp ?? sf.hp,
     alive,
-    weapons:[mkWeaponSlot({...baseSlot, cd:e.timer ?? baseSlot.cd ?? surfaceEnemyCooldown(def)})],
+    weapons:[mkWeaponSlot({...baseSlot, cd:e.timer ?? baseSlot.cd ?? surfaceEnemyCooldown(def), ammo:ammoForMountedWeapon(wp, baseSlot)})],
     phase:e.phase ?? Math.random() * Math.PI * 2,
   };
 }
@@ -223,8 +225,10 @@ function damageSurfaceEnemy(site, e, dmg, x = e.x, y = e.y) {
 
 function fireSurfaceEnemyKinetic(site, e, def, aimAngle) {
   const wp = surfaceEnemyWeapon(def), fw = def.surf.fire, cnt = fw.count || 1, spread = fw.spread || 0;
-  for(let k = 0; k < cnt; k++) {
-    const a = aimAngle + (k - (cnt - 1) / 2) * spread;
+  const shots = weaponHasAmmo(wp) ? Math.min(cnt, currentAmmoForSlot(e, 0)) : cnt;
+  if(weaponHasAmmo(wp)) consumeAmmo(e, 0, shots);
+  for(let k = 0; k < shots; k++) {
+    const a = aimAngle + (k - (shots - 1) / 2) * spread;
     site.ebu.push({
       x:e.x + Math.sin(a) * fw.offset, y:e.y - Math.cos(a) * fw.offset,
       vx:Math.sin(a) * wp.spd, vy:-Math.cos(a) * wp.spd,
@@ -236,6 +240,7 @@ function fireSurfaceEnemyKinetic(site, e, def, aimAngle) {
 
 function fireSurfaceEnemyMissile(site, e, def, aimAngle) {
   const wp = surfaceEnemyWeapon(def), fw = def.surf.fire, md = MISSILE_TYPES[wp.missileType] || MISSILE_TYPES['standard'];
+  if(weaponHasAmmo(wp)) consumeAmmo(e, 0, 1);
   site.emi.push({
     x:e.x + Math.sin(aimAngle) * fw.offset, y:e.y - Math.cos(aimAngle) * fw.offset, a:aimAngle,
     vx:Math.sin(aimAngle) * wp.spd, vy:-Math.cos(aimAngle) * wp.spd,
@@ -278,6 +283,10 @@ function fireSurfaceEnemyBeam(site, e, def, aimAngle) {
 
 function fireSurfaceEnemyWeapon(site, e, def, aimAngle) {
   const wp = surfaceEnemyWeapon(def);
+  if(weaponHasAmmo(wp) && currentAmmoForSlot(e, 0) <= 0) {
+    weaponSlot(e,0).cd = 8 + Math.floor(Math.random() * 12);
+    return;
+  }
   e.a = aimAngle;
   if(wp.fireMode === 'missile') fireSurfaceEnemyMissile(site, e, def, aimAngle);
   else if(wp.fireMode === 'beam') fireSurfaceEnemyBeam(site, e, def, aimAngle);

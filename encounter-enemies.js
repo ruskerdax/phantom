@@ -4,7 +4,8 @@ let NEXT_ENC_ENEMY_ID = 1;
 
 function mkEncEnemy(typeOrClass, x, y, timer) {
   const et=enemySpawnDef(typeOrClass),ec=et.enc;
-  return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, alive:true, t:et.id, eid:NEXT_ENC_ENEMY_ID++, spin:0, weapons:[mkWeaponSlot({cd:timer ?? 0})]};
+  const wp=WEAPON_MAP[ec.fire.wpn];
+  return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, alive:true, t:et.id, eid:NEXT_ENC_ENEMY_ID++, spin:0, weapons:[mkWeaponSlot({cd:timer ?? 0, ammo:ammoForMountedWeapon(wp)})]};
 }
 
 function enemyInitialCooldown(typeOrClass, stagger=0) {
@@ -116,7 +117,10 @@ function enemyUpdate(e, s, enc, ew, eh) {
     else if(ewp.fireMode==='missile'){
       sw.cd=weaponCooldownFrames(ewp);
       const cnt=fw.count||1;
-      const bas=Array.from({length:cnt},(_,k)=>ta+(k-(cnt-1)/2)*(fw.spread||0));
+      const shots=weaponHasAmmo(ewp)?Math.min(cnt,currentAmmoForSlot(e,0)):cnt;
+      if(shots<=0){sw.cd=8+Math.floor(Math.random()*12);return false;}
+      if(weaponHasAmmo(ewp))consumeAmmo(e,0,shots);
+      const bas=Array.from({length:shots},(_,k)=>ta+(k-(shots-1)/2)*(fw.spread||0));
       const md=MISSILE_TYPES[ewp.missileType]||MISSILE_TYPES['standard'];
       for(const ba of bas){
         enc.emi.push({
@@ -134,7 +138,10 @@ function enemyUpdate(e, s, enc, ew, eh) {
     else{
       sw.cd=weaponCooldownFrames(ewp);
       const cnt=fw.count||1,spread=fw.spread||0;
-      const bas=fw.mode==='spin'?Array.from({length:cnt},(_,k)=>e.spin+k*Math.PI*2/cnt):Array.from({length:cnt},(_,k)=>ta+(k-(cnt-1)/2)*spread);
+      const shots=weaponHasAmmo(ewp)?Math.min(cnt,currentAmmoForSlot(e,0)):cnt;
+      if(shots<=0){sw.cd=8+Math.floor(Math.random()*12);return false;}
+      if(weaponHasAmmo(ewp))consumeAmmo(e,0,shots);
+      const bas=fw.mode==='spin'?Array.from({length:shots},(_,k)=>e.spin+k*Math.PI*2/shots):Array.from({length:shots},(_,k)=>ta+(k-(shots-1)/2)*spread);
       for(const ba of bas)enc.ebu.push({x:e.x+Math.sin(ba)*fw.offset,y:e.y-Math.cos(ba)*fw.offset,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,dmg:ewp.dmg,col:ecDef.col});
       tone(550+enemyTypeIndex(e.t)*80,.04,'square',.03);
     }

@@ -141,7 +141,7 @@ function startAstEnc(){
       ens.push(mkEncEnemy(def.id,EW-200+Math.cos(a)*60,EH/2+Math.sin(a)*60,initCd+i*18));
     }
   }
-  const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
+  const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);copyAmmoStateForLoadout(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   copyShieldState(ow.s,encShip);
   G.ENC={isAst:true,et:astEnemy,label:'ASTEROID FIELD',
@@ -164,7 +164,7 @@ function startHBaseEnc(){
     return mkDefense(DEFENSE_CLASS_IDS.HBASE_TURRET,hx+Math.cos(a)*HEX_R,hy+Math.sin(a)*HEX_R,{a:a,timer:defenseCooldown(defenseDef(DEFENSE_CLASS_IDS.HBASE_TURRET))+i*22,alive:hbs?hbs.turrets[i]:true});
   });
   const hexPoly=Array.from({length:6},(_,i)=>{const a=i*Math.PI/3;return[hx+Math.cos(a)*HEX_R,hy+Math.sin(a)*HEX_R];});
-  const encShip=mkShip(ew*.08,eh/2);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
+  const encShip=mkShip(ew*.08,eh/2);copyShipEnergyState(ow.s,encShip);copyAmmoStateForLoadout(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;
   copyShieldState(ow.s,encShip);
   G.ENC={isHBase:true,et:ENEMY_TYPES.BATTLESHIP,label:'HOSTILE BASE',
@@ -200,7 +200,7 @@ function owStartFleetEnc(fi,contactA,playerA){
     const tier=rng.int(0,2),td=tierDefs[tier];
     rocks.push({x:rx,y:ry,vx:rng.fl(-.55,.55),vy:rng.fl(-.55,.55),r:td.r[0]+rng.fl(0,td.r[1]),hp:td.hp,maxHp:td.hp,tier});
   }
-  const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);encShip.inv=90;
+  const encShip=mkShip(spawnX,spawnY);copyShipEnergyState(ow.s,encShip);copyAmmoStateForLoadout(ow.s,encShip);encShip.inv=90;
   encShip.hp=ow.s.hp;encShip.maxHp=ow.s.maxHp;encShip.a=playerA;
   copyShieldState(ow.s,encShip);
   // Use the first comp role/type as the representative for encounter color.

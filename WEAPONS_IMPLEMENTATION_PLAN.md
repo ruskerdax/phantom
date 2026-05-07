@@ -162,7 +162,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### F-03. Ammo system + retroactive ammo on existing weapons + top-right HUD
+### F-03. Ammo system + retroactive ammo on existing weapons + top-right HUD ✅
 
 **Goal:** Add `wp.ammoMax` field and player + enemy ammo state. Retrofit MASS DRIVER (400), RAILGUN (300), ROCKET POD (12). Refill at base + on site/encounter exit. Top-right HUD ammo lines.
 

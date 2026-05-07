@@ -28,6 +28,7 @@ function defaultSave() {
     lastLocation: null,
     currentHp: null,
     currentEnergy: null,
+    currentAmmo: null,
     currentShieldHp: null,
     currentShieldRechargeProgress: 0,
     currentShieldDrainProgress: 0,
@@ -100,6 +101,7 @@ function loadSave() {
     if (typeof d.needsRebuild !== 'boolean') d.needsRebuild = false;
     if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
     if (!Array.isArray(d.objectives))        d.objectives = def.objectives;
+    if (!Array.isArray(d.currentAmmo))       d.currentAmmo = null;
     if (!Number.isFinite(d.objectivesRequired)) d.objectivesRequired = def.objectivesRequired;
     if (typeof d.cheatSlipgateUnlocked !== 'boolean') d.cheatSlipgateUnlocked = false;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
@@ -168,6 +170,7 @@ function buildSaveData() {
     lastLocation: normalizeLastLocation(G.lastLocation),
     currentHp: (s?.alive && s.hp > 0) ? s.hp : null,
     currentEnergy: (s?.alive && s.hp > 0) ? s.energy : null,
+    currentAmmo: s ? [currentAmmoForSlot(s, 0), currentAmmoForSlot(s, 1)] : null,
     currentShieldHp: (s?.alive && s.hp > 0 && s.shieldId) ? s.shieldHp : null,
     currentShieldRechargeProgress: (s?.alive && s.hp > 0 && s.shieldId) ? s.shieldRechargeProgress : 0,
     currentShieldDrainProgress: (s?.alive && s.hp > 0 && s.shieldId) ? s.shieldDrainProgress : 0,
