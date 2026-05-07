@@ -222,7 +222,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### F-05. Charge state + below-ship charge indicator
+### F-05. Charge state + below-ship charge indicator ✅
 
 **Goal:** Add charge timer state and the charge progress indicator. Energy drain during charge.
 

@@ -33,6 +33,8 @@ function weaponSlot(s, slot) {
   if(!s.weapons) s.weapons = [];
   if(!s.weapons[slot]) s.weapons[slot] = mkWeaponSlot();
   const w = s.weapons[slot];
+  w.charge = Math.max(0, w.charge || 0);
+  w.chargeFrames = Math.max(0, w.chargeFrames || 0);
   if(!w.input) w.input = {pressed:false, pressedFrames:0, justReleased:false, releasedAfterFrames:0};
   if(!w.lockCooldowns) w.lockCooldowns = new Map();
   return w;

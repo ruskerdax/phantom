@@ -362,6 +362,23 @@ function drawBelowShipIndicatorStack(ship,x,y,shieldFrac=null){
 }
 function drawSlotBelowShipIndicators(s,slot,x,baseY){
   const wp=wpSlot(slot),sw=s?.weapons?.[slot];
+  if(weaponHasCharge(wp)&&sw&&sw.input?.pressed&&sw.chargeFrames>0){
+    const bw=28,progress=chargeProgress(s,slot,wp);
+    const marker=wp.chargeMax>0?Math.max(0,Math.min(1,wp.chargeMin/wp.chargeMax)):0;
+    cx.save();
+    cx.shadowBlur=0;
+    cx.fillStyle='#123';
+    cx.fillRect(x-bw*.5,baseY,bw,1);
+    cx.fillStyle=progress>=1?'#fb0':'#9df';
+    cx.fillRect(x-bw*.5,baseY,bw*progress,1);
+    const mx=x-bw*.5+bw*marker;
+    cx.strokeStyle='#fff';
+    cx.globalAlpha=.75;
+    cx.beginPath();cx.moveTo(mx,baseY-2);cx.lineTo(mx,baseY+3);cx.stroke();
+    cx.globalAlpha=1;
+    cx.restore();
+    return baseY+4;
+  }
   if(!weaponHasMagazine(wp)||!sw||sw.mag===null||sw.mag>=wp.magMax)return baseY;
   const cellW=4,cellH=4,gap=1,w=wp.magMax*cellW+Math.max(0,wp.magMax-1)*gap;
   cx.save();

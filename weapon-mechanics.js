@@ -101,6 +101,10 @@ function weaponHasMagazine(wp) {
   return wp?.magMax !== undefined;
 }
 
+function weaponHasCharge(wp) {
+  return wp?.chargeMin !== undefined && wp?.chargeMax !== undefined;
+}
+
 function currentAmmoForSlot(s, slot) {
   const ammo = s?.weapons?.[slot]?.ammo;
   return ammo ?? null;
@@ -114,6 +118,11 @@ function currentMagForSlot(s, slot) {
 function currentReloadingForSlot(s, slot) {
   const sw = s?.weapons?.[slot];
   return sw ? {reloading:!!sw.reloading, reloadFrames:Math.max(0, Math.floor(sw.reloadFrames || 0))} : {reloading:false, reloadFrames:0};
+}
+
+function currentChargeForSlot(s, slot) {
+  const frames = s?.weapons?.[slot]?.chargeFrames;
+  return Number.isFinite(frames) ? Math.max(0, Math.floor(frames)) : 0;
 }
 
 function consumeAmmo(s, slot, n=1) {
@@ -192,6 +201,18 @@ function restoreMagsForLoadout(s, currentMag, currentReloading) {
     const reload = Array.isArray(currentReloading) ? currentReloading[i] : null;
     sw.reloading = !!(weaponHasMagazine(wp) && reload?.reloading);
     sw.reloadFrames = sw.reloading ? Math.max(0, Math.floor(reload.reloadFrames || 0)) : 0;
+  }
+}
+
+function restoreChargeForLoadout(s, currentCharge) {
+  if(!s) return;
+  const count = Math.max(2, s.weapons?.length ?? 0, G.loadout?.weapons?.length ?? 0);
+  for(let i=0;i<count;i++){
+    const wp = wpSlot(i), sw = weaponSlot(s, i);
+    const saved = Array.isArray(currentCharge) ? currentCharge[i] : 0;
+    const frames = weaponHasCharge(wp) && Number.isFinite(saved) ? Math.max(0, Math.min(wp.chargeMax, Math.floor(saved))) : 0;
+    sw.chargeFrames = frames;
+    sw.charge = frames;
   }
 }
 
@@ -277,6 +298,48 @@ function tryFire(wp, wt, s, slot, bul) {
   return true;
 }
 
+function resetCharge(s, slot) {
+  const sw = s?.weapons?.[slot];
+  if(!sw) return;
+  sw.charge = 0;
+  sw.chargeFrames = 0;
+}
+
+function cancelActiveCharges(s) {
+  if(!s?.weapons) return;
+  for(let i=0;i<s.weapons.length;i++) resetCharge(s, i);
+}
+
+function chargeFramesForSlot(s, slot) {
+  const frames = weaponSlot(s, slot).chargeFrames;
+  return Number.isFinite(frames) ? Math.max(0, frames) : 0;
+}
+
+function chargeReady(s, slot, wp) {
+  return weaponHasCharge(wp) && chargeFramesForSlot(s, slot) >= wp.chargeMin;
+}
+
+function chargeProgress(s, slot, wp) {
+  if(!weaponHasCharge(wp) || wp.chargeMax <= 0) return 0;
+  return Math.max(0, Math.min(1, chargeFramesForSlot(s, slot) / wp.chargeMax));
+}
+
+function tickCharge(s, slot, wp) {
+  if(!weaponHasCharge(wp)) return 0;
+  const sw = weaponSlot(s, slot);
+  if(!sw.input?.pressed) return sw.chargeFrames;
+  const atCap = sw.chargeFrames >= wp.chargeMax;
+  const drain = atCap ? (wp.chargeHoldDrainPerFrame ?? 0) : (wp.chargeEnergyDrainPerFrame ?? 0);
+  if(s.energy !== undefined && drain > 0){
+    if(s.energy <= 0) return sw.chargeFrames;
+    s.energy = Math.max(0, s.energy - drain);
+    if(s.energy <= 0) return sw.chargeFrames;
+  }
+  if(!atCap) sw.chargeFrames = Math.min(wp.chargeMax, sw.chargeFrames + 1);
+  sw.charge = sw.chargeFrames;
+  return sw.chargeFrames;
+}
+
 // Drives one of the player's two weapon slots for a single frame: advances any in-flight
 // beam pulses or missile salvos, then triggers a fresh fire if the input is held and
 // cooldowns/queues are clear. Each game mode (encounter/cave-site/surface) wires its own
@@ -289,6 +352,10 @@ function runPlayerWeaponSlot(s, slot, ctx) {
   const wp = wpSlot(slot); if (!wp) return;
   const wt = WEAPON_TYPES[wp.fireMode];
   const sw = weaponSlot(s, slot);
+  if(G.paused || !['play','encounter','esc'].includes(G.st)){
+    resetCharge(s, slot);
+    return;
+  }
   const heldNow = slot===0 ? iFir() : iFireSec();
   if(heldNow){
     sw.input.pressedFrames = sw.input.pressed ? sw.input.pressedFrames + 1 : 1;
@@ -299,6 +366,7 @@ function runPlayerWeaponSlot(s, slot, ctx) {
     sw.input.pressedFrames = 0;
   }
   sw.input.pressed = heldNow;
+  tickCharge(s, slot, wp);
   tickReload(s, slot);
   if(weaponHasMagazine(wp) && sw.input.pressedFrames > 6 && sw.mag < wp.magMax && !sw.reloading) beginReload(s, slot);
   if (sw.pulsesLeft > 0 && wt.tick) {

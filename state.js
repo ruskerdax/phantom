@@ -39,34 +39,45 @@ var G={
   menuSuppressUntil:0,systemStates:{},
   needsRebuild:false,lastLocation:null,
 };
+function cancelChargesForActiveShips(){
+  cancelActiveCharges(G.OW?.s);
+  cancelActiveCharges(G.ENC?.s);
+  cancelActiveCharges(G.site?.s);
+}
 function openTitleMenu(){
+  cancelChargesForActiveShips();
   G.paused=false;
   G.cheatSub=false;
   G.showShipConfig=false;
   G.st='title';
 }
 function openPauseMenu(){
+  cancelChargesForActiveShips();
   G.paused=true;
   G.cheatSub=false;
   G.showShipConfig=false;
 }
 function openOptionsMenu(from){
+  cancelChargesForActiveShips();
   G.optFrom=from;
   G.optListen=null;
   delete G.clearDataSel;
   G.st='options';
 }
 function openControlsMenu(){
+  cancelChargesForActiveShips();
   G.ctrlSel=0;
   G.optCol=0;
   G.optListen=null;
   G.st='controls';
 }
 function openShaderMenu(){
+  cancelChargesForActiveShips();
   delete G.clearDataSel;
   G.st='shaders';
 }
 function openBaseMenu(){
+  cancelChargesForActiveShips();
   G.baseTab=0;
   G.shopActionId=null;
   G.equipFlow=null;
@@ -76,9 +87,11 @@ function openBaseMenu(){
   G.st='base';
 }
 function openSlipgateMenu(){
+  cancelChargesForActiveShips();
   G.st='slipgate';
 }
 function openRebuildMenu(){
+  cancelChargesForActiveShips();
   G.rebuildFlow=null;
   G.paused=false;
   G.st='rebuild';
@@ -675,6 +688,7 @@ function startFromSave(){
   initOW(energy,sp.x,sp.y);
   restoreAmmoForLoadout(G.OW.s, sv?.currentAmmo);
   restoreMagsForLoadout(G.OW.s, sv?.currentMag, sv?.currentReloading);
+  restoreChargeForLoadout(G.OW.s, sv?.currentCharge);
   if(sv?.currentHp!=null)G.OW.s.hp=Math.min(sv.currentHp,G.OW.s.maxHp);
   if(sv?.currentShieldHp!=null)G.OW.s.shieldHp=wholeShieldHp(sv.currentShieldHp,G.OW.s.shieldMaxHp);
   G.OW.s.shieldRechargeProgress=shieldProgress(sv?.currentShieldRechargeProgress);
