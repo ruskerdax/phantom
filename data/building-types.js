@@ -6,7 +6,45 @@ const BUILDING_CLASS_IDS = {
   POWER_STATION: 'POWER_STATION',
   AIR_DEFENSE_BASE: 'AIR_DEFENSE_BASE',
   DRONE_FACTORY: 'DRONE_FACTORY',
+  BUNGALOW: 'BUNGALOW',
+  RANCH: 'RANCH',
+  TOWNHOUSE: 'TOWNHOUSE',
+  MANSION: 'MANSION',
+  CONDO: 'CONDO',
+  HIGH_RISE: 'HIGH_RISE',
+  HOTEL: 'HOTEL',
+  ARCOLOGY: 'ARCOLOGY',
+  CROP_DOME: 'CROP_DOME',
+  FARMHOUSE: 'FARMHOUSE',
+  GOV: 'GOV',
+  HOSPITAL: 'HOSPITAL',
+  WAREHOUSE: 'WAREHOUSE',
+  FACTORY: 'FACTORY',
+  SPACEPORT: 'SPACEPORT',
+  ENTERTAINMENT: 'ENTERTAINMENT',
 };
+
+const CIV_RESIDENCE_COL = '#88ff66';
+const CIV_INFRA_COL = '#ffeeaa';
+
+function _civObjectiveOnDestroyed(site, b) {
+  const def = buildingDef(b);
+  const surface = site?.planet?.surface;
+  if(!surface || !def?.category) return;
+  const total = def.category === 'residence' ? surface.civResidencePoints : surface.civInfraPoints;
+  if(!total || total <= 0) return;
+  let destroyed = 0;
+  for(const x of siteBuildings(site)) {
+    if(x.alive) continue;
+    const xd = buildingDef(x);
+    if(xd?.category === def.category) destroyed += xd.pts || 0;
+  }
+  if(destroyed * 2 < total) return;
+  const pi = (typeof LV !== 'undefined' && Array.isArray(LV)) ? LV.indexOf(site.planet) : -1;
+  const type = def.category === 'residence' ? OBJECTIVE_TYPE_IDS.CIV_RESIDENCES : OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE;
+  const obj = pi >= 0 ? objectiveForPlanetType(pi, type) : null;
+  if(obj && !obj.complete) completeObjective(obj.id);
+}
 
 const BUILDING_CLASSES = [
   {
@@ -85,6 +123,24 @@ const BUILDING_CLASSES = [
     update(b,site){updateDroneFactory(b,site);},
     placement:{contexts:['surface']},
   },
+  // ---- Civilian residences ----
+  {id:BUILDING_CLASS_IDS.BUNGALOW,name:'BUNGALOW',hp:20,pts:2,category:'residence',footprint:{w:14,h:14},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_RESIDENCE_COL,sc:8,drawSurface(b){drawBungalow(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.RANCH,name:'RANCH',hp:40,pts:4,category:'residence',footprint:{w:22,h:14},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_RESIDENCE_COL,sc:14,drawSurface(b){drawRanch(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.TOWNHOUSE,name:'TOWNHOUSE',hp:60,pts:6,category:'residence',footprint:{w:18,h:24},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_RESIDENCE_COL,sc:22,drawSurface(b){drawTownhouse(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.MANSION,name:'MANSION',hp:80,pts:8,category:'residence',footprint:{w:32,h:22},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_RESIDENCE_COL,sc:30,drawSurface(b){drawMansion(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.CONDO,name:'CONDO',hp:100,pts:10,category:'residence',footprint:{w:22,h:34},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_RESIDENCE_COL,sc:38,drawSurface(b){drawCondo(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.HIGH_RISE,name:'HIGH RISE',hp:120,pts:12,category:'residence',footprint:{w:22,h:50},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_RESIDENCE_COL,sc:48,drawSurface(b){drawHighRise(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.HOTEL,name:'HOTEL',hp:160,pts:16,category:'residence',footprint:{w:54,h:34},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_RESIDENCE_COL,sc:64,drawSurface(b){drawHotel(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.ARCOLOGY,name:'ARCOLOGY',hp:320,pts:32,category:'residence',footprint:{w:68,h:90},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_RESIDENCE_COL,sc:120,drawSurface(b){drawArcology(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  // ---- Civilian infrastructure ----
+  {id:BUILDING_CLASS_IDS.CROP_DOME,name:'CROP DOME',hp:20,pts:2,category:'infrastructure',footprint:{w:24,h:14},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_INFRA_COL,sc:8,drawSurface(b){drawCropDome(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.FARMHOUSE,name:'FARMHOUSE',hp:40,pts:4,category:'infrastructure',footprint:{w:24,h:18},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_INFRA_COL,sc:14,drawSurface(b){drawFarmhouse(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.GOV,name:'GOV',hp:60,pts:6,category:'infrastructure',footprint:{w:34,h:22},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_INFRA_COL,sc:22,drawSurface(b){drawGov(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.HOSPITAL,name:'HOSPITAL',hp:80,pts:8,category:'infrastructure',footprint:{w:30,h:26},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_INFRA_COL,sc:30,drawSurface(b){drawHospital(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.WAREHOUSE,name:'WAREHOUSE',hp:100,pts:10,category:'infrastructure',footprint:{w:46,h:24},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_INFRA_COL,sc:38,drawSurface(b){drawWarehouse(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.FACTORY,name:'FACTORY',hp:120,pts:12,category:'infrastructure',footprint:{w:48,h:30},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_INFRA_COL,sc:48,drawSurface(b){drawFactory(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.SPACEPORT,name:'SPACEPORT',hp:160,pts:16,category:'infrastructure',footprint:{w:58,h:32},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_INFRA_COL,sc:64,drawSurface(b){drawSpaceport(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
+  {id:BUILDING_CLASS_IDS.ENTERTAINMENT,name:'ENTERTAINMENT',hp:320,pts:32,category:'infrastructure',footprint:{w:64,h:42},requiresFlat:true,requiresPower:false,indestructible:false,col:CIV_INFRA_COL,sc:120,drawSurface(b){drawEntertainment(b);},onDestroyed:_civObjectiveOnDestroyed,placement:{contexts:['surface']}},
 ];
 
 const BUILDING_CLASS_MAP = Object.fromEntries(BUILDING_CLASSES.map(b => [b.id, b]));

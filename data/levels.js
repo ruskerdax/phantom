@@ -678,6 +678,133 @@ function genSurfaceDroneFactory(rng,surface){
   }
 }
 
+const CIV_DENSITY_RULES={
+  sparse:{
+    res:{allowed:['BUNGALOW','RANCH','TOWNHOUSE','MANSION','CONDO'],capped:{HIGH_RISE:1}},
+    inf:{allowed:['CROP_DOME','FARMHOUSE','GOV','HOSPITAL'],capped:{WAREHOUSE:1}},
+    zoneCount:[1,1],
+    budget:[20,40],
+  },
+  moderate:{
+    res:{allowed:['BUNGALOW','RANCH','TOWNHOUSE','MANSION','CONDO','HIGH_RISE'],capped:{HOTEL:2}},
+    inf:{allowed:['CROP_DOME','FARMHOUSE','GOV','HOSPITAL','WAREHOUSE','FACTORY'],capped:{SPACEPORT:2}},
+    zoneCount:[2,3],
+    budget:[50,80],
+  },
+  dense:{
+    res:{allowed:['BUNGALOW','RANCH','TOWNHOUSE','MANSION','CONDO','HIGH_RISE','HOTEL'],capped:{ARCOLOGY:1}},
+    inf:{allowed:['CROP_DOME','FARMHOUSE','GOV','HOSPITAL','WAREHOUSE','FACTORY','SPACEPORT'],capped:{ENTERTAINMENT:1}},
+    zoneCount:[3,5],
+    budget:[100,200],
+  },
+};
+
+function rollCivPopulationClass(rng){
+  const r=rng.next();
+  if(r<.20)return 'none';
+  if(r<.40)return 'sparse';
+  if(r<.80)return 'moderate';
+  return 'dense';
+}
+
+const CIV_CLASS_BIT_CAP=30;
+
+function pickCivClass(rng,rule,counts){
+  const choices=[];
+  for(const id of rule.allowed)if((counts[id]||0)<CIV_CLASS_BIT_CAP)choices.push(id);
+  for(const id of Object.keys(rule.capped))
+    if((counts[id]||0)<rule.capped[id]&&(counts[id]||0)<CIV_CLASS_BIT_CAP)choices.push(id);
+  if(!choices.length)return null;
+  const id=rng.pick(choices);
+  return BUILDING_CLASS_MAP[id];
+}
+
+function placeCivBuildingsInZone(rng,surface,zone,rule,counts,budget){
+  let placed=0,cursor=zone.x0+6,stallGuard=0;
+  while(cursor<zone.x1-6&&placed<budget&&stallGuard<160){
+    stallGuard++;
+    const def=pickCivClass(rng,rule,counts);
+    if(!def)break;
+    const fp=def.footprint;
+    if(cursor+fp.w>zone.x1-4){cursor+=8;continue;}
+    const x=wrap(cursor+fp.w/2,surface.worldW);
+    if(!surfacePlacementClear(surface,x,fp.w/2+4)){cursor+=10;continue;}
+    const ground=surfaceYAt(surface,x);
+    surface.buildings.push(mkBuilding(def.id,Math.round(x),Math.round(ground-fp.h/2)));
+    counts[def.id]=(counts[def.id]||0)+1;
+    cursor+=fp.w+4;
+    placed+=def.pts||0;
+  }
+  return placed;
+}
+
+function placeCivSmattering(rng,surface,zones,rule,counts,budget){
+  const allFlat=surfaceFlatSpans(surface).filter(s=>s.x1-s.x0>=80);
+  const outside=allFlat.filter(s=>!zones.some(z=>z.x0===s.x0&&z.x1===s.x1));
+  if(!outside.length)return 0;
+  let placed=0,attempts=0;
+  while(placed<budget&&attempts<120){
+    attempts++;
+    const def=pickCivClass(rng,rule,counts);
+    if(!def)break;
+    const fp=def.footprint;
+    const span=rng.pick(outside);
+    if(span.x1-span.x0<fp.w+16)continue;
+    const x=wrap(rng.fl(span.x0+fp.w/2+6,span.x1-fp.w/2-6),surface.worldW);
+    if(!surfacePlacementClear(surface,x,Math.max(70,fp.w/2+10)))continue;
+    const ground=surfaceYAt(surface,x);
+    surface.buildings.push(mkBuilding(def.id,Math.round(x),Math.round(ground-fp.h/2)));
+    counts[def.id]=(counts[def.id]||0)+1;
+    placed+=def.pts||0;
+  }
+  return placed;
+}
+
+function genSurfaceCivilians(rng,surface){
+  const popClass=rollCivPopulationClass(rng);
+  surface.civPopulation=popClass;
+  surface.civResidencePoints=0;
+  surface.civInfraPoints=0;
+  if(popClass==='none')return;
+  const cfg=CIV_DENSITY_RULES[popClass];
+  const resBudget=rng.int(cfg.budget[0],cfg.budget[1]);
+  const infBudget=Math.round(resBudget/2);
+  const zoneTarget=rng.int(cfg.zoneCount[0],cfg.zoneCount[1]);
+  const candSpans=surfaceFlatSpans(surface).filter(s=>s.x1-s.x0>=250);
+  const zones=[],pool=candSpans.slice();
+  while(zones.length<zoneTarget&&pool.length){
+    const idx=rng.int(0,pool.length-1);
+    zones.push(pool.splice(idx,1)[0]);
+  }
+  const counts={};
+  const totalZoneW=zones.reduce((s,z)=>s+(z.x1-z.x0),0)||1;
+  const inZoneRes=Math.round(resBudget*0.80);
+  let resPlaced=0;
+  for(const zone of zones){
+    const portion=Math.round(inZoneRes*(zone.x1-zone.x0)/totalZoneW);
+    resPlaced+=placeCivBuildingsInZone(rng,surface,zone,cfg.res,counts,portion);
+  }
+  const remRes=resBudget-resPlaced;
+  if(remRes>0)resPlaced+=placeCivSmattering(rng,surface,zones,cfg.res,counts,remRes);
+  const inZoneInf=Math.round(infBudget*0.70);
+  let infPlaced=0;
+  for(const zone of zones){
+    const portion=Math.round(inZoneInf*(zone.x1-zone.x0)/totalZoneW);
+    infPlaced+=placeCivBuildingsInZone(rng,surface,zone,cfg.inf,counts,portion);
+  }
+  const remInf=infBudget-infPlaced;
+  if(remInf>0)infPlaced+=placeCivSmattering(rng,surface,zones,cfg.inf,counts,remInf);
+  let resTotal=0,infTotal=0;
+  for(const b of surface.buildings){
+    const def=BUILDING_CLASS_MAP[b.classId];
+    if(!def?.category)continue;
+    if(def.category==='residence')resTotal+=def.pts||0;
+    else if(def.category==='infrastructure')infTotal+=def.pts||0;
+  }
+  surface.civResidencePoints=resTotal;
+  surface.civInfraPoints=infTotal;
+}
+
 function genSurfaceEnergy(rng,surface,count){
   const fu=[];
   for(let i=0;i<count;i++){
@@ -731,6 +858,7 @@ function genSurface(tmpl,seed,sites){
   surface.en=genSurfaceEnemies(rng,surface,threatSlots);
   genSurfaceAirDefenseBase(rng,surface);
   genSurfaceDroneFactory(rng,surface);
+  genSurfaceCivilians(rng,surface);
   placeRandomSurfaceTowers(rng,surface);
   return surface;
 }

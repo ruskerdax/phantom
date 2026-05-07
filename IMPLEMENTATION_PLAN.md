@@ -318,7 +318,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P1-05. Civilian residences + infrastructure
+### P1-05. Civilian residences + infrastructure ✅
 
 **Goal:** 8 residence + 8 infrastructure classes; per-planet population class roll; city-zone placement; 50%-by-points objective wiring.
 

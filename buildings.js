@@ -149,6 +149,232 @@ function drawAirDefenseBase(base) {
   cx.restore();
 }
 
+function _drawCivBox(b, col, w, h, detail) {
+  cx.save();
+  cx.translate(b.x, b.y);
+  cx.strokeStyle = col;
+  cx.fillStyle = col === CIV_INFRA_COL ? 'rgba(28,22,8,.86)' : 'rgba(8,22,10,.86)';
+  cx.shadowColor = col;
+  cx.shadowBlur = sb(3);
+  cx.lineWidth = 1;
+  cx.beginPath();
+  cx.rect(-w/2, -h/2, w, h);
+  cx.fill();
+  cx.stroke();
+  if(detail) detail();
+  cx.restore();
+}
+
+function drawBungalow(b) {
+  _drawCivBox(b, CIV_RESIDENCE_COL, 14, 10, () => {
+    cx.beginPath();
+    cx.moveTo(-8, -5); cx.lineTo(0, -10); cx.lineTo(8, -5);
+    cx.stroke();
+    cx.fillStyle = CIV_RESIDENCE_COL;
+    cx.fillRect(-2, -1, 3, 4);
+  });
+}
+function drawRanch(b) {
+  _drawCivBox(b, CIV_RESIDENCE_COL, 22, 10, () => {
+    cx.beginPath();
+    cx.moveTo(-12, -5); cx.lineTo(-6, -10); cx.lineTo(6, -10); cx.lineTo(12, -5);
+    cx.stroke();
+    cx.fillStyle = CIV_RESIDENCE_COL;
+    cx.fillRect(-7, -2, 3, 3); cx.fillRect(-1, -2, 3, 3); cx.fillRect(5, -2, 2, 3);
+  });
+}
+function drawTownhouse(b) {
+  _drawCivBox(b, CIV_RESIDENCE_COL, 18, 22, () => {
+    cx.beginPath();
+    cx.moveTo(-10, -11); cx.lineTo(0, -16); cx.lineTo(10, -11);
+    cx.stroke();
+    cx.fillStyle = CIV_RESIDENCE_COL;
+    for(let r = 0; r < 2; r++)
+      for(let c = 0; c < 2; c++)
+        cx.fillRect(-6 + c*8, -8 + r*8, 3, 3);
+  });
+}
+function drawMansion(b) {
+  _drawCivBox(b, CIV_RESIDENCE_COL, 32, 18, () => {
+    cx.beginPath();
+    cx.rect(-6, -16, 12, 7);
+    cx.stroke();
+    cx.fillStyle = CIV_RESIDENCE_COL;
+    for(let i = 0; i < 5; i++) cx.fillRect(-13 + i*6, -4, 3, 4);
+    cx.fillRect(-1, 2, 2, 7);
+  });
+}
+function drawCondo(b) {
+  _drawCivBox(b, CIV_RESIDENCE_COL, 22, 34, () => {
+    cx.fillStyle = CIV_RESIDENCE_COL;
+    for(let r = 0; r < 5; r++)
+      for(let c = 0; c < 3; c++)
+        cx.fillRect(-9 + c*8, -14 + r*6, 3, 3);
+  });
+}
+function drawHighRise(b) {
+  _drawCivBox(b, CIV_RESIDENCE_COL, 22, 50, () => {
+    cx.fillStyle = CIV_RESIDENCE_COL;
+    for(let r = 0; r < 8; r++)
+      for(let c = 0; c < 3; c++)
+        cx.fillRect(-9 + c*8, -22 + r*6, 3, 3);
+    cx.beginPath();
+    cx.moveTo(0, -25); cx.lineTo(0, -30);
+    cx.stroke();
+  });
+}
+function drawHotel(b) {
+  _drawCivBox(b, CIV_RESIDENCE_COL, 54, 32, () => {
+    cx.fillStyle = CIV_RESIDENCE_COL;
+    for(let r = 0; r < 4; r++)
+      for(let c = 0; c < 7; c++)
+        cx.fillRect(-24 + c*8, -13 + r*7, 3, 3);
+    cx.beginPath();
+    cx.rect(-8, 9, 16, 7);
+    cx.stroke();
+  });
+}
+function drawArcology(b) {
+  cx.save();
+  cx.translate(b.x, b.y);
+  const col = CIV_RESIDENCE_COL;
+  cx.strokeStyle = col;
+  cx.fillStyle = 'rgba(8,22,10,.86)';
+  cx.shadowColor = col;
+  cx.shadowBlur = sb(5);
+  cx.lineWidth = 1.4;
+  cx.beginPath();
+  cx.moveTo(-30, 45);
+  cx.lineTo(-12, -5);
+  cx.lineTo(-12, -25);
+  cx.lineTo(12, -25);
+  cx.lineTo(12, -5);
+  cx.lineTo(30, 45);
+  cx.stroke();
+  cx.beginPath();
+  cx.moveTo(-22, 22); cx.lineTo(22, 22);
+  cx.moveTo(-16, 5); cx.lineTo(16, 5);
+  cx.stroke();
+  cx.beginPath();
+  cx.ellipse(0, -32, 18, 14, 0, 0, Math.PI*2);
+  cx.fill();
+  cx.stroke();
+  cx.fillStyle = col;
+  for(let i = 0; i < 5; i++) cx.fillRect(-12 + i*5, -34, 2, 2);
+  cx.beginPath();
+  cx.moveTo(0, -46); cx.lineTo(0, -52);
+  cx.stroke();
+  cx.restore();
+}
+function drawCropDome(b) {
+  cx.save();
+  cx.translate(b.x, b.y);
+  cx.strokeStyle = CIV_INFRA_COL;
+  cx.fillStyle = 'rgba(28,22,8,.86)';
+  cx.shadowColor = CIV_INFRA_COL;
+  cx.shadowBlur = sb(3);
+  cx.lineWidth = 1;
+  cx.beginPath();
+  cx.arc(0, 5, 12, Math.PI, Math.PI*2);
+  cx.lineTo(12, 7); cx.lineTo(-12, 7);
+  cx.closePath();
+  cx.fill(); cx.stroke();
+  cx.beginPath();
+  cx.moveTo(-9, 0); cx.lineTo(9, 0);
+  cx.moveTo(0, -7); cx.lineTo(0, 7);
+  cx.stroke();
+  cx.restore();
+}
+function drawFarmhouse(b) {
+  _drawCivBox(b, CIV_INFRA_COL, 14, 14, () => {
+    cx.beginPath();
+    cx.moveTo(-8, -7); cx.lineTo(0, -12); cx.lineTo(8, -7);
+    cx.stroke();
+    cx.beginPath();
+    cx.rect(7, -4, 6, 11);
+    cx.moveTo(7, -4); cx.lineTo(13, -4); cx.lineTo(10, -8); cx.closePath();
+    cx.stroke();
+  });
+}
+function drawGov(b) {
+  _drawCivBox(b, CIV_INFRA_COL, 34, 18, () => {
+    cx.beginPath();
+    cx.moveTo(-18, -9); cx.lineTo(0, -16); cx.lineTo(18, -9);
+    cx.stroke();
+    cx.beginPath();
+    for(let i = 0; i < 5; i++) {
+      const x = -13 + i*6.5;
+      cx.moveTo(x, -7); cx.lineTo(x, 8);
+    }
+    cx.stroke();
+  });
+}
+function drawHospital(b) {
+  _drawCivBox(b, CIV_INFRA_COL, 30, 24, () => {
+    cx.fillStyle = CIV_INFRA_COL;
+    cx.fillRect(-2, -8, 4, 12);
+    cx.fillRect(-7, -3, 14, 4);
+    for(let r = 0; r < 2; r++)
+      for(let c = 0; c < 4; c++)
+        cx.fillRect(-13 + c*4, 6 + r*4, 2, 2);
+  });
+}
+function drawWarehouse(b) {
+  _drawCivBox(b, CIV_INFRA_COL, 46, 22, () => {
+    cx.beginPath();
+    for(let i = 1; i < 5; i++) {
+      const x = -23 + i*9.2;
+      cx.moveTo(x, -11); cx.lineTo(x, 11);
+    }
+    cx.stroke();
+    cx.fillStyle = CIV_INFRA_COL;
+    cx.fillRect(-6, 4, 12, 7);
+  });
+}
+function drawFactory(b) {
+  _drawCivBox(b, CIV_INFRA_COL, 48, 22, () => {
+    cx.beginPath();
+    cx.rect(-22, -16, 7, 16);
+    cx.rect(-12, -16, 7, 16);
+    cx.stroke();
+    cx.beginPath();
+    cx.moveTo(8, -11); cx.lineTo(8, -22); cx.lineTo(13, -22); cx.lineTo(13, -11);
+    cx.stroke();
+    cx.fillStyle = CIV_INFRA_COL;
+    cx.fillRect(2, 2, 12, 8);
+  });
+}
+function drawSpaceport(b) {
+  _drawCivBox(b, CIV_INFRA_COL, 58, 24, () => {
+    cx.beginPath();
+    cx.moveTo(-29, -12); cx.lineTo(29, -12);
+    cx.stroke();
+    cx.beginPath();
+    cx.moveTo(15, -12); cx.lineTo(20, -28); cx.lineTo(25, -12);
+    cx.closePath();
+    cx.stroke();
+    cx.fillStyle = CIV_INFRA_COL;
+    cx.fillRect(-26, -8, 6, 6);
+    cx.fillRect(-12, -8, 6, 6);
+    cx.fillRect(2, -8, 6, 6);
+    cx.beginPath();
+    cx.moveTo(-25, -12); cx.lineTo(-23, -22);
+    cx.stroke();
+  });
+}
+function drawEntertainment(b) {
+  _drawCivBox(b, CIV_INFRA_COL, 60, 32, () => {
+    cx.beginPath();
+    cx.arc(0, -16, 18, Math.PI*1.05, Math.PI*1.95);
+    cx.stroke();
+    cx.fillStyle = CIV_INFRA_COL;
+    for(let i = 0; i < 6; i++) cx.fillRect(-22 + i*8, -2, 4, 4);
+    cx.beginPath();
+    cx.moveTo(-26, 14); cx.lineTo(26, 14);
+    cx.stroke();
+  });
+}
+
 function drawDroneFactory(factory) {
   const pulse = .5 + .5 * Math.sin(G.fr * .09 + factory.x * .015);
   cx.save();

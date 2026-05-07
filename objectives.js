@@ -29,6 +29,10 @@ function siteDataHasBuilding(d, classId) {
   return (d?.buildings || []).some(b => b.classId === classId);
 }
 
+function siteDataHasBuildingCategory(d, category) {
+  return (d?.buildings || []).some(b => buildingDef(b)?.category === category);
+}
+
 function genObjectives(rng) {
   const out = [];
   for(let pi = 0; pi < LV.length; pi++) {
@@ -38,6 +42,12 @@ function genObjectives(rng) {
     }
     if((p.sites || []).some(s => s.id === 'targets' || s.type === 'surface_targets') && siteDataHasBuilding(p.surface, BUILDING_CLASS_IDS.DISH)) {
       out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, pi), type:OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, planetIdx:pi, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, pi)});
+    }
+    if(siteDataHasBuildingCategory(p.surface, 'residence')) {
+      out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.CIV_RESIDENCES, pi), type:OBJECTIVE_TYPE_IDS.CIV_RESIDENCES, planetIdx:pi, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.CIV_RESIDENCES, pi)});
+    }
+    if(siteDataHasBuildingCategory(p.surface, 'infrastructure')) {
+      out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE, pi), type:OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE, planetIdx:pi, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE, pi)});
     }
   }
   if(HBASE) out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.HBASE), type:OBJECTIVE_TYPE_IDS.HBASE, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.HBASE)});
