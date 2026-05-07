@@ -313,7 +313,6 @@ function drShip(x,y,a,ship,thr,energy,inv,fr){
   const def=shieldDefForShip(ship);
   const shieldMax=ship?.shieldMaxHp||def?.hp||0;
   const shieldFrac=def&&ship?.shieldId&&shieldMax>0?Math.max(0,Math.min(1,(ship.shieldHp||0)/shieldMax)):1;
-  const showShieldBar=def&&ship?.shieldId&&shieldFrac<1;
   cx.save();cx.translate(x,y);cx.rotate(a);
   const shieldFlash=Math.max(0,Math.min(1,(ship?.shieldFlash||0)/SHIELD_FLASH_FRAMES));
   const shieldActive=ship?.shieldId&&ship.shieldEnabled!==false&&!ship.shieldOffline&&ship.shieldHp>0;
@@ -339,16 +338,57 @@ function drShip(x,y,a,ship,thr,energy,inv,fr){
   if(thrust.strafeLeft)flame(7,-2,11+Math.random()*side,0,7,2,lit?8:4);
   if(thrust.strafeRight)flame(-7,-2,-11-Math.random()*side,0,-7,2,lit?8:4);
   cx.restore();
-  if(showShieldBar){
-    const bw=26,bh=4,by=y-22;
+  drawBelowShipIndicatorStack(ship,x,y,shieldFrac);
+}
+function drawBelowShipIndicatorStack(ship,x,y,shieldFrac=null){
+  if(!ship)return;
+  let iy=y-22;
+  const def=shieldDefForShip(ship);
+  const shieldMax=ship?.shieldMaxHp||def?.hp||0;
+  const frac=shieldFrac??(def&&ship?.shieldId&&shieldMax>0?Math.max(0,Math.min(1,(ship.shieldHp||0)/shieldMax)):1);
+  if(def&&ship?.shieldId&&frac<1){
+    const bw=26,bh=4;
     cx.save();
     cx.shadowBlur=0;
     cx.fillStyle='#123';
-    cx.fillRect(x-bw*.5,by,bw,bh);
+    cx.fillRect(x-bw*.5,iy,bw,bh);
     cx.fillStyle=ship.shieldEnabled===false?'#557':'#6cf';
-    cx.fillRect(x-bw*.5,by,bw*shieldFrac,bh);
+    cx.fillRect(x-bw*.5,iy,bw*frac,bh);
     cx.restore();
+    iy+=bh+3;
   }
+  iy=drawSlotBelowShipIndicators(ship,0,x,iy);
+  drawSlotBelowShipIndicators(ship,1,x,iy);
+}
+function drawSlotBelowShipIndicators(s,slot,x,baseY){
+  const wp=wpSlot(slot),sw=s?.weapons?.[slot];
+  if(!weaponHasMagazine(wp)||!sw||sw.mag===null||sw.mag>=wp.magMax)return baseY;
+  const cellW=4,cellH=4,gap=1,w=wp.magMax*cellW+Math.max(0,wp.magMax-1)*gap;
+  cx.save();
+  cx.shadowBlur=0;
+  for(let i=0;i<wp.magMax;i++){
+    const sx=x-w*.5+i*(cellW+gap);
+    cx.strokeStyle='#aaffcc';
+    cx.lineWidth=1;
+    cx.strokeRect(sx,baseY,cellW,cellH);
+    if(i<sw.mag){
+      cx.fillStyle='#aaffcc';
+      cx.fillRect(sx+1,baseY+1,Math.max(1,cellW-2),Math.max(1,cellH-2));
+    }
+  }
+  let used=cellH;
+  if(sw.reloading){
+    const total=Math.max(1,Math.ceil((wp.reloadSec??3)*60));
+    const progress=1-Math.max(0,Math.min(total,sw.reloadFrames||0))/total;
+    const py=baseY+cellH+2;
+    cx.fillStyle='#123';
+    cx.fillRect(x-w*.5,py,w,1);
+    cx.fillStyle='#aaffcc';
+    cx.fillRect(x-w*.5,py,w*progress,1);
+    used+=3;
+  }
+  cx.restore();
+  return baseY+used+3;
 }
 // All distances are in pixels from the ship center.
 const CONE={innerR:30,outerR:350,half:15*Math.PI/180,gap:3,dot:1,col:'#ffb060',alpha:0.3,alphaRot:0.5};

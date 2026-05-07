@@ -97,9 +97,23 @@ function weaponHasAmmo(wp) {
   return wp?.ammoMax !== undefined;
 }
 
+function weaponHasMagazine(wp) {
+  return wp?.magMax !== undefined;
+}
+
 function currentAmmoForSlot(s, slot) {
   const ammo = s?.weapons?.[slot]?.ammo;
   return ammo ?? null;
+}
+
+function currentMagForSlot(s, slot) {
+  const mag = s?.weapons?.[slot]?.mag;
+  return mag ?? null;
+}
+
+function currentReloadingForSlot(s, slot) {
+  const sw = s?.weapons?.[slot];
+  return sw ? {reloading:!!sw.reloading, reloadFrames:Math.max(0, Math.floor(sw.reloadFrames || 0))} : {reloading:false, reloadFrames:0};
 }
 
 function consumeAmmo(s, slot, n=1) {
@@ -109,10 +123,23 @@ function consumeAmmo(s, slot, n=1) {
   return sw.ammo;
 }
 
+function consumeMag(s, slot) {
+  const sw = weaponSlot(s, slot);
+  if(sw.mag === null || sw.mag === undefined || sw.mag <= 0) return false;
+  sw.mag--;
+  return true;
+}
+
 function ammoForWeapon(wp, savedAmmo=undefined) {
   if(!weaponHasAmmo(wp)) return null;
   if(savedAmmo === undefined || savedAmmo === null || !Number.isFinite(savedAmmo)) return wp.ammoMax;
   return Math.max(0, Math.min(wp.ammoMax, Math.floor(savedAmmo)));
+}
+
+function magForWeapon(wp, savedMag=undefined) {
+  if(!weaponHasMagazine(wp)) return null;
+  if(savedMag === undefined || savedMag === null || !Number.isFinite(savedMag)) return wp.magMax;
+  return Math.max(0, Math.min(wp.magMax, Math.floor(savedMag)));
 }
 
 function refillAmmoForLoadout(s) {
@@ -121,10 +148,51 @@ function refillAmmoForLoadout(s) {
   for(let i=0;i<count;i++) weaponSlot(s, i).ammo = ammoForWeapon(wpSlot(i));
 }
 
+function fillMagFromReserve(s, slot, wp) {
+  if(!weaponHasMagazine(wp)) return null;
+  const sw = weaponSlot(s, slot);
+  sw.mag = magForWeapon(wp, sw.mag);
+  const missing = Math.max(0, wp.magMax - sw.mag);
+  if(missing <= 0) return sw.mag;
+  if(weaponHasAmmo(wp)){
+    const available = Math.max(0, sw.ammo ?? 0);
+    const moved = Math.min(missing, available);
+    sw.mag += moved;
+    sw.ammo = available - moved;
+  }else{
+    sw.mag = wp.magMax;
+  }
+  return sw.mag;
+}
+
+function refillMagsForLoadout(s) {
+  if(!s) return;
+  const count = Math.max(2, s.weapons?.length ?? 0, G.loadout?.weapons?.length ?? 0);
+  for(let i=0;i<count;i++){
+    const sw = weaponSlot(s, i), wp = wpSlot(i);
+    sw.mag = magForWeapon(wp, sw.mag);
+    sw.reloading = false;
+    sw.reloadFrames = 0;
+    fillMagFromReserve(s, i, wp);
+  }
+}
+
 function restoreAmmoForLoadout(s, currentAmmo) {
   if(!s) return;
   const count = Math.max(2, s.weapons?.length ?? 0, G.loadout?.weapons?.length ?? 0);
   for(let i=0;i<count;i++) weaponSlot(s, i).ammo = ammoForWeapon(wpSlot(i), Array.isArray(currentAmmo) ? currentAmmo[i] : undefined);
+}
+
+function restoreMagsForLoadout(s, currentMag, currentReloading) {
+  if(!s) return;
+  const count = Math.max(2, s.weapons?.length ?? 0, G.loadout?.weapons?.length ?? 0);
+  for(let i=0;i<count;i++){
+    const wp = wpSlot(i), sw = weaponSlot(s, i);
+    sw.mag = magForWeapon(wp, Array.isArray(currentMag) ? currentMag[i] : undefined);
+    const reload = Array.isArray(currentReloading) ? currentReloading[i] : null;
+    sw.reloading = !!(weaponHasMagazine(wp) && reload?.reloading);
+    sw.reloadFrames = sw.reloading ? Math.max(0, Math.floor(reload.reloadFrames || 0)) : 0;
+  }
 }
 
 function copyAmmoStateForLoadout(src, dst) {
@@ -133,16 +201,67 @@ function copyAmmoStateForLoadout(src, dst) {
   for(let i=0;i<count;i++) weaponSlot(dst, i).ammo = ammoForWeapon(wpSlot(i), currentAmmoForSlot(src, i));
 }
 
+function copyMagStateForLoadout(src, dst) {
+  if(!src || !dst) return;
+  const count = Math.max(2, dst.weapons?.length ?? 0, G.loadout?.weapons?.length ?? 0);
+  for(let i=0;i<count;i++){
+    const wp = wpSlot(i), sw = weaponSlot(dst, i), srcReload = currentReloadingForSlot(src, i);
+    sw.mag = magForWeapon(wp, currentMagForSlot(src, i));
+    sw.reloading = !!(weaponHasMagazine(wp) && srcReload.reloading);
+    sw.reloadFrames = srcReload.reloadFrames;
+  }
+}
+
 function ammoForMountedWeapon(wp, slotState=null) {
   if(!weaponHasAmmo(wp)) return null;
   const ammo = slotState?.ammo;
   return ammo === undefined || ammo === null ? wp.ammoMax : ammoForWeapon(wp, ammo);
 }
 
+function magForMountedWeapon(wp, slotState=null) {
+  if(!weaponHasMagazine(wp)) return null;
+  const mag = slotState?.mag;
+  return mag === undefined || mag === null ? wp.magMax : magForWeapon(wp, mag);
+}
+
+function beginReload(s, slot) {
+  const wp = wpSlot(slot);
+  if(!weaponHasMagazine(wp)) return false;
+  const sw = weaponSlot(s, slot);
+  sw.mag = magForWeapon(wp, sw.mag);
+  if(sw.reloading || sw.mag >= wp.magMax) return false;
+  sw.reloading = true;
+  sw.reloadFrames = Math.max(1, Math.ceil((wp.reloadSec ?? 3) * 60));
+  return true;
+}
+
+function tickReload(s, slot) {
+  const wp = wpSlot(slot), sw = weaponSlot(s, slot);
+  if(!weaponHasMagazine(wp)){
+    sw.mag = null;
+    sw.reloading = false;
+    sw.reloadFrames = 0;
+    return;
+  }
+  sw.mag = magForWeapon(wp, sw.mag);
+  if(!sw.reloading) return;
+  sw.reloadFrames = Math.max(0, (sw.reloadFrames || 0) - 1);
+  if(sw.reloadFrames > 0) return;
+  fillMagFromReserve(s, slot, wp);
+  sw.reloading = false;
+}
+
 // Fire a weapon, deducting energyCost if defined and the ship tracks energy.
 // Returns false if the ship lacks energy, true otherwise.
 // Enemies (no s.energy) ignore energyCost and always fire.
 function tryFire(wp, wt, s, slot, bul) {
+  if (weaponHasMagazine(wp)) {
+    const mag = currentMagForSlot(s, slot);
+    if (mag === null || mag <= 0) {
+      tone(140,.035,'square',.04);
+      return false;
+    }
+  } else
   if (weaponHasAmmo(wp)) {
     const ammo = currentAmmoForSlot(s, slot);
     if (ammo === null || ammo <= 0) return false;
@@ -152,7 +271,8 @@ function tryFire(wp, wt, s, slot, bul) {
     if (s.energy < wp.energyCost) return false;
     s.energy = Math.max(0, s.energy - wp.energyCost);
   }
-  if (weaponHasAmmo(wp)) consumeAmmo(s, slot, 1);
+  if (weaponHasMagazine(wp)) consumeMag(s, slot);
+  else if (weaponHasAmmo(wp)) consumeAmmo(s, slot, 1);
   wt.fire(wp, s, slot, bul);
   return true;
 }
@@ -179,11 +299,13 @@ function runPlayerWeaponSlot(s, slot, ctx) {
     sw.input.pressedFrames = 0;
   }
   sw.input.pressed = heldNow;
+  tickReload(s, slot);
+  if(weaponHasMagazine(wp) && sw.input.pressedFrames > 6 && sw.mag < wp.magMax && !sw.reloading) beginReload(s, slot);
   if (sw.pulsesLeft > 0 && wt.tick) {
     const tgts = ctx.tgts();
     const res = wt.tick(wp, s, slot, tgts, ctx.lsb, ctx.walls || [], ctx.space || null);
     if (res && res.hitIdx >= 0) ctx.onBeamHit(tgts[res.hitIdx], wp, res);
   }
   if (sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis);
-  if (sw.input.pressed && !sw.cd && !sw.pulsesLeft && !sw.misLeft) tryFire(wp, wt, s, slot, ctx.bul);
+  if (!sw.reloading && sw.input.pressed && !sw.cd && !sw.pulsesLeft && !sw.misLeft) tryFire(wp, wt, s, slot, ctx.bul);
 }

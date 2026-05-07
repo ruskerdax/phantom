@@ -192,7 +192,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### F-04. Magazine system + below-ship indicator stack
+### F-04. Magazine system + below-ship indicator stack ✅
 
 **Goal:** Add `wp.magMax` and reload state. Implement the below-ship indicator stack (shield + slot 0 + slot 1 vertically).
 

@@ -330,7 +330,7 @@ function planetState(pi=G.lv){
 function siteShipAt(x,y,from=null){
   const src=from||G.OW?.s;
   const ship={...mkShip(x,y),hp:src?src.hp:activeChassisObj().maxHp,maxHp:src?src.maxHp:activeChassisObj().maxHp};
-  if(src){copyShipEnergyState(src,ship);setShipEnergy(ship,Math.max(25,src.energy));copyShieldState(src,ship);copyAmmoStateForLoadout(src,ship);}
+  if(src){copyShipEnergyState(src,ship);setShipEnergy(ship,Math.max(25,src.energy));copyShieldState(src,ship);copyAmmoStateForLoadout(src,ship);copyMagStateForLoadout(src,ship);}
   else fillShipEnergy(ship);
   ship.x=x;ship.y=y;
   return ship;
@@ -363,6 +363,7 @@ function returnPlanetToOverworld(){
   initOW(s?s.energy:loadoutBatteryCapacity(),pp.x,Math.max(80,pp.y-LV[pi].pr-55));
   if(s){copyShipEnergyState(s,G.OW.s);G.OW.s.hp=s.hp;G.OW.s.maxHp=s.maxHp;copyShieldState(s,G.OW.s);}
   refillAmmoForLoadout(G.OW.s);
+  refillMagsForLoadout(G.OW.s);
   G.site=null;
   recordLastLocation('planet',pi);
   returnToOverworld();

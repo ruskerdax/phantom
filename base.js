@@ -108,7 +108,14 @@ function equipWeaponInSlot(item, slotIdx) {
   const slots = G.loadout.weapons;
   while (slots.length <= slotIdx) slots.push(null);
   slots[slotIdx] = item.id;
-  if (G.OW?.s) weaponSlot(G.OW.s, slotIdx).ammo = ammoForWeapon(item);
+  if (G.OW?.s) {
+    const sw = weaponSlot(G.OW.s, slotIdx);
+    sw.ammo = ammoForWeapon(item);
+    sw.mag = magForWeapon(item);
+    sw.reloading = false;
+    sw.reloadFrames = 0;
+    fillMagFromReserve(G.OW.s, slotIdx, item);
+  }
   return true;
 }
 

@@ -57,6 +57,7 @@ function encWin(){
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
   copyShieldState(enc.s,ow.s);
   refillAmmoForLoadout(ow.s);
+  refillMagsForLoadout(ow.s);
   if(keepVelocity){ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;}
   ow.s.inv=80;
   G.ENC=null;G.absAimTarget=null;returnToOverworld({keepVelocity});
@@ -206,7 +207,7 @@ function updEnc(){
   thrusterSound(thrustIn,'encounter',s.energy<=0);
   const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}
-  else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;rechargeShieldFromEnergy(s,true);copyShipEnergyState(s,ow.s);ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;copyShieldState(s,ow.s);ow.s.inv=80;G.ENC=null;returnToOverworld();return;}}
+  else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;rechargeShieldFromEnergy(s,true);copyShipEnergyState(s,ow.s);ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;copyShieldState(s,ow.s);copyAmmoStateForLoadout(s,ow.s);copyMagStateForLoadout(s,ow.s);ow.s.inv=80;G.ENC=null;returnToOverworld();return;}}
   else{s.x=wrap(s.x+s.vx,ew);s.y=wrap(s.y+s.vy,eh);}
   tickWeaponCooldowns(s);if(s.inv>0)s.inv--;
   // Lerp the camera toward the player (clamped to world bounds). The 0.12 multiplier controls follow speed —
