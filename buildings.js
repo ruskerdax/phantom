@@ -55,12 +55,22 @@ function siteBuildings(site) {
   return site?.buildings || [];
 }
 
+function updateBuilding(site, b) {
+  if(!b?.alive) return;
+  const def = buildingDef(b);
+  b.powered = buildingIsPowered(site, b);
+  if(buildingRequiresPower(b, def) && !b.powered) return;
+  if(def.update) def.update(b, site);
+}
+
 function drawBuildingSurface(b, site) {
   const def = buildingDef(b);
-  if(def.drawSurface) def.drawSurface(b, site);
+  b.powered = buildingIsPowered(site, b);
+  if(def.drawSurface) def.drawSurface(b, site, b.powered);
 }
 
 function drawBuildingTunnel(b, site) {
   const def = buildingDef(b);
-  if(def.drawTunnel) def.drawTunnel(b, site);
+  b.powered = buildingIsPowered(site, b);
+  if(def.drawTunnel) def.drawTunnel(b, site, b.powered);
 }

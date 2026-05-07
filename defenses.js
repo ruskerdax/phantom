@@ -139,7 +139,8 @@ function updateDefense(site, d) {
   const aim = defenseAim(site, d);
   d.a += angDiff(d.a, aim.a) * (dc.turn ?? .04);
   if(--d.timer <= 0) {
-    if(defenseCanFire(d, def, aim.dist, aim.a)) fireDefenseWeapon(site, d, def, aim.a);
+    if(defenseRequiresPower(d, def) && !defenseIsPowered(site, d)) d.timer = 8 + Math.floor(Math.random() * 12);
+    else if(defenseCanFire(d, def, aim.dist, aim.a)) fireDefenseWeapon(site, d, def, aim.a);
     else d.timer = 8 + Math.floor(Math.random() * 12);
   }
 }

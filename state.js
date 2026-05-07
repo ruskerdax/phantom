@@ -491,6 +491,96 @@ function castLaserForSpace(ox,oy,a,range,targets,walls=[],space=null,hitPad=0){
 }
 
 function owPos(b){const a=b.orbitA+G.owFr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
+function powerStationClassId(){
+  return (typeof BUILDING_CLASS_IDS!=='undefined'&&BUILDING_CLASS_IDS.POWER_STATION)||'POWER_STATION';
+}
+function powerStationRefsForPlanet(pi){
+  const p=LV?.[pi],stationId=powerStationClassId();
+  if(!p)return [];
+  if(typeof planetBuildingRefs==='function'){
+    return planetBuildingRefs(p).filter(r=>r.classId===stationId&&(r.mode==='surface'||r.mode==='tunnel'));
+  }
+  const refs=[],counts={};
+  const add=(mode,d)=>{
+    (d?.buildings||[]).forEach((b,i)=>{
+      const classId=b.classId,bitIndex=counts[classId]||0;
+      counts[classId]=bitIndex+1;
+      if(classId===stationId&&(mode==='surface'||mode==='tunnel'))refs.push({mode,siteIndex:i,classId,bitIndex,b});
+    });
+  };
+  add('surface',p.surface);
+  add('tunnel',p.tunnel);
+  return refs;
+}
+function activeSiteBuildingAlive(pi,ref){
+  if(G.lv!==pi||!G.site||G.site.mode!==ref.mode)return null;
+  const list=G.site.buildings||[];
+  const b=list.find(x=>x.classId===ref.classId&&x.bitIndex===ref.bitIndex);
+  return b?!!b.alive:null;
+}
+function planetIsPowered(pi=G.lv){
+  const refs=powerStationRefsForPlanet(pi),stationId=powerStationClassId();
+  const ps=(typeof planetState==='function'&&LV?.[pi])?planetState(pi):(G.lvState?.[pi]||null);
+  const bits=ps?.buildings||{};
+  const hasSyntheticStation=Object.prototype.hasOwnProperty.call(bits,stationId);
+  if(!refs.length)return !hasSyntheticStation||!!bits[stationId];
+  for(const ref of refs){
+    const live=activeSiteBuildingAlive(pi,ref);
+    if(live===true)return true;
+    if(live===false)continue;
+    if(bits[ref.classId]&(1<<ref.bitIndex))return true;
+  }
+  return false;
+}
+function entityRequiresPower(entity,def=null){
+  if(entity?.requiresPower===false)return false;
+  if(entity?.requiresPower===true)return true;
+  if(def?.requiresPower===false||def?.defense?.requiresPower===false)return false;
+  return def?.requiresPower===true||def?.defense?.requiresPower===true;
+}
+function sitePlanetIndex(site){
+  const idx=site?.planet?.index??G.lv;
+  return Number.isInteger(idx)&&idx>=0?idx:null;
+}
+function defenseRequiresPower(d,def=null){
+  return entityRequiresPower(d,def||defenseDef(d));
+}
+function defenseIsPowered(site,d){
+  if(!defenseRequiresPower(d))return true;
+  const pi=sitePlanetIndex(site);
+  return pi==null||planetIsPowered(pi);
+}
+function buildingRequiresPower(b,def=null){
+  return entityRequiresPower(b,def||buildingDef(b));
+}
+function buildingIsPowered(site,b){
+  if(!buildingRequiresPower(b))return true;
+  const pi=sitePlanetIndex(site);
+  return pi==null||planetIsPowered(pi);
+}
+function planetHasPoweredEntities(pi=G.lv){
+  const poweredDefense=d=>{
+    try{return defenseRequiresPower(d);}
+    catch(_){return !!d?.requiresPower;}
+  };
+  const poweredBuilding=b=>{
+    try{return buildingRequiresPower(b);}
+    catch(_){return !!b?.requiresPower;}
+  };
+  if(G.lv===pi&&G.site){
+    if((G.site.defenses||[]).some(poweredDefense))return true;
+    if((G.site.en||[]).some(poweredDefense))return true;
+    if((G.site.buildings||[]).some(poweredBuilding))return true;
+  }
+  const p=LV?.[pi];
+  if(!p)return false;
+  if((p.surface?.defenses||[]).some(poweredDefense))return true;
+  if((p.tunnel?.en||[]).some(poweredDefense))return true;
+  if((p.cave?.en||[]).some(poweredDefense))return true;
+  if((p.surface?.buildings||[]).some(poweredBuilding))return true;
+  if((p.tunnel?.buildings||[]).some(poweredBuilding))return true;
+  return (p.cave?.buildings||[]).some(poweredBuilding);
+}
 function clearedForPlanets(src=null){
   const out=Array.isArray(src)?src.slice(0,PP.length):[];
   while(out.length<PP.length)out.push(false);

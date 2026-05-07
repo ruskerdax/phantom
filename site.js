@@ -472,6 +472,7 @@ function updCaveSite(){
     if(consumed)site.bul.splice(i,1);
     if(s.hp<=0){siteKillShip();return;}
   }
+  for(const b of siteBuildings(site))updateBuilding(site,b);
   for(const e of site.en)updateDefense(site,e);
   for(let i=site.ebu.length-1;i>=0;i--){
     const b=site.ebu[i];
@@ -538,6 +539,17 @@ function surfaceBuildingHit(site,b,x,y){
 }
 function buildingBeamTarget(b,i){
   return {x:b.x,y:b.y,r:buildingTargetRadius(b),kind:'building',idx:i};
+}
+function drawPowerOfflineIndicator(pi=G.lv){
+  if(planetIsPowered(pi)||!planetHasPoweredEntities(pi))return;
+  cx.save();
+  cx.font='11px MajorMonoDisplay, monospace';
+  cx.textAlign='right';
+  cx.fillStyle='#ff6644';
+  cx.shadowColor='#ff6644';
+  cx.shadowBlur=sb(8);
+  cx.fillText('POWER OFFLINE',W-12,48);
+  cx.restore();
 }
 function surfaceBeamTargets(site){
   const tgts=[];
@@ -649,6 +661,7 @@ function updSurface(){
   runPlayerWeaponSlot(s,0,surfaceCtx);
   runPlayerWeaponSlot(s,1,surfaceCtx);
   updSurfaceProjectiles(site);
+  for(const b of siteBuildings(site))updateBuilding(site,b);
   for(const df of site.defenses)updateDefense(site,df);
   for(const e of site.en){updSurfaceEnemy(site,e);if(!s.alive)return;}
   if(updSurfaceMissiles(site,site.mis,false))return;
@@ -693,6 +706,7 @@ function drawCaveSite(){
   if(site.s.alive)drAimCone(site.s);
   cx.restore();
   drHUD(site.s.energy,site.s.maxEnergy,site.s.hp,site.s.maxHp,site.s);
+  drawPowerOfflineIndicator(G.lv);
   cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.fillStyle=col;cx.textAlign='center';cx.fillText(site.mode==='tunnel'?'tunnel':'cave',W/2,18);cx.restore();
   if(G.st==='esc'){const sec=Math.ceil(site.esc/60);cx.save();cx.fillStyle=sec<=3?'#f40':'#ff0';cx.shadowColor=cx.fillStyle;cx.shadowBlur=sb(12);cx.font='bold 20px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('reactor critical — escape now!',W/2,52);cx.font='bold 34px MajorMonoDisplay, monospace';cx.fillText(sec+'s',W/2,84);cx.restore();}
   if(G.st==='dead_site'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=sb(14);cx.font='bold 26px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('ship destroyed',W/2,H/2);cx.restore();}
@@ -787,6 +801,7 @@ function drawSurface(){
   cx.restore();
   drawSurfaceIndicators(site);
   drHUD(site.s.energy,site.s.maxEnergy,site.s.hp,site.s.maxHp,site.s);
+  drawPowerOfflineIndicator(G.lv);
   drawObjectivesPanel({layout:'planet',planetIdx:G.lv});
   const dishes=siteBuildings(site).filter(b=>b.classId===BUILDING_CLASS_IDS.DISH);
   const remaining=dishes.filter(d=>d.alive).length,ps=planetState(G.lv);

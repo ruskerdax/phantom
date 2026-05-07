@@ -215,7 +215,7 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 ---
 
-### F-08. Powered-flag cascade
+### F-08. Powered-flag cascade ✅
 
 **Goal:** Per-planet powered state derived from power-station alive count, propagated to entities flagged `requiresPower`.
 
