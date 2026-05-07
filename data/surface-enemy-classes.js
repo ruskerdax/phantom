@@ -5,13 +5,17 @@
 const SURFACE_ENEMY_TYPES = {
   SKIMMER: 'skimmer',
   DIVER: 'diver',
+  SURFACE_DRONE: 'surface_drone',
 };
 
 const SURFACE_ENEMY_CAP = 12;
+const SURFACE_DRONE_CAP = 8;
+const TUNNEL_DRONE_CAP = 8;
 
 const SURFACE_ENEMY_CLASS_IDS = {
   GLIDER: 'surface-glider',
   PIERCER: 'surface-piercer',
+  BASE_DEFENSE_DRONE: 'base-defense-drone',
 };
 
 const SURFACE_ENEMY_CLASSES = [
@@ -31,6 +35,15 @@ const SURFACE_ENEMY_CLASSES = [
     col:'#ff66cc', col2:'#aa3399', sc:220,
     hull:{angle:'flight', boundsR:12, parts:[{kind:'poly', pts:[[0,-12],[-9,8],[0,4],[9,8]]}]},
     surf:{hp:20, r:12, spd:3.8, fire:{wpn:'mass driver', offset:13, arc:Math.PI, senseRange:460}},
+    drawSurface(e){drawSurfaceHullEnemy(this,e);}
+  },
+  {
+    id:SURFACE_ENEMY_CLASS_IDS.BASE_DEFENSE_DRONE,
+    className:'BaseDefenseDrone', type:SURFACE_ENEMY_TYPES.SURFACE_DRONE, typeName:'Surface Drone',
+    name:'BASE DEFENSE DRONE',
+    col:'#66ffcc', col2:'#33aa88', sc:90,
+    hull:{angle:'flight', boundsR:8, parts:[{kind:'poly', pts:[[0,-8],[8,0],[0,8],[-8,0]]},{kind:'circle', x:0, y:0, r:3}]},
+    surf:{hp:10, r:8, spd:1.6, fire:{wpn:'mining laser', offset:9, arc:Math.PI, senseRange:260}},
     drawSurface(e){drawSurfaceHullEnemy(this,e);}
   },
 ];

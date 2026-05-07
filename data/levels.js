@@ -661,6 +661,23 @@ function genSurfaceAirDefenseBase(rng,surface){
   }
 }
 
+function genSurfaceDroneFactory(rng,surface){
+  if(rng.next()>=.25)return;
+  const spans=surfaceFlatSpans(surface).filter(s=>s.x1-s.x0>=220);
+  if(!spans.length)return;
+  for(let attempt=0;attempt<180;attempt++){
+    const span=rng.pick(spans);
+    const x=wrap(rng.fl(span.x0+100,span.x1-100),surface.worldW);
+    if(!surfacePlacementClear(surface,x,120))continue;
+    const ground=surfaceYAt(surface,x),idx=surface.buildings.length;
+    surface.buildings.push(mkBuilding(BUILDING_CLASS_IDS.DRONE_FACTORY,Math.round(x),Math.round(ground-16),{
+      idx,
+      spawnTimer:1200,
+    }));
+    return;
+  }
+}
+
 function genSurfaceEnergy(rng,surface,count){
   const fu=[];
   for(let i=0;i<count;i++){
@@ -713,6 +730,7 @@ function genSurface(tmpl,seed,sites){
   surface.defenses.push(...genSurfaceDefenses(rng,surface,0));
   surface.en=genSurfaceEnemies(rng,surface,threatSlots);
   genSurfaceAirDefenseBase(rng,surface);
+  genSurfaceDroneFactory(rng,surface);
   placeRandomSurfaceTowers(rng,surface);
   return surface;
 }

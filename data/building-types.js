@@ -5,6 +5,7 @@ const BUILDING_CLASS_IDS = {
   TOWER: 'TOWER',
   POWER_STATION: 'POWER_STATION',
   AIR_DEFENSE_BASE: 'AIR_DEFENSE_BASE',
+  DRONE_FACTORY: 'DRONE_FACTORY',
 };
 
 const BUILDING_CLASSES = [
@@ -68,6 +69,20 @@ const BUILDING_CLASSES = [
     sc:0,
     drawSurface(b,site){drawAirDefenseBase(b,site);},
     update(b,site){updateAirDefenseBase(b,site);},
+    placement:{contexts:['surface']},
+  },
+  {
+    id:BUILDING_CLASS_IDS.DRONE_FACTORY,
+    name:'DRONE FACTORY',
+    hp:300,
+    footprint:{w:64,h:32},
+    requiresFlat:true,
+    requiresPower:false,
+    indestructible:false,
+    col:'#66ffcc',
+    sc:0,
+    drawSurface(b,site){drawDroneFactory(b,site);},
+    update(b,site){updateDroneFactory(b,site);},
     placement:{contexts:['surface']},
   },
 ];

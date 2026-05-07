@@ -298,7 +298,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P1-04. Drone factory + Surface drone
+### P1-04. Drone factory + Surface drone ✅
 
 **Goal:** Add `DRONE_FACTORY` (HP 300). New `SURFACE_DRONE` enemy type / `BASE_DEFENSE_DRONE` class. 8-cap drones per site (independent from surface enemy cap).
 

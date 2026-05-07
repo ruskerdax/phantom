@@ -148,3 +148,39 @@ function drawAirDefenseBase(base) {
   cx.fillText(base.hp, 0, 6);
   cx.restore();
 }
+
+function drawDroneFactory(factory) {
+  const pulse = .5 + .5 * Math.sin(G.fr * .09 + factory.x * .015);
+  cx.save();
+  cx.translate(factory.x, factory.y);
+  cx.strokeStyle = '#66ffcc';
+  cx.fillStyle = 'rgba(6,36,30,.88)';
+  cx.shadowColor = '#66ffcc';
+  cx.shadowBlur = sb(6 + pulse * 8);
+  cx.lineWidth = 1.5;
+  cx.beginPath();
+  cx.rect(-32, -8, 64, 24);
+  cx.fill();
+  cx.stroke();
+  cx.beginPath();
+  cx.rect(-19, -23, 38, 15);
+  cx.fill();
+  cx.stroke();
+  cx.beginPath();
+  cx.moveTo(-24, 16);
+  cx.lineTo(-24, 22);
+  cx.moveTo(24, 16);
+  cx.lineTo(24, 22);
+  cx.moveTo(-10, -15);
+  cx.lineTo(0, -21);
+  cx.lineTo(10, -15);
+  cx.moveTo(-18, 2);
+  cx.lineTo(18, 2);
+  cx.stroke();
+  cx.fillStyle = '#66ffcc';
+  cx.font = 'bold 8px MajorMonoDisplay, monospace';
+  cx.textAlign = 'center';
+  cx.shadowBlur = 0;
+  cx.fillText(factory.hp, 0, 7);
+  cx.restore();
+}

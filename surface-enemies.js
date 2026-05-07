@@ -60,6 +60,10 @@ function surfaceSkimmerDiverCounts(site) {
   return out;
 }
 
+function surfaceDroneCount(site) {
+  return (site?.en || []).filter(e => e.alive && surfaceEnemyDef(e).type === SURFACE_ENEMY_TYPES.SURFACE_DRONE).length;
+}
+
 function airDefenseBaseGround(site, base) {
   return surfaceYAt(site.d, base.x);
 }
@@ -125,6 +129,69 @@ function updateAirDefenseBase(base, site) {
   if(--base.spawnTimer <= 0) {
     spawnNextAirDefenseEnemy(site, base);
     base.spawnTimer = 1200;
+  }
+}
+
+function spawnSurfaceDrone(site, factory) {
+  if(surfaceDroneCount(site) >= SURFACE_DRONE_CAP) return null;
+  const ground = surfaceYAt(site.d, factory.x);
+  const e = mkSurfaceEnemy(SURFACE_ENEMY_TYPES.SURFACE_DRONE, factory.x, Math.round(Math.min(factory.y - 28, ground - 44)), {
+    vx:(Math.random() - .5) * .8,
+    vy:(Math.random() - .5) * .8,
+    phase:Math.random() * Math.PI * 2,
+    factoryOf:factory.idx,
+    homeX:factory.x,
+    homeY:factory.y - 56,
+  });
+  site.en.push(initSurfaceEnemy(e, true));
+  return e;
+}
+
+function updateDroneFactory(factory, site) {
+  if(site?.mode !== 'surface' || !factory?.alive) return;
+  if(!Number.isFinite(factory.spawnTimer)) factory.spawnTimer = 1200;
+  if(surfaceDroneCount(site) >= SURFACE_DRONE_CAP) return;
+  if(--factory.spawnTimer <= 0) {
+    spawnSurfaceDrone(site, factory);
+    factory.spawnTimer = 1200;
+  }
+}
+
+function surfaceDroneHasLos(site, e, dist, aimAngle) {
+  const d = site.d, s = site.s;
+  const tgts = [{x:s.x, y:s.y, r:shipHitRadius(s), kind:'ship'}];
+  const res = castLaserForSpace(e.x, e.y, aimAngle, dist + shipHitRadius(s), tgts, surfaceTerrainSegments(d), {toroidal:true, worldW:d.worldW, worldH:999999});
+  return res.hitIdx >= 0;
+}
+
+function surfaceDroneHome(site, e) {
+  const factory = siteBuildings(site).find(b => b.classId === BUILDING_CLASS_IDS.DRONE_FACTORY && b.idx === e.factoryOf);
+  if(factory) return {x:factory.x, y:factory.y - 56};
+  return {x:e.homeX ?? e.x, y:e.homeY ?? e.y};
+}
+
+function steerSurfaceDrone(site, e, dist, aimAngle) {
+  const d = site.d, s = site.s, home = surfaceDroneHome(site, e);
+  if(surfaceDroneHasLos(site, e, dist, aimAngle)) {
+    const orbitA = G.fr * .025 + e.phase;
+    const tx = wrap(s.x + Math.sin(orbitA) * 120, d.worldW);
+    const ty = s.y + Math.cos(orbitA) * 120;
+    const cd = surfaceDelta(d, tx, ty, e.x, e.y);
+    e.vx += cd.dx * .006;
+    e.vy += cd.dy * .006;
+  } else {
+    const orbitA = G.fr * .016 + e.phase;
+    const tx = wrap(home.x + Math.sin(orbitA) * 170, d.worldW);
+    const ty = home.y + Math.cos(orbitA) * 52;
+    const pd = surfaceDelta(d, tx, ty, e.x, e.y);
+    const hd = surfaceDelta(d, home.x, home.y, e.x, e.y);
+    const hdist = Math.hypot(hd.dx, hd.dy) || 1;
+    e.vx += pd.dx * .004;
+    e.vy += pd.dy * .004;
+    if(hdist > 250) {
+      e.vx += hd.dx / hdist * .08;
+      e.vy += hd.dy / hdist * .08;
+    }
   }
 }
 
@@ -228,7 +295,9 @@ function updSurfaceEnemy(site, e) {
   const d = site.d, s = site.s, def = surfaceEnemyDef(e), sf = def.surf, ground = surfaceYAt(d, e.x);
   const delta = surfaceDelta(d, s.x, s.y, e.x, e.y), dist = Math.hypot(delta.dx, delta.dy) || 1, aimAngle = Math.atan2(delta.dx, -delta.dy);
 
-  if(e.role === 'guard') {
+  if(def.type === SURFACE_ENEMY_TYPES.SURFACE_DRONE) {
+    steerSurfaceDrone(site, e, dist, aimAngle);
+  } else if(e.role === 'guard') {
     const base = siteBuildings(site).find(b => b.alive && b.classId === BUILDING_CLASS_IDS.AIR_DEFENSE_BASE && b.idx === e.guardOf);
     if(base) {
       const orbitA = G.fr * .018 + e.phase;
