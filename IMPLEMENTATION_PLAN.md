@@ -238,7 +238,7 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 P1-01 and P1-02 are foundational; the rest can run in parallel after both land. P1-08 also needs P1-05.
 
-### P1-01. Tower
+### P1-01. Tower ✅
 
 **Goal:** Add `TOWER` building (HP 100, mounts a turret on top, paired-with-structures + 2–5 random per surface).
 

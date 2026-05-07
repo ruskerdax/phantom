@@ -135,7 +135,15 @@ function fireDefenseWeapon(site, d, def, aimAngle) {
 function updateDefense(site, d) {
   if(!d.alive) return;
   const def = defenseDef(d), dc = def.defense;
-  if(site.mode === 'surface' && dc.groundOffset != null) d.y = surfaceYAt(site.d, d.x) - dc.groundOffset;
+  if(site.mode === 'surface' && d.towerId != null) {
+    const tower = site.buildings?.[d.towerId];
+    if(!tower?.alive) {
+      d.alive = false;
+      return;
+    }
+    d.x = tower.x;
+    d.y = towerTopY(tower);
+  } else if(site.mode === 'surface' && dc.groundOffset != null) d.y = surfaceYAt(site.d, d.x) - dc.groundOffset;
   const aim = defenseAim(site, d);
   d.a += angDiff(d.a, aim.a) * (dc.turn ?? .04);
   if(--d.timer <= 0) {
@@ -157,13 +165,5 @@ function drawDefense(d) {
 }
 
 function genSurfaceDefenses(rng, surface, count) {
-  const defs = [];
-  const excl = W * .6, availLen = Math.max(0, surface.worldW - 2 * excl), startX = surface.ent.x + excl;
-  for(let i = 0; i < count; i++) {
-    const t = (i + .5 + rng.fl(-.22, .22)) / count;
-    const x = wrap(startX + t * availLen, surface.worldW);
-    const ground = surfaceYAt(surface, x);
-    defs.push(mkDefense(DEFENSE_CLASS_IDS.SURFACE_SENTINEL, Math.round(x), Math.round(ground - 9), {a:-Math.PI/2}, rng));
-  }
-  return defs;
+  return [];
 }

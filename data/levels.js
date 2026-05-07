@@ -534,6 +534,79 @@ function genSurfaceDishes(rng,surface,count,siteId){
   return buildings;
 }
 
+function surfacePlacementDist(surface,x,otherX){
+  return Math.abs(wrapCoordNear(x,otherX,surface.worldW)-otherX);
+}
+
+function surfacePlacementClear(surface,x,minSep,ignore=null){
+  const items=[...(surface.buildings||[]),...(surface.defenses||[]),...(surface.fu||[])];
+  if(surface.tunnel)items.push(surface.tunnel);
+  for(const o of items){
+    if(o===ignore)continue;
+    if(Number.isFinite(o.x)&&surfacePlacementDist(surface,x,o.x)<minSep)return false;
+  }
+  return true;
+}
+
+function towerTopY(tower){
+  return tower.y - 24;
+}
+
+function addTowerAt(surface,x){
+  const ground=surfaceYAt(surface,x);
+  const towerIdx=surface.buildings.length;
+  const turretId=surface.defenses.length;
+  const tower=mkBuilding(BUILDING_CLASS_IDS.TOWER,Math.round(x),Math.round(ground-17),{turretId});
+  const turret=mkDefense(DEFENSE_CLASS_IDS.SURFACE_SENTINEL,tower.x,Math.round(towerTopY(tower)),{a:-Math.PI/2,requiresPower:true,towerId:towerIdx});
+  surface.buildings.push(tower);
+  surface.defenses.push(turret);
+  return tower;
+}
+
+function flattishSpanAt(surface,x,maxSlope=Math.PI/6){
+  x=wrap(x,surface.worldW);
+  return surfaceFlattishSpans(surface,maxSlope).find(s=>x>=s.x0&&x<=s.x1);
+}
+
+function placePairedTower(rng,surface,anchorX,side){
+  const dir=side==='left'?-1:1;
+  for(let attempt=0;attempt<36;attempt++){
+    const dist=56+attempt*4+rng.fl(-12,12);
+    const x=wrap(anchorX+dir*dist,surface.worldW);
+    if(!flattishSpanAt(surface,x))continue;
+    if(!surfacePlacementClear(surface,x,48))continue;
+    return addTowerAt(surface,x);
+  }
+  return null;
+}
+
+function randomFlattishX(rng,surface,spans){
+  const total=spans.reduce((sum,s)=>sum+Math.max(0,s.x1-s.x0),0);
+  let roll=rng.fl(0,total);
+  for(const s of spans){
+    const w=Math.max(0,s.x1-s.x0);
+    if(roll<=w)return rng.fl(s.x0,s.x1);
+    roll-=w;
+  }
+  const s=spans[spans.length-1];
+  return rng.fl(s.x0,s.x1);
+}
+
+function placeRandomSurfaceTowers(rng,surface){
+  const spans=surfaceFlattishSpans(surface,Math.PI/6).filter(s=>s.x1-s.x0>=28);
+  if(!spans.length)return;
+  const count=rng.int(2,5);
+  for(let i=0;i<count;i++){
+    let placed=false;
+    for(let attempt=0;attempt<120&&!placed;attempt++){
+      const x=wrap(randomFlattishX(rng,surface,spans),surface.worldW);
+      if(!surfacePlacementClear(surface,x,90))continue;
+      addTowerAt(surface,x);
+      placed=true;
+    }
+  }
+}
+
 function genSurfaceEnergy(rng,surface,count){
   const fu=[];
   for(let i=0;i<count;i++){
@@ -576,14 +649,15 @@ function genSurface(tmpl,seed,sites){
   const hasTargets=sites.some(s=>s.type==='surface_targets');
   if(hasTargets)surface.buildings=genSurfaceDishes(rng,surface,rng.int(4,6),'targets');
   surface.fu=genSurfaceEnergy(rng,surface,rng.int(2,4));
-  const threatSlots=rng.int(6,10),defenseCount=Math.max(1,Math.round(threatSlots*.34));
-  surface.defenses=genSurfaceDefenses(rng,surface,defenseCount);
-  surface.en=genSurfaceEnemies(rng,surface,threatSlots-defenseCount);
+  const threatSlots=rng.int(6,10);
+  surface.defenses=genSurfaceDefenses(rng,surface,0);
+  surface.en=genSurfaceEnemies(rng,surface,threatSlots);
   const caveSite=sites.find(s=>s.type==='cave_connector');
   if(caveSite){
     const tx=wrap(rng.fl(W*.8,worldW-W*.8),worldW);
     surface.tunnel={x:Math.round(tx),y:Math.round(surfaceYAt(surface,tx)),siteId:caveSite.id};
   }
+  placeRandomSurfaceTowers(rng,surface);
   return surface;
 }
 

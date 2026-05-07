@@ -751,6 +751,16 @@ function drawDish(dish){
   cx.fillStyle='#ffdd88';cx.font='bold 9px MajorMonoDisplay, monospace';cx.textAlign='center';cx.shadowBlur=0;cx.fillText(dish.hp,0,5);
   cx.restore();
 }
+function drawTower(tower){
+  const pulse=.5+.5*Math.sin(G.fr*.08+tower.x*.01);
+  cx.save();cx.translate(tower.x,tower.y);
+  cx.strokeStyle='#ff5555';cx.fillStyle='rgba(55,8,12,.86)';cx.shadowColor='#ff5555';cx.shadowBlur=sb(6+pulse*5);cx.lineWidth=1.5;
+  cx.beginPath();cx.rect(-12,5,24,12);cx.fill();cx.stroke();
+  cx.beginPath();cx.moveTo(-7,5);cx.lineTo(-4,-17);cx.lineTo(4,-17);cx.lineTo(7,5);cx.closePath();cx.fill();cx.stroke();
+  cx.beginPath();cx.moveTo(-8,-17);cx.lineTo(8,-17);cx.moveTo(0,-17);cx.lineTo(0,-24);cx.stroke();
+  cx.fillStyle='#ff5555';cx.font='bold 8px MajorMonoDisplay, monospace';cx.textAlign='center';cx.shadowBlur=0;cx.fillText(tower.hp,0,2);
+  cx.restore();
+}
 function drawTunnelMouth(tun,done){
   cx.save();cx.translate(tun.x,tun.y);
   cx.strokeStyle=done?'#335':'#00ccff';cx.shadowColor=cx.strokeStyle;cx.shadowBlur=sb(done?0:10);cx.lineWidth=2;

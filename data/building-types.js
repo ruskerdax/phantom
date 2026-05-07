@@ -2,6 +2,7 @@
 
 const BUILDING_CLASS_IDS = {
   DISH: 'DISH',
+  TOWER: 'TOWER',
 };
 
 const BUILDING_CLASSES = [
@@ -20,6 +21,23 @@ const BUILDING_CLASSES = [
       if(siteBuildings(site).filter(x => x.classId === BUILDING_CLASS_IDS.DISH).every(x => !x.alive)) {
         completePlanetSite(b.siteId || 'targets');
       }
+    },
+    placement:{contexts:['surface']},
+  },
+  {
+    id:BUILDING_CLASS_IDS.TOWER,
+    name:'TOWER',
+    hp:100,
+    footprint:{w:18,h:34},
+    requiresFlat:true,
+    requiresPower:false,
+    indestructible:false,
+    col:'#ff5555',
+    sc:180,
+    drawSurface(b,site){drawTower(b,site);},
+    onDestroyed(site,b){
+      const turret=site?.defenses?.[b.turretId];
+      if(turret)turret.alive=false;
     },
     placement:{contexts:['surface']},
   },
