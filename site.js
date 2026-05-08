@@ -725,8 +725,8 @@ function drawCaveSite(){
       if(target)drawTargetLockSquare(target);
     }
   }
-  for(const b of site.bul){cx.save();cx.fillStyle='#fff';cx.shadowColor='#fff';cx.shadowBlur=sb(6);cx.beginPath();cx.arc(b.x,b.y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
-  for(const b of site.ebu){cx.save();cx.fillStyle='#f66';cx.shadowColor='#f66';cx.shadowBlur=sb(6);cx.beginPath();cx.arc(b.x,b.y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
+  for(const b of site.bul){const wp=WEAPON_MAP[b.wpId];if(wp?.drawProjectile)wp.drawProjectile(b);else drBullet(b.x,b.y,'#fff');}
+  for(const b of site.ebu){const wp=WEAPON_MAP[b.wpId];if(wp?.drawProjectile)wp.drawProjectile(b);else drBullet(b.x,b.y,'#f66');}
   for(const m of site.mis)drMissile(m.x,m.y,m.a,m.type);
   for(const m of site.emi)drMissile(m.x,m.y,m.a,m.type);
   for(const lb of site.lsb){const a=lb.l/8,bw=lb.w||2;cx.save();cx.globalAlpha=a;cx.strokeStyle=lb.col;cx.shadowColor=lb.col;cx.shadowBlur=sb(10);cx.lineWidth=bw;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.globalAlpha=a*.6;cx.strokeStyle='#fff';cx.lineWidth=Math.max(1,bw/2);cx.shadowBlur=0;cx.beginPath();cx.moveTo(lb.x1,lb.y1);cx.lineTo(lb.x2,lb.y2);cx.stroke();cx.restore();}
@@ -836,8 +836,8 @@ function drawSurface(){
       if(target)drawSurfaceCopies(site,target.x,target.y,target.r+10,(x,y)=>drawTargetLockSquare({...target,x,y}));
     }
   }
-  for(const b of site.bul)drawSurfaceCopies(site,b.x,b.y,5,(x,y)=>drBullet(x,y,'#fff'));
-  for(const b of site.ebu)drawSurfaceCopies(site,b.x,b.y,5,(x,y)=>drBullet(x,y,b.col));
+  for(const b of site.bul)drawSurfaceCopies(site,b.x,b.y,8,(x,y)=>{const wp=WEAPON_MAP[b.wpId];if(wp?.drawProjectile)wp.drawProjectile({...b,x,y});else drBullet(x,y,'#fff');});
+  for(const b of site.ebu)drawSurfaceCopies(site,b.x,b.y,8,(x,y)=>{const wp=WEAPON_MAP[b.wpId];if(wp?.drawProjectile)wp.drawProjectile({...b,x,y});else drBullet(x,y,b.col);});
   for(const m of site.mis)drawSurfaceCopies(site,m.x,m.y,10,(x,y)=>drMissile(x,y,m.a,m.type));
   for(const m of site.emi)drawSurfaceCopies(site,m.x,m.y,10,(x,y)=>drMissile(x,y,m.a,m.type));
   for(const lb of site.lsb){const a=lb.l/8,bw=lb.w||2;drawSurfaceSegmentCopies(site,lb.x1,lb.y1,lb.x2,lb.y2,bw+12,(x1,y1,x2,y2)=>{cx.save();cx.globalAlpha=a;cx.strokeStyle=lb.col;cx.shadowColor=lb.col;cx.shadowBlur=sb(10);cx.lineWidth=bw;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();cx.globalAlpha=a*.6;cx.strokeStyle='#fff';cx.lineWidth=Math.max(1,bw/2);cx.shadowBlur=0;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();cx.restore();});}

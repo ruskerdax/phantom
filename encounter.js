@@ -350,8 +350,8 @@ function drawEnc(){
     }
   }
   for(const f of enc.fu)drawAt(f.x,f.y,12,(x,y)=>drEnergy(x,y,'#0f8'));
-  for(const b of enc.bul)drawAt(b.x,b.y,5,(x,y)=>drBullet(x,y,'#fff'));
-  for(const b of enc.ebu)drawAt(b.x,b.y,5,(x,y)=>drBullet(x,y,b.col));
+  for(const b of enc.bul)drawAt(b.x,b.y,8,(x,y)=>{const wp=WEAPON_MAP[b.wpId];if(wp?.drawProjectile)wp.drawProjectile({...b,x,y});else drBullet(x,y,'#fff');});
+  for(const b of enc.ebu)drawAt(b.x,b.y,8,(x,y)=>{const wp=WEAPON_MAP[b.wpId];if(wp?.drawProjectile)wp.drawProjectile({...b,x,y});else drBullet(x,y,b.col);});
   for(const m of enc.mis)drawAt(m.x,m.y,10,(x,y)=>drMissile(x,y,m.a,m.type));
   for(const m of enc.emi)drawAt(m.x,m.y,10,(x,y)=>drMissile(x,y,m.a,m.type));
   for(const lb of enc.lsb){const a=lb.l/8,bw=lb.w||2;drawSeg(lb.x1,lb.y1,lb.x2,lb.y2,bw+12,(x1,y1,x2,y2)=>{cx.save();cx.globalAlpha=a;cx.strokeStyle=lb.col;cx.shadowColor=lb.col;cx.shadowBlur=sb(10);cx.lineWidth=bw;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();cx.globalAlpha=a*.6;cx.strokeStyle='#fff';cx.lineWidth=Math.max(1,bw/2);cx.shadowBlur=0;cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.stroke();cx.restore();});}

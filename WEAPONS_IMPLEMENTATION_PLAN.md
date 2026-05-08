@@ -382,7 +382,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ## Phase 1 — Simple weapons (parallelizable, after Phase 0)
 
-### P1-01. Plasma Blaster
+### P1-01. Plasma Blaster ✅
 
 **Goal:** Add PLASMA BLASTER to `WEAPONS` registry. Energy-only, projectile fire mode, fast cooldown.
 
