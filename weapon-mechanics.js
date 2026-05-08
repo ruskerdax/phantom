@@ -283,6 +283,55 @@ function tickPersistentProjectilesForActor(owner, slot, wp, projectiles, ctx={})
   }
 }
 
+const arcChainTargetKinds = new Set(['enemy', 'defense']);
+
+function arcTargetKey(t) {
+  return t?.id ?? `${t?.kind || 'target'}:${t?.idx ?? Math.round(t?.x ?? 0)+','+Math.round(t?.y ?? 0)}`;
+}
+
+function arcPointNear(x, y, refX, refY, ctx={}) {
+  const space = ctx.space;
+  if(space?.toroidal && Number.isFinite(space.worldW) && space.worldW > 0) {
+    return {
+      x:wrapCoordNear(x, refX, space.worldW),
+      y:Number.isFinite(space.worldH) && space.worldH > 0 && space.worldH < 100000 ? wrapCoordNear(y, refY, space.worldH) : y,
+    };
+  }
+  return {x, y};
+}
+
+function arcTargetInfo(srcX, srcY, target, ctx={}) {
+  const p = arcPointNear(target.x ?? srcX, target.y ?? srcY, srcX, srcY, ctx);
+  const dx = p.x - srcX, dy = p.y - srcY;
+  return {...target, x:p.x, y:p.y, dx, dy, dist:Math.hypot(dx, dy), key:arcTargetKey(target)};
+}
+
+function arcVisualLine(lsb, x1, y1, x2, y2, wp) {
+  if(!lsb) return;
+  const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len, ny = dx / len;
+  let px = x1, py = y1;
+  for(let i=1;i<=3;i++) {
+    const t = i / 3;
+    const jitter = (i % 2 ? 1 : -1) * 4;
+    const qx = i === 3 ? x2 : x1 + dx * t + nx * jitter;
+    const qy = i === 3 ? y2 : y1 + dy * t + ny * jitter;
+    lsb.push({x1:px, y1:py, x2:qx, y2:qy, l:10, col:'#dff', w:1.5, wpId:wp.id});
+    px = qx; py = qy;
+  }
+}
+
+function arcFlash(lsb, x, y, wp) {
+  if(!lsb) return;
+  lsb.push({x1:x-5, y1:y, x2:x+5, y2:y, l:10, col:'#fff', w:1, wpId:wp.id});
+  lsb.push({x1:x, y1:y-5, x2:x, y2:y+5, l:10, col:'#fff', w:1, wpId:wp.id});
+}
+
+function arcApplyHit(target, dmg, wp, ctx, srcX, srcY) {
+  if(typeof ctx.onBeamHit !== 'function') return;
+  ctx.onBeamHit(target, {...wp, dmg}, {x1:srcX, y1:srcY, x2:target.x, y2:target.y, a:Math.atan2(target.x - srcX, -(target.y - srcY))});
+}
+
 const stepBulletBase = stepBullet;
 stepBullet = function(b, wrapX, wrapY, maxStep, onStep) {
   if(b?.persistentProjectile) return false;
@@ -404,6 +453,50 @@ const WEAPON_TYPES = {
     },
     tick(wp, s, slot, bul, ctx = {}) {
       tickPersistentProjectilesForActor(s, slot, wp, bul, ctx);
+    }
+  },
+  'charged-cone-chain': {
+    fire(wp, s, slot, _bul, ctx = {}) {
+      const sw = weaponSlot(s, slot);
+      const a = ctx.angle ?? s.a;
+      const srcX = s.x + Math.sin(a) * (ctx.offset ?? 13);
+      const srcY = s.y - Math.cos(a) * (ctx.offset ?? 13);
+      const halfCone = (wp.coneAngleRad ?? 0) * .5;
+      const targets = (typeof ctx.tgts === 'function' ? ctx.tgts() : [])
+        .filter(t => t && arcChainTargetKinds.has(t.kind))
+        .map(t => arcTargetInfo(srcX, srcY, t, ctx));
+      const primaryHits = targets.filter(t => t.dist <= wp.coneLength && Math.abs(angDiff(a, Math.atan2(t.dx, -t.dy))) <= halfCone);
+      const hitKeys = new Set(primaryHits.map(t => t.key));
+      for(const primary of primaryHits) arcApplyHit(primary, wp.primaryDmg, wp, ctx, srcX, srcY);
+      for(const primary of primaryHits) {
+        const path = [primary];
+        let current = primary;
+        for(let hop=0; hop<Math.min(wp.chainHopsMax ?? 0, wp.chainDamages?.length ?? 0); hop++) {
+          let best = null, bestDist = Infinity;
+          for(const candidate of targets) {
+            if(hitKeys.has(candidate.key)) continue;
+            const p = arcPointNear(candidate.x, candidate.y, current.x, current.y, ctx);
+            const dist = Math.hypot(p.x - current.x, p.y - current.y);
+            if(dist <= wp.chainHopMaxDist && dist < bestDist) {
+              best = {...candidate, x:p.x, y:p.y};
+              bestDist = dist;
+            }
+          }
+          if(!best) break;
+          hitKeys.add(best.key);
+          arcApplyHit(best, wp.chainDamages[hop], wp, ctx, current.x, current.y);
+          path.push(best);
+          current = best;
+        }
+        let lx = srcX, ly = srcY;
+        for(const p of path) {
+          arcVisualLine(ctx.lsb, lx, ly, p.x, p.y, wp);
+          arcFlash(ctx.lsb, p.x, p.y, wp);
+          lx = p.x; ly = p.y;
+        }
+      }
+      sw.cd = ctx.cooldownFrames ?? Math.round((wp.cd ?? 0) * 60);
+      tone(980, .08, 'sawtooth', .06);
     }
   },
   'beam': {
@@ -676,10 +769,11 @@ function tryFire(wp, wt, s, slot, bul, ctx = {}) {
     const ammo = currentAmmoForSlot(s, slot);
     if (ammo === null || ammo < ammoCost) return false;
   }
-  if (wp.energyCost !== undefined && s.energy !== undefined) {
+  const energyCost = wp.energyCost ?? wp.fireEnergyCost;
+  if (energyCost !== undefined && s.energy !== undefined) {
     if (typeof syncShipEnergyProfile === 'function') syncShipEnergyProfile(s);
-    if (s.energy < wp.energyCost) return false;
-    s.energy = Math.max(0, s.energy - wp.energyCost);
+    if (s.energy < energyCost) return false;
+    s.energy = Math.max(0, s.energy - energyCost);
   }
   if (weaponHasMagazine(wp)) consumeMag(s, slot);
   else if (weaponHasAmmo(wp)) consumeAmmo(s, slot, ammoCost);
@@ -893,6 +987,13 @@ function runPlayerWeaponSlot(s, slot, ctx) {
   if (wp.fireMode === 'persistent-projectile' && wt.tick) wt.tick(wp, s, slot, ctx.bul, ctx);
   if (wp.fireMode === 'charged-persistent-projectile' && wt.tick) {
     wt.tick(wp, s, slot, ctx.bul, ctx);
+    if(sw.input.justReleased) {
+      if(chargeReady(s, slot, wp) && !sw.cd) tryFire(wp, wt, s, slot, ctx.bul, ctx);
+      resetCharge(s, slot);
+    }
+    return;
+  }
+  if (wp.fireMode === 'charged-cone-chain') {
     if(sw.input.justReleased) {
       if(chargeReady(s, slot, wp) && !sw.cd) tryFire(wp, wt, s, slot, ctx.bul, ctx);
       resetCharge(s, slot);

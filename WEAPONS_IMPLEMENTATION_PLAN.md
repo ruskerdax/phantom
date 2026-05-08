@@ -480,7 +480,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### P2-02. Arc Caster
+### P2-02. Arc Caster ✅
 
 **Goal:** Add ARC CASTER. Hold-to-charge energy weapon that fires a narrow cone with a chain effect.
 
