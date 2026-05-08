@@ -410,6 +410,49 @@ const WEAPON_TYPES = {
       tone(720,.05,'square',.06);
     }
   },
+  'spooled-projectile': {
+    fire(wp, s, slot, bul, ctx = {}) {
+      const sw = weaponSlot(s, slot);
+      const a = (ctx.angle ?? s.a) + (Math.random() * 2 - 1) * (wp.fireSpread ?? 0);
+      const offset = ctx.offset ?? 13;
+      const inherit = ctx.inherit ?? .3;
+      const ox = s.x + Math.sin(a) * offset;
+      const oy = s.y - Math.cos(a) * offset;
+      bul.push({
+        x:ox,
+        y:oy,
+        vx:Math.sin(a) * wp.spd + (s.vx || 0) * inherit,
+        vy:-Math.cos(a) * wp.spd + (s.vy || 0) * inherit,
+        l:wp.life * wp.spd,
+        dmg:wp.dmg,
+        wpId:wp.id,
+      });
+      if(ctx.lsb) ctx.lsb.push({x1:ox,y1:oy,x2:ox+Math.sin(a)*7,y2:oy-Math.cos(a)*7,l:3,col:'#fff',w:1,wpId:wp.id});
+      sw.cd = ctx.cooldownFrames ?? Math.max(1, Math.round(wp.cd));
+      tone(1400,.025,'square',.035);
+    },
+    tick(wp, s, slot, bul, ctx = {}) {
+      const sw = weaponSlot(s, slot);
+      const frames = Math.max(1, Math.floor(wp.spoolFrames || 1));
+      const step = 1 / frames;
+      const prev = Math.max(0, Math.min(1, sw.spool || 0));
+      const held = !!sw.input?.pressed;
+      if(held) {
+        if(prev <= 0 && sw.input.pressedFrames === 1) toneRise(800,1400,.1,'sine',.04);
+        sw.spool = Math.min(1, prev + step);
+        if(1 - sw.spool < 1e-9) sw.spool = 1;
+      } else {
+        if(sw.input?.justReleased && prev > 0) {
+          const f0 = 800 + 600 * prev;
+          if(typeof toneSlide === 'function') toneSlide(f0,800,frames/60,'sine',.035);
+          else tone(f0,frames/60,'sine',.035);
+        }
+        sw.spool = Math.max(0, prev - step);
+      }
+      if(!held || sw.spool < 1 || sw.cd > 0) return false;
+      return tryFire(wp, this, s, slot, bul, ctx);
+    }
+  },
   'persistent-projectile': {
     fire(wp, s, slot, bul, ctx = {}) {
       const sw = weaponSlot(s, slot);
@@ -1035,6 +1078,10 @@ function runPlayerWeaponSlot(s, slot, ctx) {
       if(sw.mag <= 0) tone(140,.035,'square',.04);
       else if(!sw.cd) tryFire(wp, wt, s, slot, ctx.bul, ctx);
     }
+    return;
+  }
+  if (wp.fireMode === 'spooled-projectile') {
+    if(wt.tick) wt.tick(wp, s, slot, ctx.bul, ctx);
     return;
   }
   if (sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis, ctx);

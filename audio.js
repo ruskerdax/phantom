@@ -180,6 +180,23 @@ function toneRise(f0,f1,d,t='sine',v=.07){
     o.stop(now+d+.05);
   }catch(e){}
 }
+function toneSlide(f0,f1,d,t='sine',v=.07){
+  if(!AC)return;
+  initAudioGraph();
+  audioSyncSfxVolume();
+  if(sfxVolumeTarget()===0)return;
+  try{
+    const o=AC.createOscillator(),g=AC.createGain(),now=AC.currentTime;
+    o.connect(g);g.connect(AUDIO.sfxMaster||AC.destination);
+    o.type=t;
+    o.frequency.setValueAtTime(Math.max(10,f0),now);
+    o.frequency.exponentialRampToValueAtTime(Math.max(10,f1),now+d);
+    g.gain.setValueAtTime(v,now);
+    g.gain.exponentialRampToValueAtTime(.0001,now+d);
+    o.start();
+    o.stop(now+d+.05);
+  }catch(e){}
+}
 
 function thrusterNoiseBuffer(){
   if(!AC)return null;

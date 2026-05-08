@@ -535,7 +535,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### P3-02. Rotary Autocannon
+### P3-02. Rotary Autocannon ✅
 
 **Goal:** Add ROTARY AUTOCANNON. Spool-up weapon that fires sustained rapid bullets in a 2° cone.
 
