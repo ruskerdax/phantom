@@ -165,8 +165,11 @@ function heatSeekTurn(m, ctx={}, opts={}) {
 }
 
 function persistentProjectileTick(p, ctx={}) {
-  p.x += p.vx || 0;
-  p.y += p.vy || 0;
+  if(typeof ctx.movePersistentProjectile === 'function') ctx.movePersistentProjectile(p);
+  else {
+    p.x += p.vx || 0;
+    p.y += p.vy || 0;
+  }
   if(Number.isFinite(p.l) && --p.l <= 0) return true;
   if(typeof ctx.terrainHit === 'function' && ctx.terrainHit(p)) return true;
   const targets = typeof ctx.radiusTargets === 'function' ? ctx.radiusTargets(p) : [];
@@ -184,6 +187,80 @@ function persistentProjectileTick(p, ctx={}) {
   }
   return false;
 }
+
+const persistentProjectileTargetKinds = new Set(['enemy', 'defense', 'building', 'reactor', 'softpt', 'ship', 'shield']);
+
+function persistentProjectileTerrainHit(p, ctx={}) {
+  const r = p.r ?? Math.max(2, Math.min(8, p.innerR || 4));
+  if(ctx.walls?.some(w => dseg(p.x, p.y, w[0], w[1], w[2], w[3]) <= r)) return true;
+  if(typeof ctx.terrainHit === 'function') return !!ctx.terrainHit(p);
+  return false;
+}
+
+function movePersistentProjectile(p, ctx={}) {
+  const nx = p.x + (p.vx || 0), ny = p.y + (p.vy || 0), space = ctx.space;
+  if(space?.toroidal && Number.isFinite(space.worldW) && space.worldW > 0) {
+    p.x = wrap(nx, space.worldW);
+    p.y = Number.isFinite(space.worldH) && space.worldH > 0 && space.worldH < 100000 ? wrap(ny, space.worldH) : ny;
+  } else {
+    p.x = nx;
+    p.y = ny;
+  }
+}
+
+function persistentProjectileDistance(p, target, ctx={}) {
+  if(typeof ctx.targetDistance === 'function') return ctx.targetDistance(p, target);
+  const space = ctx.space;
+  if(space?.toroidal && Number.isFinite(space.worldW) && space.worldW > 0) {
+    const dy = Number.isFinite(space.worldH) && space.worldH > 0 && space.worldH < 100000
+      ? wrapCoordNear(p.y, target.y, space.worldH) - target.y
+      : p.y - target.y;
+    return Math.hypot(wrapCoordNear(p.x, target.x, space.worldW) - target.x, dy);
+  }
+  return Math.hypot((target.x ?? 0) - p.x, (target.y ?? 0) - p.y);
+}
+
+function persistentProjectileTargets(ctx={}) {
+  const raw = typeof ctx.radiusTargets === 'function' ? ctx.radiusTargets() : (typeof ctx.tgts === 'function' ? ctx.tgts() : []);
+  return (Array.isArray(raw) ? raw : []).filter(t => t && t.alive !== false && persistentProjectileTargetKinds.has(t.kind));
+}
+
+function damagePersistentProjectileTarget(target, dmg, p, wp, ctx={}) {
+  if(dmg <= 0 || typeof ctx.onBeamHit !== 'function') return;
+  const hitWp = {...wp, dmg, range:p.innerR || wp.innerR || 1};
+  ctx.onBeamHit(target, hitWp, {
+    x1:p.x, y1:p.y,
+    x2:target.x ?? p.x, y2:target.y ?? p.y,
+    a:flightAngle(p),
+  });
+}
+
+function persistentProjectileContext(wp, ctx={}) {
+  return {
+    ...ctx,
+    movePersistentProjectile:p => movePersistentProjectile(p, ctx),
+    terrainHit:p => persistentProjectileTerrainHit(p, ctx),
+    radiusTargets:() => persistentProjectileTargets(ctx),
+    targetDistance:(p, target) => persistentProjectileDistance(p, target, ctx),
+    damageRadiusTarget:(target, dmg, p) => damagePersistentProjectileTarget(target, dmg, p, wp, ctx),
+  };
+}
+
+function tickPersistentProjectilesForActor(owner, slot, wp, projectiles, ctx={}) {
+  if(!Array.isArray(projectiles)) return;
+  const pctx = persistentProjectileContext(wp, ctx);
+  for(let i=projectiles.length-1;i>=0;i--) {
+    const p = projectiles[i];
+    if(!p?.persistentProjectile || p.owner !== owner || p.ownerSlot !== slot) continue;
+    if(persistentProjectileTick(p, pctx)) projectiles.splice(i, 1);
+  }
+}
+
+const stepBulletBase = stepBullet;
+stepBullet = function(b, wrapX, wrapY, maxStep, onStep) {
+  if(b?.persistentProjectile) return false;
+  return stepBulletBase(b, wrapX, wrapY, maxStep, onStep);
+};
 
 function weaponMechanicsInlineTest() {
   const b = {x:0,y:0,vx:10,vy:0,l:20,ricochetsLeft:1,r:0};
@@ -229,6 +306,36 @@ const WEAPON_TYPES = {
       sw.cd = ctx.cooldownFrames ?? Math.round(wp.cd*60);
       if(ctx.projectileTone) tone(...ctx.projectileTone);
       else tone(900,.04,'square',.05);
+    }
+  },
+  'persistent-projectile': {
+    fire(wp, s, slot, bul, ctx = {}) {
+      const sw = weaponSlot(s, slot);
+      const a = ctx.angle ?? s.a;
+      const offset = ctx.offset ?? 13;
+      const inherit = ctx.inherit ?? .3;
+      bul.push({
+        x:s.x + Math.sin(a) * offset,
+        y:s.y - Math.cos(a) * offset,
+        vx:Math.sin(a) * wp.spd + (s.vx || 0) * inherit,
+        vy:-Math.cos(a) * wp.spd + (s.vy || 0) * inherit,
+        l:wp.life,
+        r:Math.max(2, Math.min(8, wp.innerR || 4)),
+        innerR:wp.innerR,
+        innerDmgPerTick:wp.innerDmgPerTick,
+        outerR:wp.outerR,
+        outerDmgPerTick:wp.outerDmgPerTick,
+        outerTickInterval:wp.outerTickInterval,
+        persistentProjectile:true,
+        owner:s,
+        ownerSlot:slot,
+        wpId:wp.id,
+      });
+      sw.cd = ctx.cooldownFrames ?? Math.round(wp.cd * 60);
+      tone(760, .06, 'sine', .05);
+    },
+    tick(wp, s, slot, bul, ctx = {}) {
+      tickPersistentProjectilesForActor(s, slot, wp, bul, ctx);
     }
   },
   'beam': {
@@ -537,6 +644,7 @@ function runAiWeaponSlot(s, slot, wp, ctx) {
     const res = wt.tick(wp, s, slot, tgts, ctx.lsb, ctx.walls || [], ctx.space || null, ctx);
     if(res && res.hitIdx >= 0 && ctx.onBeamHit) beamHitResult = !!ctx.onBeamHit(tgts[res.hitIdx], wp, res);
   }
+  if(wp.fireMode === 'persistent-projectile' && wt.tick) wt.tick(wp, s, slot, ctx.bul, ctx);
   if(sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis, ctx);
   const policy = WEAPON_AI_POLICIES[wp.aiPolicy];
   if(!policy) throw new Error(`Weapon ${wp.id} has unknown AI policy ${wp.aiPolicy}`);
@@ -714,6 +822,7 @@ function runPlayerWeaponSlot(s, slot, ctx) {
     const res = wt.tick(wp, s, slot, tgts, ctx.lsb, ctx.walls || [], ctx.space || null, ctx);
     if (res && res.hitIdx >= 0) ctx.onBeamHit(tgts[res.hitIdx], wp, res);
   }
+  if (wp.fireMode === 'persistent-projectile' && wt.tick) wt.tick(wp, s, slot, ctx.bul, ctx);
   if (sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis, ctx);
   const lockReady = !wp.targetLockRange || (sw.input.pressedFrames > TAP_FRAMES && sw.lockedTargetId);
   if (!sw.reloading && sw.input.pressed && lockReady && !sw.cd && !sw.pulsesLeft && !sw.misLeft) {
