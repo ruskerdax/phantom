@@ -454,7 +454,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ## Phase 2 — Charge weapons (parallelizable, after Phase 0)
 
-### P2-01. Ion Cannon
+### P2-01. Ion Cannon ✅
 
 **Goal:** Add ION CANNON. Hold-to-charge energy weapon that fires a persistent projectile with two radii and dynamic-radius growth based on charge time.
 

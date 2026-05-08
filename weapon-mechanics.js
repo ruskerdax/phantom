@@ -246,9 +246,10 @@ function persistentProjectileDistance(p, target, ctx={}) {
   return Math.hypot((target.x ?? 0) - p.x, (target.y ?? 0) - p.y);
 }
 
-function persistentProjectileTargets(ctx={}) {
+function persistentProjectileTargets(ctx={}, p=null) {
   const raw = typeof ctx.radiusTargets === 'function' ? ctx.radiusTargets() : (typeof ctx.tgts === 'function' ? ctx.tgts() : []);
-  return (Array.isArray(raw) ? raw : []).filter(t => t && t.alive !== false && persistentProjectileTargetKinds.has(t.kind));
+  const allowed = Array.isArray(p?.radiusTargetKinds) ? new Set(p.radiusTargetKinds) : persistentProjectileTargetKinds;
+  return (Array.isArray(raw) ? raw : []).filter(t => t && t.alive !== false && allowed.has(t.kind));
 }
 
 function damagePersistentProjectileTarget(target, dmg, p, wp, ctx={}) {
@@ -266,7 +267,7 @@ function persistentProjectileContext(wp, ctx={}) {
     ...ctx,
     movePersistentProjectile:p => movePersistentProjectile(p, ctx),
     terrainHit:p => persistentProjectileTerrainHit(p, ctx),
-    radiusTargets:() => persistentProjectileTargets(ctx),
+    radiusTargets:p => persistentProjectileTargets(ctx, p),
     targetDistance:(p, target) => persistentProjectileDistance(p, target, ctx),
     damageRadiusTarget:(target, dmg, p) => damagePersistentProjectileTarget(target, dmg, p, wp, ctx),
   };
@@ -361,6 +362,45 @@ const WEAPON_TYPES = {
       });
       sw.cd = ctx.cooldownFrames ?? Math.round(wp.cd * 60);
       tone(760, .06, 'sine', .05);
+    },
+    tick(wp, s, slot, bul, ctx = {}) {
+      tickPersistentProjectilesForActor(s, slot, wp, bul, ctx);
+    }
+  },
+  'charged-persistent-projectile': {
+    fire(wp, s, slot, bul, ctx = {}) {
+      const sw = weaponSlot(s, slot);
+      const a = ctx.angle ?? s.a;
+      const offset = ctx.offset ?? 13;
+      const inherit = ctx.inherit ?? .3;
+      const held = Math.max(wp.chargeMin, Math.min(wp.chargeMax, chargeFramesForSlot(s, slot)));
+      const span = Math.max(1, wp.chargeMax - wp.chargeMin);
+      const level = Math.max(0, Math.min(1, (held - wp.chargeMin) / span));
+      const innerR = wp.innerRMin + (wp.innerRMax - wp.innerRMin) * level;
+      const outerR = wp.outerRMin + (wp.outerRMax - wp.outerRMin) * level;
+      bul.push({
+        x:s.x + Math.sin(a) * offset,
+        y:s.y - Math.cos(a) * offset,
+        vx:Math.sin(a) * wp.spd + (s.vx || 0) * inherit,
+        vy:-Math.cos(a) * wp.spd + (s.vy || 0) * inherit,
+        l:wp.life,
+        r:Math.max(2, Math.min(10, innerR * .35)),
+        innerR,
+        innerDmgPerTick:wp.innerDmgPerTick,
+        outerR,
+        outerDmgPerTick:wp.outerDmgPerTick,
+        outerTickInterval:wp.outerTickInterval,
+        outerBeamColor:'#9df',
+        outerBeamWidth:1,
+        chargeLevel:level,
+        radiusTargetKinds:['enemy','defense','building','reactor','softpt','ship','shield','rock','missile'],
+        persistentProjectile:true,
+        owner:s,
+        ownerSlot:slot,
+        wpId:wp.id,
+      });
+      sw.cd = ctx.cooldownFrames ?? (wp.cd ? Math.round(wp.cd * 60) : 0);
+      tone(520 + level * 420, .09, 'sine', .06);
     },
     tick(wp, s, slot, bul, ctx = {}) {
       tickPersistentProjectilesForActor(s, slot, wp, bul, ctx);
@@ -851,6 +891,14 @@ function runPlayerWeaponSlot(s, slot, ctx) {
     if (res && res.hitIdx >= 0) ctx.onBeamHit(tgts[res.hitIdx], wp, res);
   }
   if (wp.fireMode === 'persistent-projectile' && wt.tick) wt.tick(wp, s, slot, ctx.bul, ctx);
+  if (wp.fireMode === 'charged-persistent-projectile' && wt.tick) {
+    wt.tick(wp, s, slot, ctx.bul, ctx);
+    if(sw.input.justReleased) {
+      if(chargeReady(s, slot, wp) && !sw.cd) tryFire(wp, wt, s, slot, ctx.bul, ctx);
+      resetCharge(s, slot);
+    }
+    return;
+  }
   if (sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis, ctx);
   const lockReady = !wp.targetLockRange || (sw.input.pressedFrames > TAP_FRAMES && sw.lockedTargetId);
   if (!sw.reloading && sw.input.pressed && lockReady && !sw.cd && !sw.pulsesLeft && !sw.misLeft) {
