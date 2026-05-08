@@ -336,7 +336,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### F-10. wpId tagging on existing weapons' projectiles/missiles/beams
+### F-10. wpId tagging on existing weapons' projectiles/missiles/beams ✅
 
 **Goal:** Add `wpId` (source weapon id, string) to every existing bullet, missile, and beam-line spawn for forward compatibility with the WebGL effects layer.
 

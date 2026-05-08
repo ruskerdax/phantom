@@ -21,6 +21,7 @@ function spawnMissile(wp, s, mis, opts = {}) {
     dmg:wp.dmg, expDmg:wp.expDmg, expR:wp.expR,
     type:wp.missileType||'standard', col:md.col,
     seek:!!wp.seek, trailTimer:0,
+    wpId:wp.id,
   });
   tone(360,.10,'square',.06);
 }
@@ -222,7 +223,7 @@ const WEAPON_TYPES = {
         bul.push({
           x:s.x+Math.sin(a)*offset, y:s.y-Math.cos(a)*offset,
           vx:Math.sin(a)*wp.spd+(s.vx || 0)*inherit, vy:-Math.cos(a)*wp.spd+(s.vy || 0)*inherit,
-          l:wp.life*wp.spd, dmg:wp.dmg, col:ctx.projectileColor,
+          l:wp.life*wp.spd, dmg:wp.dmg, col:ctx.projectileColor, wpId:wp.id,
         });
       }
       sw.cd = ctx.cooldownFrames ?? Math.round(wp.cd*60);
@@ -256,7 +257,7 @@ const WEAPON_TYPES = {
       const hitPad=typeof beamHitPadding==='function'?beamHitPadding(wp):Math.max(2,(wp.beamWidth??2)*.5);
       const res=castLaserForSpace(ox,oy,s.a,wp.range,tgts,walls,space,hitPad);
       res.x1=ox;res.y1=oy;res.a=s.a;
-      lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ctx.beamColor ?? wp.beamColor ?? '#0cf',w:wp.beamWidth??2});
+      lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ctx.beamColor ?? wp.beamColor ?? '#0cf',w:wp.beamWidth??2,wpId:wp.id});
       if(ctx.beamTone)tone(...ctx.beamTone);else if(wp.beamSound)tone(...wp.beamSound);else tone(1200,.08,'sine',.05);
       if(wp.persist&&res.hitIdx<0)sw.persistBeam={ox,oy,a:s.a,range:wp.range,hitPad,l:wp.persist};
       else sw.persistBeam=null;
