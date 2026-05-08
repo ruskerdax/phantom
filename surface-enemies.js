@@ -234,85 +234,88 @@ function damageSurfaceEnemy(site, e, dmg, x = e.x, y = e.y) {
 }
 
 function fireSurfaceEnemyKinetic(site, e, def, aimAngle) {
-  const wp = surfaceEnemyWeapon(def), fw = def.surf.fire, cnt = fw.count || 1, spread = fw.spread || 0;
-  const shots = weaponHasAmmo(wp) ? Math.min(cnt, currentAmmoForSlot(e, 0)) : cnt;
-  if(shots <= 0 || !consumeEnemyWeaponCosts(e, 0, wp, shots)) return false;
-  for(let k = 0; k < shots; k++) {
-    const a = aimAngle + (k - (shots - 1) / 2) * spread;
-    site.ebu.push({
-      x:e.x + Math.sin(a) * fw.offset, y:e.y - Math.cos(a) * fw.offset,
-      vx:Math.sin(a) * wp.spd, vy:-Math.cos(a) * wp.spd,
-      l:wp.life * wp.spd, dmg:wp.dmg, col:def.col,
-    });
-  }
-  tone(520, .04, 'square', .03);
-  return true;
+  const wp = surfaceEnemyWeapon(def), ctx = surfaceEnemyWeaponContext(site, e, def, 0, aimAngle);
+  e.a = aimAngle;
+  return tryFire(wp, WEAPON_TYPES[wp.fireMode], e, 0, site.ebu, ctx);
 }
 
 function fireSurfaceEnemyMissile(site, e, def, aimAngle) {
-  const wp = surfaceEnemyWeapon(def), fw = def.surf.fire, md = MISSILE_TYPES[wp.missileType] || MISSILE_TYPES['standard'];
-  if(!consumeEnemyWeaponCosts(e, 0, wp, 1)) return false;
-  site.emi.push({
-    x:e.x + Math.sin(aimAngle) * fw.offset, y:e.y - Math.cos(aimAngle) * fw.offset, a:aimAngle,
-    vx:Math.sin(aimAngle) * wp.spd, vy:-Math.cos(aimAngle) * wp.spd,
-    spd:wp.spd, maxSpd:wp.maxSpd, accel:wp.accel,
-    hp:wp.hp, maxHp:wp.hp, l:wp.life,
-    dmg:wp.dmg, expDmg:wp.expDmg, expR:wp.expR,
-    type:wp.missileType || 'standard', col:md.col,
-    seek:!!wp.seek, trailTimer:0,
-  });
-  tone(360, .10, 'square', .06);
-  return true;
+  const wp = surfaceEnemyWeapon(def), ctx = surfaceEnemyWeaponContext(site, e, def, 0, aimAngle);
+  e.a = aimAngle;
+  return tryFire(wp, WEAPON_TYPES[wp.fireMode], e, 0, site.ebu, ctx);
 }
 
 function fireSurfaceEnemyBeam(site, e, def, aimAngle) {
-  const wp = surfaceEnemyWeapon(def), fw = def.surf.fire, s = site.s;
-  if(!consumeEnemyWeaponCosts(e, 0, wp, 1)) return false;
-  const ox = e.x + Math.sin(aimAngle) * fw.offset, oy = e.y - Math.cos(aimAngle) * fw.offset;
-  const src = {x:surfaceNearX(site.d, ox, s.x), y:oy}, hit = {source:src, kind:'beam', weapon:wp};
-  const tgts = [];
+  const wp = surfaceEnemyWeapon(def), ctx = surfaceEnemyWeaponContext(site, e, def, 0, aimAngle);
+  e.a = aimAngle;
+  return tryFire(wp, WEAPON_TYPES[wp.fireMode], e, 0, site.ebu, ctx);
+}
+
+function surfaceEnemyBeamTargets(site) {
+  const s = site.s, tgts = [], hit = {source:{x:s.x, y:s.y}, kind:'beam'};
   if(shipShieldCanTakeHit(s, hit)) tgts.push({x:s.x, y:s.y, r:shipShieldHitRadius(s), kind:'shield'});
   tgts.push({x:s.x, y:s.y, r:shipHitRadius(s), kind:'ship'});
   for(let i = 0; i < site.mis.length; i++) tgts.push({x:site.mis[i].x, y:site.mis[i].y, r:5, kind:'missile', idx:i});
-  const res = castLaserForSpace(ox, oy, aimAngle, wp.range, tgts, surfaceTerrainSegments(site.d), {toroidal:true, worldW:site.d.worldW, worldH:999999});
-  site.lsb.push({x1:ox, y1:oy, x2:res.x2, y2:res.y2, l:8, col:def.col, w:wp.beamWidth});
-  if(res.hitIdx >= 0) {
-    const tg = tgts[res.hitIdx];
-    if(tg.kind === 'shield') {
-      const sh = applyShipShieldDamage(s, wp.dmg, hit);
-      if(sh.passthroughDamage > 0) applyShipDamage(s, sh.passthroughDamage, hit);
-      shipDamageTone({shieldDamage:sh.shieldDamage, hullDamage:sh.passthroughDamage});
-    } else if(tg.kind === 'ship') {
-      shipDamageTone(applyShipDamage(s, wp.dmg, hit));
-    } else if(tg.kind === 'missile') {
-      const m = site.mis[tg.idx];
-      m.hp -= wp.dmg; boomAt(site.pts, res.x2, res.y2, m.col, 3);
-      if(m.hp <= 0) { surfaceExplodeMissile(site, m, false); site.mis.splice(tg.idx, 1); }
-    }
-  }
-  if(s.hp <= 0) siteKillShip();
-  tone(550, .08, 'sine', .04);
-  return true;
+  return tgts;
 }
 
-function fireSurfaceEnemyWeapon(site, e, def, aimAngle) {
-  const wp = surfaceEnemyWeapon(def);
-  if(!enemyCanFireAnyWeapon(e)) {
-    weaponSlot(e,0).cd = 8 + Math.floor(Math.random() * 12);
-    return;
+function surfaceEnemyHandleBeamHit(site, wp, res, tg) {
+  const s = site.s;
+  const src = {x:surfaceNearX(site.d, res.x1, s.x), y:res.y1}, hit = {source:src, kind:'beam', weapon:wp};
+  if(tg.kind === 'shield') {
+    const sh = applyShipShieldDamage(s, wp.dmg, hit);
+    if(sh.passthroughDamage > 0) applyShipDamage(s, sh.passthroughDamage, hit);
+    shipDamageTone({shieldDamage:sh.shieldDamage, hullDamage:sh.passthroughDamage});
+  } else if(tg.kind === 'ship') {
+    shipDamageTone(applyShipDamage(s, wp.dmg, hit));
+  } else if(tg.kind === 'missile') {
+    const m = site.mis[tg.idx];
+    m.hp -= wp.dmg; boomAt(site.pts, res.x2, res.y2, m.col, 3);
+    if(m.hp <= 0) { surfaceExplodeMissile(site, m, false); site.mis.splice(tg.idx, 1); }
   }
-  e.a = aimAngle;
-  const fired = wp.fireMode === 'missile' ? fireSurfaceEnemyMissile(site, e, def, aimAngle)
-    : wp.fireMode === 'beam' ? fireSurfaceEnemyBeam(site, e, def, aimAngle)
-    : fireSurfaceEnemyKinetic(site, e, def, aimAngle);
-  weaponSlot(e,0).cd = fired ? surfaceEnemyCooldown(def) : 8 + Math.floor(Math.random() * 12);
+  if(s.hp <= 0) { siteKillShip(); return true; }
+  return false;
+}
+
+function surfaceEnemyWeaponContext(site, e, def, dist, aimAngle) {
+  const wp = surfaceEnemyWeapon(def), fw = def.surf.fire;
+  const shots = enemyWeaponShotCount(e, 0, wp, fw.count || 1);
+  const angles = enemyFireAngles(e, fw, aimAngle, shots);
+  return {
+    trace:'surface-enemy',
+    angle:aimAngle,
+    angles,
+    count:shots,
+    ammoCost:shots,
+    spread:fw.spread || 0,
+    offset:fw.offset,
+    inherit:0,
+    cooldownFrames:surfaceEnemyCooldown(def),
+    retryCooldown:enemyRetryCooldown,
+    projectileColor:def.col,
+    projectileTone:[520, .04, 'square', .03],
+    beamColor:def.col,
+    beamTone:[550, .08, 'sine', .04],
+    bul:site.ebu,
+    mis:site.emi,
+    lsb:site.lsb,
+    walls:surfaceTerrainSegments(site.d),
+    space:{toroidal:true, worldW:site.d.worldW, worldH:999999},
+    tgts:()=>surfaceEnemyBeamTargets(site),
+    onBeamHit:(tg, hitWp, res)=>surfaceEnemyHandleBeamHit(site, hitWp, res, tg),
+    blocked:()=>e.disengaging && e.disengageKind === 'permanent',
+    canStartFire:()=>shots > 0 && enemyCanFireAnyWeapon(e) && surfaceEnemyCanFire(e, def, dist, aimAngle),
+    aimOnPress:true,
+  };
+}
+
+function fireSurfaceEnemyWeapon(site, e, def, aimAngle, dist = Infinity) {
+  const wp = surfaceEnemyWeapon(def);
+  return runAiWeaponSlot(e, 0, wp, surfaceEnemyWeaponContext(site, e, def, dist, aimAngle));
 }
 
 function maybeFireSurfaceEnemy(site, e, def, dist, aimAngle) {
-  const sw = weaponSlot(e,0);
-  if(--sw.cd > 0) return;
-  if(surfaceEnemyCanFire(e, def, dist, aimAngle)) fireSurfaceEnemyWeapon(site, e, def, aimAngle);
-  else sw.cd = 8 + Math.floor(Math.random() * 12);
+  fireSurfaceEnemyWeapon(site, e, def, aimAngle, dist);
 }
 
 function updSurfaceEnemy(site, e) {

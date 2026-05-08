@@ -41,6 +41,90 @@ function enemyCanStartFire(e, dist, aimAngle, fw, ewp) {
   return Math.abs(angDiff(e.a,aimAngle))<=arc;
 }
 
+function enemyRetryCooldown() {
+  return 8 + Math.floor(Math.random() * 12);
+}
+
+function enemyWeaponShotCount(actor, slot, wp, requested = 1) {
+  const count = Math.max(1, Math.floor(requested || 1));
+  return weaponHasAmmo(wp) ? Math.min(count, currentAmmoForSlot(actor, slot) ?? 0) : count;
+}
+
+function enemyFireAngles(e, fw, aimAngle, shots) {
+  if(fw.mode === 'spin') return Array.from({length:shots}, (_, k) => e.spin + k * Math.PI * 2 / shots);
+  const spread = fw.spread || 0;
+  return Array.from({length:shots}, (_, k) => aimAngle + (k - (shots - 1) / 2) * spread);
+}
+
+function encEnemyBeamTargets(enc, s) {
+  const tgts = [];
+  const hit = {source:{x:s.x, y:s.y}, kind:'beam'};
+  if(shipShieldCanTakeHit(s, hit)) tgts.push({x:s.x, y:s.y, r:shipShieldHitRadius(s), kind:'shield'});
+  tgts.push({x:s.x, y:s.y, r:shipHitRadius(s), kind:'ship'});
+  for(let mi=0; mi<enc.mis.length; mi++) tgts.push({x:enc.mis[mi].x, y:enc.mis[mi].y, r:5, kind:'missile', idx:mi});
+  return tgts;
+}
+
+function encEnemyHandleBeamHit(e, s, enc, ew, eh, wp, res, tor, tg) {
+  const src = tor ? toroidalPointNear(res.x1, res.y1, s.x, s.y, ew, eh) : {x:res.x1, y:res.y1};
+  const beamHit = {source:src, kind:'beam', weapon:wp};
+  if(tg.kind === 'shield') {
+    const hit = applyShipShieldDamage(s, wp.dmg, beamHit);
+    const ex = src.x + Math.sin(res.a) * wp.range, ey = src.y - Math.cos(res.a) * wp.range;
+    if(hit.passthroughDamage > 0 && dseg(s.x, s.y, src.x, src.y, ex, ey) < shipHitRadius(s)) {
+      hit.hullDamage = hit.passthroughDamage;
+      s.hp = Math.max(0, s.hp - hit.hullDamage);
+    } else hit.hullDamage = 0;
+    shipDamageTone(hit);
+    if(s.hp <= 0) { encKillShip(); return true; }
+  } else if(tg.kind === 'ship') {
+    const hit = applyShipDamage(s, wp.dmg, beamHit);
+    shipDamageTone(hit);
+    if(s.hp <= 0) { encKillShip(); return true; }
+  } else if(tg.kind === 'missile') {
+    const m = enc.mis[tg.idx];
+    m.hp -= wp.dmg;
+    boomAt(enc.pts, res.x2, res.y2, m.col, 3);
+    if(m.hp <= 0) {
+      encExplodeMissile(enc, m, false);
+      enc.mis.splice(tg.idx, 1);
+      if(s.hp <= 0) { encKillShip(); return true; }
+    }
+  }
+  return false;
+}
+
+function encEnemyWeaponContext(e, s, enc, ew, eh, ecDef, fw, wp, dist, aimAngle, tor) {
+  const shots = enemyWeaponShotCount(e, 0, wp, fw.count || 1);
+  const angles = enemyFireAngles(e, fw, aimAngle, shots);
+  return {
+    trace:'encounter',
+    angle:aimAngle,
+    angles,
+    count:shots,
+    ammoCost:shots,
+    spread:fw.spread || 0,
+    offset:fw.offset,
+    inherit:0,
+    cooldownFrames:weaponCooldownFrames(wp),
+    retryCooldown:enemyRetryCooldown,
+    projectileColor:ecDef.col,
+    projectileTone:[550 + enemyTypeIndex(e.t) * 80, .04, 'square', .03],
+    beamColor:ecDef.enc.col,
+    beamTone:[550 + enemyTypeIndex(e.t) * 80, .08, 'sine', .04],
+    bul:enc.ebu,
+    mis:enc.emi,
+    lsb:enc.lsb,
+    walls:[],
+    space:tor ? {toroidal:true, worldW:ew, worldH:eh} : null,
+    tgts:()=>encEnemyBeamTargets(enc, s),
+    onBeamHit:(tg, hitWp, res)=>encEnemyHandleBeamHit(e, s, enc, ew, eh, hitWp, res, tor, tg),
+    blocked:()=>e.disengaging && e.disengageKind === 'permanent',
+    canStartFire:()=>shots > 0 && enemyCanFireAnyWeapon(e) && enemyCanStartFire(e, dist, aimAngle, fw, wp),
+    aimOnPress:wp.fireMode === 'beam',
+  };
+}
+
 function enemyLaunchDrones(e, enc, ec, ew, eh) {
   const launch=ec.launch;
   if(!launch)return;
@@ -88,84 +172,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
 
   const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1;
   const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn],ta=enemyAimAngle(e,s,ew,eh,fw,ewp);
-  const sw=weaponSlot(e,0);
-  if(ewp.fireMode==='beam'&&sw.pulsesLeft>0&&--sw.pulseTimer<=0){
-    const ox=e.x+Math.sin(e.a)*fw.offset,oy=e.y-Math.cos(e.a)*fw.offset;
-    const src=tor?toroidalPointNear(ox,oy,s.x,s.y,ew,eh):{x:ox,y:oy};
-    const beamHit={source:src,kind:'beam',weapon:ewp};
-    const tgts=[];
-    if(shipShieldCanTakeHit(s,beamHit))tgts.push({x:s.x,y:s.y,r:shipShieldHitRadius(s),kind:'shield'});
-    tgts.push({x:s.x,y:s.y,r:shipHitRadius(s),kind:'ship'});
-    for(let mi=0;mi<enc.mis.length;mi++)tgts.push({x:enc.mis[mi].x,y:enc.mis[mi].y,r:5,kind:'missile',idx:mi});
-    const res=castLaserForSpace(ox,oy,e.a,ewp.range,tgts,[],tor?{toroidal:true,worldW:ew,worldH:eh}:null);
-    enc.lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ec.col,w:ewp.beamWidth});
-    tone(550+enemyTypeIndex(e.t)*80,.08,'sine',.04);
-    if(res.hitIdx>=0){
-      const tg=tgts[res.hitIdx];
-      if(tg.kind==='shield'){
-        const hit=applyShipShieldDamage(s,ewp.dmg,beamHit);
-        const ex=src.x+Math.sin(e.a)*ewp.range,ey=src.y-Math.cos(e.a)*ewp.range;
-        if(hit.passthroughDamage>0&&dseg(s.x,s.y,src.x,src.y,ex,ey)<shipHitRadius(s)){
-          hit.hullDamage=hit.passthroughDamage;
-          s.hp=Math.max(0,s.hp-hit.hullDamage);
-        }else hit.hullDamage=0;
-        shipDamageTone(hit);
-        if(s.hp<=0){encKillShip();return true;}
-      } else if(tg.kind==='ship'){
-        const hit=applyShipDamage(s,ewp.dmg,beamHit);
-        shipDamageTone(hit);
-        if(s.hp<=0){encKillShip();return true;}
-      } else if(tg.kind==='missile'){
-        const m=enc.mis[tg.idx];m.hp-=ewp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);
-        if(m.hp<=0){encExplodeMissile(enc,m,false);enc.mis.splice(tg.idx,1);if(s.hp<=0){encKillShip();return true;}}
-      }
-    }
-    sw.pulsesLeft--;
-    if(sw.pulsesLeft>0)sw.pulseTimer=ewp.pulseCd;else sw.cd=weaponCooldownFrames(ewp);
-  } else if(sw.pulsesLeft===0&&--sw.cd<=0){
-    if(e.disengaging&&e.disengageKind==='permanent'){
-      sw.cd=8+Math.floor(Math.random()*12);
-    } else
-    if(!enemyCanStartFire(e,dist,ta,fw,ewp)){
-      sw.cd=8+Math.floor(Math.random()*12);
-    } else if(ewp.fireMode==='beam'){
-      if(!consumeEnemyWeaponCosts(e,0,ewp,1)){sw.cd=8+Math.floor(Math.random()*12);return false;}
-      e.a=ta;
-      sw.pulsesLeft=ewp.pulses;
-      sw.pulseTimer=1;
-    }
-    else if(ewp.fireMode==='missile'){
-      sw.cd=weaponCooldownFrames(ewp);
-      const cnt=fw.count||1;
-      const shots=weaponHasAmmo(ewp)?Math.min(cnt,currentAmmoForSlot(e,0)):cnt;
-      if(shots<=0){sw.cd=8+Math.floor(Math.random()*12);return false;}
-      if(!consumeEnemyWeaponCosts(e,0,ewp,shots)){sw.cd=8+Math.floor(Math.random()*12);return false;}
-      const bas=Array.from({length:shots},(_,k)=>ta+(k-(shots-1)/2)*(fw.spread||0));
-      const md=MISSILE_TYPES[ewp.missileType]||MISSILE_TYPES['standard'];
-      for(const ba of bas){
-        enc.emi.push({
-          x:e.x+Math.sin(ba)*fw.offset, y:e.y-Math.cos(ba)*fw.offset, a:ba,
-          vx:Math.sin(ba)*ewp.spd, vy:-Math.cos(ba)*ewp.spd,
-          spd:ewp.spd, maxSpd:ewp.maxSpd, accel:ewp.accel,
-          hp:ewp.hp, maxHp:ewp.hp, l:ewp.life,
-          dmg:ewp.dmg, expDmg:ewp.expDmg, expR:ewp.expR,
-          type:ewp.missileType||'standard', col:md.col,
-          seek:!!ewp.seek, trailTimer:0,
-        });
-      }
-      tone(360,.10,'square',.06);
-    }
-    else{
-      sw.cd=weaponCooldownFrames(ewp);
-      const cnt=fw.count||1,spread=fw.spread||0;
-      const shots=weaponHasAmmo(ewp)?Math.min(cnt,currentAmmoForSlot(e,0)):cnt;
-      if(shots<=0){sw.cd=8+Math.floor(Math.random()*12);return false;}
-      if(!consumeEnemyWeaponCosts(e,0,ewp,shots)){sw.cd=8+Math.floor(Math.random()*12);return false;}
-      const bas=fw.mode==='spin'?Array.from({length:shots},(_,k)=>e.spin+k*Math.PI*2/shots):Array.from({length:shots},(_,k)=>ta+(k-(shots-1)/2)*spread);
-      for(const ba of bas)enc.ebu.push({x:e.x+Math.sin(ba)*fw.offset,y:e.y-Math.cos(ba)*fw.offset,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,dmg:ewp.dmg,col:ecDef.col});
-      tone(550+enemyTypeIndex(e.t)*80,.04,'square',.03);
-    }
-  }
+  if(runAiWeaponSlot(e,0,ewp,encEnemyWeaponContext(e,s,enc,ew,eh,ecDef,fw,ewp,dist,ta,tor))) return s.hp<=0;
   if(dist<ec.r+9){
     e.vx-=(dx/dist)*2;e.vy-=(dy/dist)*2;
   }

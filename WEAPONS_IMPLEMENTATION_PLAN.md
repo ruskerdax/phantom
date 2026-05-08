@@ -313,7 +313,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### F-09. Weapon AI policy registry
+### F-09. Weapon AI policy registry ✅
 
 **Goal:** Add `weapon-ai.js` (NEW) with a `WEAPON_AI_POLICIES` keyed by string id. Each policy decides press/release each frame for a non-player ship using a given weapon. Existing fire modes get default policies that match current behavior.
 

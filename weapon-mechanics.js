@@ -5,13 +5,16 @@ const TAP_FRAMES = 8;
 // Build a missile object from a weapon config + ship pose. Fires from the ship's nose,
 // inheriting a fraction of ship velocity. The owner ship's heading sets the missile's
 // initial heading; speed starts at wp.spd and ramps to wp.maxSpd via wp.accel each frame.
-function spawnMissile(wp, s, mis) {
+function spawnMissile(wp, s, mis, opts = {}) {
   const md = MISSILE_TYPES[wp.missileType] || MISSILE_TYPES['standard'];
-  const ox = s.x + Math.sin(s.a)*13, oy = s.y - Math.cos(s.a)*13;
+  const a = opts.angle ?? s.a;
+  const offset = opts.offset ?? 13;
+  const inherit = opts.inherit ?? .3;
+  const ox = s.x + Math.sin(a)*offset, oy = s.y - Math.cos(a)*offset;
   mis.push({
-    x:ox, y:oy, a:s.a,
-    vx: Math.sin(s.a)*wp.spd + s.vx*.3,
-    vy:-Math.cos(s.a)*wp.spd + s.vy*.3,
+    x:ox, y:oy, a,
+    vx: Math.sin(a)*wp.spd + (s.vx || 0)*inherit,
+    vy:-Math.cos(a)*wp.spd + (s.vy || 0)*inherit,
     spd:wp.spd, maxSpd:wp.maxSpd, accel:wp.accel,
     hp:wp.hp, maxHp:wp.hp,
     l:wp.life,
@@ -207,10 +210,24 @@ function weaponMechanicsInlineTest() {
 // Weapon firing mechanic behavior - keyed by wp.fireMode.
 const WEAPON_TYPES = {
   'projectile': {
-    fire(wp, s, slot, bul) {
-      bul.push({x:s.x+Math.sin(s.a)*13,y:s.y-Math.cos(s.a)*13,vx:Math.sin(s.a)*wp.spd+s.vx*.3,vy:-Math.cos(s.a)*wp.spd+s.vy*.3,l:wp.life*wp.spd,dmg:wp.dmg});
-      weaponSlot(s, slot).cd = Math.round(wp.cd*60);
-      tone(900,.04,'square',.05);
+    fire(wp, s, slot, bul, ctx = {}) {
+      const sw = weaponSlot(s, slot);
+      const count = Math.max(1, Math.floor(ctx.count ?? 1));
+      const spread = ctx.spread ?? 0;
+      const center = ctx.angle ?? s.a;
+      const angles = Array.isArray(ctx.angles) ? ctx.angles.slice(0, count) : Array.from({length:count}, (_, k) => center + (k - (count - 1) / 2) * spread);
+      const offset = ctx.offset ?? 13;
+      const inherit = ctx.inherit ?? .3;
+      for(const a of angles) {
+        bul.push({
+          x:s.x+Math.sin(a)*offset, y:s.y-Math.cos(a)*offset,
+          vx:Math.sin(a)*wp.spd+(s.vx || 0)*inherit, vy:-Math.cos(a)*wp.spd+(s.vy || 0)*inherit,
+          l:wp.life*wp.spd, dmg:wp.dmg, col:ctx.projectileColor,
+        });
+      }
+      sw.cd = ctx.cooldownFrames ?? Math.round(wp.cd*60);
+      if(ctx.projectileTone) tone(...ctx.projectileTone);
+      else tone(900,.04,'square',.05);
     }
   },
   'beam': {
@@ -223,42 +240,56 @@ const WEAPON_TYPES = {
     // Caller is responsible for building tgts (context-specific) and handling the hit.
     // If wp.persist is set and a pulse misses, the same ray is re-cast for that many
     // additional frames so targets moving through the beam path still register hits.
-    tick(wp, s, slot, tgts, lsb, walls=[], space=null) {
+    tick(wp, s, slot, tgts, lsb, walls=[], space=null, ctx = {}) {
       const sw = weaponSlot(s, slot);
       if(--sw.pulseTimer>0){
         if(wp.chargeTone&&sw.pulseTimer===wp.chargeDelay-1)toneRise(wp.chargeTone[0],wp.chargeTone[1],wp.chargeDelay/60,wp.chargeTone[2],wp.chargeTone[3]);
         if(sw.persistBeam&&sw.persistBeam.l-->0){
           const{ox,oy,a,range,hitPad}=sw.persistBeam;
           const res=castLaserForSpace(ox,oy,a,range,tgts,walls,space,hitPad);
-          if(res.hitIdx>=0){sw.persistBeam.l=0;return res;}
+          if(res.hitIdx>=0){sw.persistBeam.l=0;res.x1=ox;res.y1=oy;res.a=a;return res;}
         }
         return null;
       }
-      const ox=s.x+Math.sin(s.a)*13,oy=s.y-Math.cos(s.a)*13;
+      const offset = ctx.offset ?? 13;
+      const ox=s.x+Math.sin(s.a)*offset,oy=s.y-Math.cos(s.a)*offset;
       const hitPad=typeof beamHitPadding==='function'?beamHitPadding(wp):Math.max(2,(wp.beamWidth??2)*.5);
       const res=castLaserForSpace(ox,oy,s.a,wp.range,tgts,walls,space,hitPad);
-      lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:wp.beamColor??'#0cf',w:wp.beamWidth??2});
-      if(wp.beamSound)tone(...wp.beamSound);else tone(1200,.08,'sine',.05);
+      res.x1=ox;res.y1=oy;res.a=s.a;
+      lsb.push({x1:ox,y1:oy,x2:res.x2,y2:res.y2,l:8,col:ctx.beamColor ?? wp.beamColor ?? '#0cf',w:wp.beamWidth??2});
+      if(ctx.beamTone)tone(...ctx.beamTone);else if(wp.beamSound)tone(...wp.beamSound);else tone(1200,.08,'sine',.05);
       if(wp.persist&&res.hitIdx<0)sw.persistBeam={ox,oy,a:s.a,range:wp.range,hitPad,l:wp.persist};
       else sw.persistBeam=null;
       sw.pulsesLeft--;
-      if(sw.pulsesLeft>0)sw.pulseTimer=wp.pulseCd;else sw.cd=Math.round(wp.cd*60);
+      if(sw.pulsesLeft>0)sw.pulseTimer=wp.pulseCd;else sw.cd=ctx.cooldownFrames ?? Math.round(wp.cd*60);
       return res;
     }
   },
   'missile': {
-    fire(wp, s, slot) {
+    fire(wp, s, slot, _bul, ctx = {}) {
       // Same pattern as beam gun: fire() only arms the volley; tick() spawns each missile.
       const sw = weaponSlot(s, slot);
-      sw.misLeft = wp.salvo;
+      const rawCount = ctx.count ?? wp.salvo ?? 1;
+      const count = Number.isFinite(rawCount) ? Math.max(1, Math.floor(rawCount)) : 1;
+      const spread = ctx.spread ?? 0;
+      const center = ctx.angle ?? s.a;
+      sw.salvoAngles = Array.isArray(ctx.angles) ? ctx.angles.slice(0, count) : Array.from({length:count}, (_, k) => center + (k - (count - 1) / 2) * spread);
+      sw.salvoOffset = ctx.offset ?? 13;
+      sw.salvoInherit = ctx.inherit ?? .3;
       sw.misTimer = 1;
+      sw.misLeft = sw.salvoAngles.length;
     },
-    tick(wp, s, slot, mis) {
+    tick(wp, s, slot, mis, ctx = {}) {
       const sw = weaponSlot(s, slot);
       if(--sw.misTimer>0)return;
-      spawnMissile(wp,s,mis);
+      const idx = (sw.salvoAngles?.length || sw.misLeft) - sw.misLeft;
+      const angle = sw.salvoAngles?.[idx] ?? ctx.angle ?? s.a;
+      spawnMissile(wp,s,mis,{angle, offset:sw.salvoOffset ?? ctx.offset ?? 13, inherit:sw.salvoInherit ?? ctx.inherit ?? .3});
       sw.misLeft--;
-      if(sw.misLeft>0)sw.misTimer=wp.salvoCd;else sw.cd=Math.round(wp.cd*60);
+      if(sw.misLeft>0)sw.misTimer=wp.salvoCd;else {
+        sw.cd=ctx.cooldownFrames ?? Math.round(wp.cd*60);
+        sw.salvoAngles=null;
+      }
     }
   }
 };
@@ -456,7 +487,8 @@ function tickReload(s, slot) {
 
 // Fire a weapon, deducting energyCost/ammo if defined and the actor tracks them.
 // Returns false if the actor lacks energy/ammo, true otherwise.
-function tryFire(wp, wt, s, slot, bul) {
+function tryFire(wp, wt, s, slot, bul, ctx = {}) {
+  const ammoCost = Math.max(1, Math.floor(ctx.ammoCost ?? 1));
   if (weaponHasMagazine(wp)) {
     const mag = currentMagForSlot(s, slot);
     if (mag === null || mag <= 0) {
@@ -466,7 +498,7 @@ function tryFire(wp, wt, s, slot, bul) {
   } else
   if (weaponHasAmmo(wp)) {
     const ammo = currentAmmoForSlot(s, slot);
-    if (ammo === null || ammo <= 0) return false;
+    if (ammo === null || ammo < ammoCost) return false;
   }
   if (wp.energyCost !== undefined && s.energy !== undefined) {
     if (typeof syncShipEnergyProfile === 'function') syncShipEnergyProfile(s);
@@ -474,9 +506,46 @@ function tryFire(wp, wt, s, slot, bul) {
     s.energy = Math.max(0, s.energy - wp.energyCost);
   }
   if (weaponHasMagazine(wp)) consumeMag(s, slot);
-  else if (weaponHasAmmo(wp)) consumeAmmo(s, slot, 1);
-  wt.fire(wp, s, slot, bul);
+  else if (weaponHasAmmo(wp)) consumeAmmo(s, slot, ammoCost);
+  wt.fire(wp, s, slot, bul, ctx);
   return true;
+}
+
+function updateWeaponInputState(s, slot, pressed) {
+  const sw = weaponSlot(s, slot);
+  if(pressed) {
+    sw.input.pressedFrames = sw.input.pressed ? sw.input.pressedFrames + 1 : 1;
+    sw.input.justReleased = false;
+  } else {
+    sw.input.justReleased = !!sw.input.pressed;
+    sw.input.releasedAfterFrames = sw.input.pressedFrames;
+    sw.input.pressedFrames = 0;
+  }
+  sw.input.pressed = !!pressed;
+  return sw.input;
+}
+
+function runAiWeaponSlot(s, slot, wp, ctx) {
+  const wt = WEAPON_TYPES[wp.fireMode];
+  if(!wt) throw new Error(`Weapon ${wp.id} has unknown fire mode ${wp.fireMode}`);
+  const sw = weaponSlot(s, slot);
+  if(sw.cd > 0) sw.cd--;
+  let beamHitResult = false;
+  if(sw.pulsesLeft > 0 && wt.tick) {
+    const tgts = ctx.tgts ? ctx.tgts() : [];
+    const res = wt.tick(wp, s, slot, tgts, ctx.lsb, ctx.walls || [], ctx.space || null, ctx);
+    if(res && res.hitIdx >= 0 && ctx.onBeamHit) beamHitResult = !!ctx.onBeamHit(tgts[res.hitIdx], wp, res);
+  }
+  if(sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis, ctx);
+  const policy = WEAPON_AI_POLICIES[wp.aiPolicy];
+  if(!policy) throw new Error(`Weapon ${wp.id} has unknown AI policy ${wp.aiPolicy}`);
+  policy.update(s, slot, wp, ctx);
+  if(sw.input.pressed && !sw.cd && !sw.pulsesLeft && !sw.misLeft) {
+    const fired = tryFire(wp, wt, s, slot, ctx.bul, ctx);
+    if(!fired && ctx.retryCooldown) sw.cd = ctx.retryCooldown();
+    return beamHitResult;
+  }
+  return beamHitResult;
 }
 
 function resetCharge(s, slot) {
@@ -641,12 +710,12 @@ function runPlayerWeaponSlot(s, slot, ctx) {
   if(weaponHasMagazine(wp) && sw.input.pressedFrames > 6 && sw.mag < wp.magMax && !sw.reloading) beginReload(s, slot);
   if (sw.pulsesLeft > 0 && wt.tick) {
     const tgts = ctx.tgts();
-    const res = wt.tick(wp, s, slot, tgts, ctx.lsb, ctx.walls || [], ctx.space || null);
+    const res = wt.tick(wp, s, slot, tgts, ctx.lsb, ctx.walls || [], ctx.space || null, ctx);
     if (res && res.hitIdx >= 0) ctx.onBeamHit(tgts[res.hitIdx], wp, res);
   }
-  if (sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis);
+  if (sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis, ctx);
   const lockReady = !wp.targetLockRange || (sw.input.pressedFrames > TAP_FRAMES && sw.lockedTargetId);
   if (!sw.reloading && sw.input.pressed && lockReady && !sw.cd && !sw.pulsesLeft && !sw.misLeft) {
-    if(tryFire(wp, wt, s, slot, ctx.bul) && wp.targetLockRange) sw.lastLockActivityFrame = G.fr;
+    if(tryFire(wp, wt, s, slot, ctx.bul, ctx) && wp.targetLockRange) sw.lastLockActivityFrame = G.fr;
   }
 }
