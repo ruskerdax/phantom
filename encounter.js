@@ -193,7 +193,10 @@ function updEncMissiles(enc, mis, isEnemy, ew, eh){
   for(let i=mis.length-1;i>=0;i--){
     const m=mis[i];
     if(m.spd<m.maxSpd) m.spd=Math.min(m.maxSpd, m.spd+m.accel);
-    // Future: heat-seeking turn applied to m.a here when m.seek is true.
+    if(m.seek) heatSeekTurn(m, {
+      seekTargets:()=>encLockTargets(enc),
+      seekDelta:(_m,t)=>encDelta(enc,t.x,t.y,_m.x,_m.y)
+    }, {kinds:m.seekTargetKinds||['enemy']});
     m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
     m.x=wrap(m.x+m.vx,ew);m.y=wrap(m.y+m.vy,eh);
     m.l--;

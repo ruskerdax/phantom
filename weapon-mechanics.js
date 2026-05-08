@@ -20,7 +20,7 @@ function spawnMissile(wp, s, mis, opts = {}) {
     l:wp.life,
     dmg:wp.dmg, expDmg:wp.expDmg, expR:wp.expR,
     type:wp.missileType||'standard', col:md.col,
-    seek:!!wp.seek, trailTimer:0,
+    seek:!!wp.seek, seekTurnRate:wp.seekTurnRate, seekTargetKinds:wp.seekTargetKinds, trailTimer:0,
     wpId:wp.id,
   });
   tone(360,.10,'square',.06);

@@ -4,6 +4,7 @@
 // of these by string id via missileType. Future heat-seeker / cluster variants add entries here.
 const MISSILE_TYPES = {
   'standard': { col:'#ff8800', fin:'#888', length:8, width:3 },
+  'heat-seeker': { col:'#ff3322', fin:'#aa3300', length:9, width:3.5 },
 };
 
 function mkWeaponSlot(overrides = {}) {
@@ -56,6 +57,7 @@ const WEAPONS = [
   {id:'tungsten slugthrower', name:'TUNGSTEN SLUGTHROWER', wpnType:'kinetic', fireMode:'projectile', dmg:25, cd:1.0, spd:12, life:100, ammoMax:100, ricochetsMax:3, aiPolicy:'tap', buyable:true, licensePrice:2400, buildPrice:340, drawProjectile:(b)=>{const sp=Math.hypot(b.vx||0,b.vy||0)||1,tx=-(b.vx||0)/sp*13,ty=-(b.vy||0)/sp*13;cx.save();cx.strokeStyle='#49ffff';cx.globalAlpha=.45;cx.lineWidth=2;cx.beginPath();cx.moveTo(b.x+tx,b.y+ty);cx.lineTo(b.x,b.y);cx.stroke();cx.globalAlpha=1;cx.fillStyle='#dfffff';cx.shadowColor='#49ffff';cx.shadowBlur=sb(10);cx.beginPath();cx.arc(b.x,b.y,2.4,0,Math.PI*2);cx.fill();cx.restore();}},
   {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'energy', fireMode:'beam',    dmg:80, cd:4.0, range:400, pulses:1, pulseCd:20, persist:4, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#8f0', beamSound:[120,.35,'sawtooth',.09], chargeTone:[1200,1800,'sine',.05], aiPolicy:'beam-pulse', buyable:true},
   {id:'rocket pod', name:'ROCKET POD', wpnType:'missile', fireMode:'missile', missileType:'standard', dmg:60, expDmg:80, expR:55, cd:3.0, spd:1.8, maxSpd:9, accel:0.18, life:140, hp:20, salvo:1, salvoCd:6, ammoMax:12, aiPolicy:'missile-salvo', buyable:true},
+  {id:'heat seeker', name:'HEAT SEEKER', wpnType:'missile', fireMode:'missile', missileType:'heat-seeker', dmg:50, expDmg:60, expR:45, cd:3.0, spd:2, maxSpd:8, accel:0.18, life:160, hp:20, salvo:1, salvoCd:6, ammoMax:8, seek:true, seekTurnRate:0.06, seekTargetKinds:['enemy'], aiPolicy:'missile-salvo', buyable:true, licensePrice:2800, buildPrice:380},
 ];
 
 const WEAPON_MAP = Object.fromEntries(WEAPONS.map(w => [w.id, w]));

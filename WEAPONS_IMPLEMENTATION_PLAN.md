@@ -434,7 +434,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### P1-04. Heat Seeker
+### P1-04. Heat Seeker ✅
 
 **Goal:** Add HEAT SEEKER missile. Targets the closest enemy automatically (no manual target lock). Buildings/turrets/asteroids ignored.
 

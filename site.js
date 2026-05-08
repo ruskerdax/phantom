@@ -184,6 +184,10 @@ function updSiteMissiles(site, mis, isEnemy){
   for(let i=mis.length-1;i>=0;i--){
     const m=mis[i];
     if(m.spd<m.maxSpd) m.spd=Math.min(m.maxSpd, m.spd+m.accel);
+    if(m.seek) heatSeekTurn(m, {
+      seekTargets:()=>siteLockTargets(site),
+      seekDelta:(_m,t)=>({dx:t.x-_m.x,dy:t.y-_m.y})
+    }, {kinds:m.seekTargetKinds||['enemy']});
     m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
     m.x+=m.vx;m.y+=m.vy;
     m.l--;
@@ -619,6 +623,10 @@ function updSurfaceMissiles(site,mis,isEnemy){
   for(let i=mis.length-1;i>=0;i--){
     const m=mis[i];
     if(m.spd<m.maxSpd)m.spd=Math.min(m.maxSpd,m.spd+m.accel);
+    if(m.seek) heatSeekTurn(m, {
+      seekTargets:()=>siteLockTargets(site),
+      seekDelta:(_m,t)=>surfaceDelta(d,t.x,t.y,_m.x,_m.y)
+    }, {kinds:m.seekTargetKinds||['enemy']});
     m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
     m.x=wrap(m.x+m.vx,d.worldW);m.y+=m.vy;m.l--;
     if(--m.trailTimer<=0){m.trailTimer=2;site.pts.push({x:m.x-Math.sin(m.a)*5,y:m.y+Math.cos(m.a)*5,vx:-Math.sin(m.a)*.4,vy:Math.cos(m.a)*.4,l:12,ml:18,c:'#fa0'});}
