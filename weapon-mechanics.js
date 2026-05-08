@@ -386,6 +386,30 @@ const WEAPON_TYPES = {
       else tone(900,.04,'square',.05);
     }
   },
+  'magazine-burst': {
+    fire(wp, s, slot, bul, ctx = {}) {
+      const sw = weaponSlot(s, slot);
+      const count = Math.max(1, Math.floor(wp.burstCount ?? 1));
+      const spread = wp.burstSpread ?? 0;
+      const center = ctx.angle ?? s.a;
+      const offset = ctx.offset ?? 13;
+      const inherit = ctx.inherit ?? .3;
+      for(let i=0;i<count;i++) {
+        const a = center + (Math.random() - .5) * spread;
+        bul.push({
+          x:s.x + Math.sin(a) * offset,
+          y:s.y - Math.cos(a) * offset,
+          vx:Math.sin(a) * wp.spd + (s.vx || 0) * inherit,
+          vy:-Math.cos(a) * wp.spd + (s.vy || 0) * inherit,
+          l:wp.life * wp.spd,
+          dmg:wp.dmg,
+          wpId:wp.id,
+        });
+      }
+      sw.cd = ctx.cooldownFrames ?? Math.round(wp.cd * 60);
+      tone(720,.05,'square',.06);
+    }
+  },
   'persistent-projectile': {
     fire(wp, s, slot, bul, ctx = {}) {
       const sw = weaponSlot(s, slot);
@@ -633,10 +657,14 @@ function magForWeapon(wp, savedMag=undefined) {
   return Math.max(0, Math.min(wp.magMax, Math.floor(savedMag)));
 }
 
-function refillAmmoForLoadout(s) {
+function refillAmmoForLoadout(s, opts = {}) {
   if(!s) return;
   const count = Math.max(2, s.weapons?.length ?? 0, G.loadout?.weapons?.length ?? 0);
-  for(let i=0;i<count;i++) weaponSlot(s, i).ammo = ammoForWeapon(wpSlot(i));
+  for(let i=0;i<count;i++){
+    const wp = wpSlot(i);
+    if(opts.skipMagazines && weaponHasMagazine(wp)) continue;
+    weaponSlot(s, i).ammo = ammoForWeapon(wp);
+  }
 }
 
 function fillMagFromReserve(s, slot, wp) {
@@ -978,7 +1006,7 @@ function runPlayerWeaponSlot(s, slot, ctx) {
   }
   tickCharge(s, slot, wp);
   tickReload(s, slot);
-  if(weaponHasMagazine(wp) && sw.input.pressedFrames > 6 && sw.mag < wp.magMax && !sw.reloading) beginReload(s, slot);
+  if(weaponHasMagazine(wp) && wp.fireMode !== 'magazine-burst' && sw.input.pressedFrames > 6 && sw.mag < wp.magMax && !sw.reloading) beginReload(s, slot);
   if (sw.pulsesLeft > 0 && wt.tick) {
     const tgts = ctx.tgts();
     const res = wt.tick(wp, s, slot, tgts, ctx.lsb, ctx.walls || [], ctx.space || null, ctx);
@@ -997,6 +1025,15 @@ function runPlayerWeaponSlot(s, slot, ctx) {
     if(sw.input.justReleased) {
       if(chargeReady(s, slot, wp) && !sw.cd) tryFire(wp, wt, s, slot, ctx.bul, ctx);
       resetCharge(s, slot);
+    }
+    return;
+  }
+  if (wp.fireMode === 'magazine-burst') {
+    sw.mag = magForWeapon(wp, sw.mag);
+    if(sw.input.pressedFrames > TAP_FRAMES && sw.mag < wp.magMax && !sw.reloading) beginReload(s, slot);
+    if(sw.input.justReleased && sw.input.releasedAfterFrames <= TAP_FRAMES && !sw.reloading) {
+      if(sw.mag <= 0) tone(140,.035,'square',.04);
+      else if(!sw.cd) tryFire(wp, wt, s, slot, ctx.bul, ctx);
     }
     return;
   }

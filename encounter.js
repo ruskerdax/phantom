@@ -119,7 +119,7 @@ function encWin(){
   rechargeShieldFromEnergy(enc.s,true);
   if(enc.isHBase){G.hbState=null;completeObjective(objectiveId(OBJECTIVE_TYPE_IDS.HBASE));}
   if(enc.fleetIdx!=null)ow.fleets[enc.fleetIdx].alive=false;
-  refillAmmoForLoadout(enc.s);
+  refillAmmoForLoadout(enc.s,{skipMagazines:true});
   refillMagsForLoadout(enc.s);
   copyShipEnergyState(enc.s,ow.s);
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;

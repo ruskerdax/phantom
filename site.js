@@ -402,7 +402,7 @@ function returnPlanetToOverworld(){
   if(s){
     saveActiveSiteState();
     rechargeShieldFromEnergy(s,true);
-    refillAmmoForLoadout(s);
+    refillAmmoForLoadout(s,{skipMagazines:true});
     refillMagsForLoadout(s);
   }
   const pi=G.lv,pp=owPos(PP[pi]);

@@ -511,7 +511,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ## Phase 3 — Magazine + spool weapons (parallelizable, after Phase 0)
 
-### P3-01. Flak Cannon
+### P3-01. Flak Cannon ✅
 
 **Goal:** Add FLAK CANNON. Magazine-based burst weapon. Tap = burst. Hold while mag<5 = reload.
 
