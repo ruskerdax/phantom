@@ -355,7 +355,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### F-11. assertWeaponRegistry + magazine/ammo refill on exit hooks
+### F-11. assertWeaponRegistry + magazine/ammo refill on exit hooks ✅
 
 **Goal:** Wire the auto-refill on site/encounter exit (D5). Add a registry assert that catches misconfigured weapons.
 

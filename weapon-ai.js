@@ -40,12 +40,4 @@ const WEAPON_AI_POLICIES = {
   'missile-salvo': weaponAiTap('missile-salvo'),
 };
 
-function assertWeaponAiPolicies() {
-  for(const wp of WEAPONS) {
-    if(wp.aiPolicy === undefined) throw new Error(`Weapon ${wp.id} is missing aiPolicy`);
-    if(wp.aiPolicy !== null && !WEAPON_AI_POLICIES[wp.aiPolicy]) throw new Error(`Weapon ${wp.id} has unknown aiPolicy ${wp.aiPolicy}`);
-    if(!WEAPON_TYPES[wp.fireMode]) throw new Error(`Weapon ${wp.id} has unknown fireMode ${wp.fireMode}`);
-  }
-}
-
-assertWeaponAiPolicies();
+assertWeaponRegistry();

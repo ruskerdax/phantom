@@ -56,3 +56,45 @@ const WEAPONS = [
 ];
 
 const WEAPON_MAP = Object.fromEntries(WEAPONS.map(w => [w.id, w]));
+
+function enemyMountedWeaponIds() {
+  const ids = new Set();
+  const add = id => { if(id !== undefined && id !== null) ids.add(id); };
+  if(typeof ENEMY_CLASSES !== 'undefined') {
+    ENEMY_CLASSES.forEach(e => add(e.enc?.fire?.wpn));
+  }
+  if(typeof SURFACE_ENEMY_CLASSES !== 'undefined') {
+    SURFACE_ENEMY_CLASSES.forEach(e => add(e.surf?.fire?.wpn));
+  }
+  if(typeof DEFENSE_CLASSES !== 'undefined') {
+    DEFENSE_CLASSES.forEach(d => add(d.defense?.fire?.wpn));
+  }
+  return ids;
+}
+
+function assertWeaponRegistry() {
+  const enemyUsed = enemyMountedWeaponIds();
+  for(const wp of WEAPONS) {
+    if(!WEAPON_TYPES[wp.fireMode]) throw new Error(`Weapon ${wp.id} has unknown fireMode ${wp.fireMode}`);
+    if(wp.aiPolicy !== undefined && wp.aiPolicy !== null && !WEAPON_AI_POLICIES[wp.aiPolicy]) {
+      throw new Error(`Weapon ${wp.id} has unknown aiPolicy ${wp.aiPolicy}`);
+    }
+    if(enemyUsed.has(wp.id) && (wp.aiPolicy === undefined || wp.aiPolicy === null)) {
+      throw new Error(`Enemy-mounted weapon ${wp.id} is missing aiPolicy`);
+    }
+    if(wp.ammoMax !== undefined && !(Number.isFinite(wp.ammoMax) && wp.ammoMax > 0)) {
+      throw new Error(`Weapon ${wp.id} has invalid ammoMax ${wp.ammoMax}`);
+    }
+    if(wp.magMax !== undefined) {
+      if(!(Number.isFinite(wp.magMax) && wp.magMax > 0)) throw new Error(`Weapon ${wp.id} has invalid magMax ${wp.magMax}`);
+      if(wp.ammoMax === undefined) throw new Error(`Weapon ${wp.id} has magMax but no ammoMax`);
+    }
+    if(wp.chargeMin !== undefined || wp.chargeMax !== undefined) {
+      if(!(Number.isFinite(wp.chargeMin) && wp.chargeMin > 0)) throw new Error(`Weapon ${wp.id} has invalid chargeMin ${wp.chargeMin}`);
+      if(!(Number.isFinite(wp.chargeMax) && wp.chargeMax >= wp.chargeMin)) throw new Error(`Weapon ${wp.id} has invalid chargeMax ${wp.chargeMax}`);
+    }
+  }
+  for(const id of enemyUsed) {
+    if(!WEAPON_MAP[id]) throw new Error(`Enemy registry references unknown weapon ${id}`);
+  }
+}

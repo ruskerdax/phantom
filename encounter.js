@@ -61,11 +61,13 @@ function encWin(){
   rechargeShieldFromEnergy(enc.s,true);
   if(enc.isHBase){G.hbState=null;completeObjective(objectiveId(OBJECTIVE_TYPE_IDS.HBASE));}
   if(enc.fleetIdx!=null)ow.fleets[enc.fleetIdx].alive=false;
+  refillAmmoForLoadout(enc.s);
+  refillMagsForLoadout(enc.s);
   copyShipEnergyState(enc.s,ow.s);
   ow.s.hp=enc.s.hp;ow.s.maxHp=enc.s.maxHp;
   copyShieldState(enc.s,ow.s);
-  refillAmmoForLoadout(ow.s);
-  refillMagsForLoadout(ow.s);
+  copyAmmoStateForLoadout(enc.s,ow.s);
+  copyMagStateForLoadout(enc.s,ow.s);
   if(keepVelocity){ow.s.vx+=(Math.random()-.5)*1.2;ow.s.vy+=(Math.random()-.5)*1.2;}
   ow.s.inv=80;
   G.ENC=null;G.absAimTarget=null;returnToOverworld({keepVelocity});

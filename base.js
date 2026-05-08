@@ -182,3 +182,5 @@ function execShopAction(opt) {
     tone(660, .15, 'sine', .08); G.shopActionId = null; saveGame();
   }
 }
+
+assertWeaponRegistry();

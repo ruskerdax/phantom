@@ -358,12 +358,12 @@ function returnPlanetToOverworld(){
   if(s){
     saveActiveSiteState();
     rechargeShieldFromEnergy(s,true);
+    refillAmmoForLoadout(s);
+    refillMagsForLoadout(s);
   }
   const pi=G.lv,pp=owPos(PP[pi]);
   initOW(s?s.energy:loadoutBatteryCapacity(),pp.x,Math.max(80,pp.y-LV[pi].pr-55));
-  if(s){copyShipEnergyState(s,G.OW.s);G.OW.s.hp=s.hp;G.OW.s.maxHp=s.maxHp;copyShieldState(s,G.OW.s);}
-  refillAmmoForLoadout(G.OW.s);
-  refillMagsForLoadout(G.OW.s);
+  if(s){copyShipEnergyState(s,G.OW.s);G.OW.s.hp=s.hp;G.OW.s.maxHp=s.maxHp;copyShieldState(s,G.OW.s);copyAmmoStateForLoadout(s,G.OW.s);copyMagStateForLoadout(s,G.OW.s);}
   G.site=null;
   recordLastLocation('planet',pi);
   returnToOverworld();
