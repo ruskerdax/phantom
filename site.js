@@ -458,7 +458,12 @@ function updCaveSite(){
   if(wHit(s.x,s.y,9,G.lv)){siteBounce(s);if(s.hp<=0){siteKillShip();return;}}
   for(const f of site.fu){if(!f.got&&Math.hypot(s.x-f.x,s.y-f.y)<22){f.got=true;pickupEnergy(s,f.x,f.y,site.pts,d.col);}}
   if(G.st==='esc'){site.esc--;if(site.esc<=0){saveActiveSiteState();saveGame();siteKillShip();return;}}
-  const caveCtx={tgts:()=>siteBeamTargets(site),walls:siteBeamWalls(site),space:null,lsb:site.lsb,mis:site.mis,bul:site.bul,onBeamHit:(tg,wp,res)=>siteHandleBeamHit(site,tg,wp,res)};
+  const caveCtx={
+    tgts:()=>siteBeamTargets(site),walls:siteBeamWalls(site),space:null,lsb:site.lsb,mis:site.mis,bul:site.bul,
+    lockTargets:()=>siteLockTargets(site),
+    lockDelta:(ship,t)=>({dx:t.x-ship.x,dy:t.y-ship.y}),
+    onBeamHit:(tg,wp,res)=>siteHandleBeamHit(site,tg,wp,res)
+  };
   runPlayerWeaponSlot(s,0,caveCtx);
   runPlayerWeaponSlot(s,1,caveCtx);
   for(let i=site.bul.length-1;i>=0;i--){
@@ -561,6 +566,16 @@ function surfaceBeamTargets(site){
   site.emi.forEach((m,i)=>tgts.push({x:m.x,y:m.y,r:5,kind:'missile',idx:i}));
   return tgts;
 }
+function siteLockTargets(site){
+  const tgts=[];
+  if(site.mode==='surface'){
+    site.en.forEach((e,i)=>{if(e.alive)tgts.push({id:'site-enemy:'+i,x:e.x,y:e.y,r:surfaceEnemyRadius(e),kind:'enemy',idx:i,entity:e,alive:true});});
+    site.defenses.forEach((d,i)=>{if(d.alive)tgts.push({id:'site-turret:'+i,x:d.x,y:d.y,r:defenseRadius(d),kind:'turret',idx:i,entity:d,alive:true});});
+  }else{
+    site.en.forEach((d,i)=>{if(d.alive)tgts.push({id:'site-turret:'+i,x:d.x,y:d.y,r:defenseRadius(d),kind:'turret',idx:i,entity:d,alive:true});});
+  }
+  return tgts;
+}
 function surfaceHandleBeamHit(site,tg,wp,res){
   if(tg.kind==='building')damageBuilding(site,siteBuildings(site)[tg.idx],wp.dmg,res.x2,res.y2);
   else if(tg.kind==='enemy')damageSurfaceEnemy(site,site.en[tg.idx],wp.dmg,res.x2,res.y2);
@@ -659,7 +674,12 @@ function updSurface(){
     const tx=surfaceNearX(d,d.tunnel.x,s.x),ty=d.tunnel.y-38;
     if(Math.hypot(s.x-tx,s.y-ty)<34){saveActiveSiteState();enterTunnel('down',s);return;}
   }
-  const surfaceCtx={tgts:()=>surfaceBeamTargets(site),walls:siteBeamWalls(site),space:{toroidal:true,worldW:d.worldW,worldH:999999},lsb:site.lsb,mis:site.mis,bul:site.bul,onBeamHit:(tg,wp,res)=>surfaceHandleBeamHit(site,tg,wp,res)};
+  const surfaceCtx={
+    tgts:()=>surfaceBeamTargets(site),walls:siteBeamWalls(site),space:{toroidal:true,worldW:d.worldW,worldH:999999},lsb:site.lsb,mis:site.mis,bul:site.bul,
+    lockTargets:()=>siteLockTargets(site),
+    lockDelta:(ship,t)=>surfaceDelta(d,t.x,t.y,ship.x,ship.y),
+    onBeamHit:(tg,wp,res)=>surfaceHandleBeamHit(site,tg,wp,res)
+  };
   runPlayerWeaponSlot(s,0,surfaceCtx);
   runPlayerWeaponSlot(s,1,surfaceCtx);
   updSurfaceProjectiles(site);
@@ -698,6 +718,13 @@ function drawCaveSite(){
   }
   for(const b of siteBuildings(site))if(b.alive)drawBuildingTunnel(b,site);
   for(const e of site.en){if(e.alive)drawDefense(e);}
+  if(site.s.alive){
+    const lockCtx={lockTargets:()=>siteLockTargets(site)};
+    for(let slot=0;slot<2;slot++){
+      const target=lockedTargetEntity(site.s,slot,lockCtx);
+      if(target)drawTargetLockSquare(target);
+    }
+  }
   for(const b of site.bul){cx.save();cx.fillStyle='#fff';cx.shadowColor='#fff';cx.shadowBlur=sb(6);cx.beginPath();cx.arc(b.x,b.y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
   for(const b of site.ebu){cx.save();cx.fillStyle='#f66';cx.shadowColor='#f66';cx.shadowBlur=sb(6);cx.beginPath();cx.arc(b.x,b.y,2.5,0,Math.PI*2);cx.fill();cx.restore();}
   for(const m of site.mis)drMissile(m.x,m.y,m.a,m.type);
@@ -802,6 +829,13 @@ function drawSurface(){
   for(const b of siteBuildings(site))if(b.alive)drawSurfaceCopies(site,b.x,b.y,buildingTargetRadius(b)+5,(x,y)=>drawBuildingSurface({...b,x,y},site));
   for(const df of site.defenses)if(df.alive)drawSurfaceCopies(site,df.x,df.y,22,(x,y)=>drawDefense({...df,x,y}));
   for(const e of site.en)if(e.alive)drawSurfaceCopies(site,e.x,e.y,22,(x,y)=>drawSurfaceEnemy({...e,x,y}));
+  if(site.s.alive){
+    const lockCtx={lockTargets:()=>siteLockTargets(site)};
+    for(let slot=0;slot<2;slot++){
+      const target=lockedTargetEntity(site.s,slot,lockCtx);
+      if(target)drawSurfaceCopies(site,target.x,target.y,target.r+10,(x,y)=>drawTargetLockSquare({...target,x,y}));
+    }
+  }
   for(const b of site.bul)drawSurfaceCopies(site,b.x,b.y,5,(x,y)=>drBullet(x,y,'#fff'));
   for(const b of site.ebu)drawSurfaceCopies(site,b.x,b.y,5,(x,y)=>drBullet(x,y,b.col));
   for(const m of site.mis)drawSurfaceCopies(site,m.x,m.y,10,(x,y)=>drMissile(x,y,m.a,m.type));

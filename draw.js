@@ -425,6 +425,17 @@ function drAimCone(s){
   cx.restore();
 }
 function drEnergy(x,y,col){cx.save();cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=sb(8);cx.lineWidth=1.5;cx.beginPath();cx.moveTo(x,y-9);cx.lineTo(x+7,y);cx.lineTo(x,y+9);cx.lineTo(x-7,y);cx.closePath();cx.stroke();cx.fillStyle=col;cx.font='bold 9px MajorMonoDisplay, monospace';cx.textAlign='center';cx.shadowBlur=0;cx.fillText('🗲',x,y+3.5);cx.restore();}
+function drawTargetLockSquare(target, col='#ffb060'){
+  if(!target)return;
+  const r=(target.r??10)+6, side=r*2;
+  cx.save();
+  cx.globalAlpha=.3;
+  cx.strokeStyle=col;
+  cx.lineWidth=1.5;
+  cx.shadowBlur=0;
+  cx.strokeRect(target.x-r,target.y-r,side,side);
+  cx.restore();
+}
 function drGPI(x=W-6,y=H-8,align='right'){cx.save();cx.textAlign=align;cx.font='11px MajorMonoDisplay, monospace';if(GP.connected){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=sb(6);cx.fillText('ctrl: '+GP.id.slice(0,22).toLowerCase(),x,y);}else{cx.fillStyle='#444';cx.shadowBlur=0;cx.fillText('no controller',x,y);}cx.restore();}
 function drWalletStake(x=8,y=18){
   cx.save();

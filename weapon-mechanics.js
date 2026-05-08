@@ -340,6 +340,90 @@ function tickCharge(s, slot, wp) {
   return sw.chargeFrames;
 }
 
+function lockTargetDelta(s, target, ctx) {
+  if(typeof ctx.lockDelta === 'function') return ctx.lockDelta(s, target);
+  if(Number.isFinite(target.dx) && Number.isFinite(target.dy)) return {dx:target.dx, dy:target.dy};
+  return {dx:(target.x ?? 0) - s.x, dy:(target.y ?? 0) - s.y};
+}
+
+function normalizeLockTarget(s, target, ctx, wp) {
+  if(!target || target.alive === false || !target.id) return null;
+  const delta = lockTargetDelta(s, target, ctx);
+  const dist = Number.isFinite(target.dist) ? target.dist : Math.hypot(delta.dx, delta.dy);
+  if(!Number.isFinite(dist) || dist > wp.targetLockRange) return null;
+  const arc = wp.targetLockArc;
+  const aim = Math.atan2(delta.dx, -delta.dy);
+  const preferred = Number.isFinite(arc) ? Math.abs(angDiff(s.a, aim)) <= arc : false;
+  return {...target, dx:delta.dx, dy:delta.dy, dist, preferred};
+}
+
+function eligibleLockTargets(s, ctx, wp) {
+  if(!s || !ctx || !wp?.targetLockRange || typeof ctx.lockTargets !== 'function') return [];
+  const raw = ctx.lockTargets(s, wp);
+  return (Array.isArray(raw) ? raw : [])
+    .map(t => normalizeLockTarget(s, t, ctx, wp))
+    .filter(Boolean)
+    .sort((a, b) => (b.preferred - a.preferred) || (a.dist - b.dist) || String(a.id).localeCompare(String(b.id)));
+}
+
+function decrementLockCooldowns(sw) {
+  for(const [id, frames] of sw.lockCooldowns) {
+    const next = frames - 1;
+    if(next > 0) sw.lockCooldowns.set(id, next);
+    else sw.lockCooldowns.delete(id);
+  }
+}
+
+function lockedTargetEntity(s, slot, ctx) {
+  const sw = s?.weapons?.[slot];
+  if(!sw?.lockedTargetId || typeof ctx?.lockTargets !== 'function') return null;
+  const targets = ctx.lockTargets(s, null);
+  return (Array.isArray(targets) ? targets : []).find(t => t && t.id === sw.lockedTargetId && t.alive !== false) || null;
+}
+
+function cycleLockTarget(s, slot, wp, ctx) {
+  const sw = weaponSlot(s, slot);
+  const previousId = sw.lockedTargetId;
+  if(previousId) sw.lockCooldowns.set(previousId, 90);
+  const targets = eligibleLockTargets(s, ctx, wp);
+  if(targets.length > 0) {
+    const currentIdx = previousId ? targets.findIndex(t => t.id === previousId) : -1;
+    const baseIdx = currentIdx >= 0 ? currentIdx : -1;
+    let next = null;
+    for(let i=1;i<=targets.length;i++) {
+      const t = targets[(baseIdx + i) % targets.length];
+      if(!sw.lockCooldowns.has(t.id)) { next = t; break; }
+    }
+    if(next) sw.lockedTargetId = next.id;
+    sw.lastLockActivityFrame = G.fr;
+  }
+  return lockedTargetEntity(s, slot, ctx);
+}
+
+function tickLock(s, slot, wp, ctx) {
+  const sw = weaponSlot(s, slot);
+  decrementLockCooldowns(sw);
+  const idleFrames = sw.lastLockActivityFrame == null ? 0 : G.fr - sw.lastLockActivityFrame;
+  if(idleFrames > 120) {
+    sw.lockCooldowns.clear();
+    sw.lockedTargetId = null;
+    return null;
+  }
+  if(!sw.lockedTargetId) return null;
+  const target = lockedTargetEntity(s, slot, ctx);
+  if(!target) {
+    sw.lockedTargetId = null;
+    return null;
+  }
+  const delta = lockTargetDelta(s, target, ctx);
+  const dist = Math.hypot(delta.dx, delta.dy);
+  if(Number.isFinite(wp.lockBreakRange) && dist > wp.lockBreakRange) {
+    sw.lockedTargetId = null;
+    return null;
+  }
+  return target;
+}
+
 // Drives one of the player's two weapon slots for a single frame: advances any in-flight
 // beam pulses or missile salvos, then triggers a fresh fire if the input is held and
 // cooldowns/queues are clear. Each game mode (encounter/cave-site/surface) wires its own
@@ -366,6 +450,11 @@ function runPlayerWeaponSlot(s, slot, ctx) {
     sw.input.pressedFrames = 0;
   }
   sw.input.pressed = heldNow;
+  if(wp.targetLockRange && ctx.lockTargets) {
+    tickLock(s, slot, wp, ctx);
+    if(sw.input.justReleased && sw.input.releasedAfterFrames <= TAP_FRAMES) cycleLockTarget(s, slot, wp, ctx);
+    if(!wt) return;
+  }
   tickCharge(s, slot, wp);
   tickReload(s, slot);
   if(weaponHasMagazine(wp) && sw.input.pressedFrames > 6 && sw.mag < wp.magMax && !sw.reloading) beginReload(s, slot);
@@ -375,5 +464,8 @@ function runPlayerWeaponSlot(s, slot, ctx) {
     if (res && res.hitIdx >= 0) ctx.onBeamHit(tgts[res.hitIdx], wp, res);
   }
   if (sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis);
-  if (!sw.reloading && sw.input.pressed && !sw.cd && !sw.pulsesLeft && !sw.misLeft) tryFire(wp, wt, s, slot, ctx.bul);
+  const lockReady = !wp.targetLockRange || (sw.input.pressedFrames > TAP_FRAMES && sw.lockedTargetId);
+  if (!sw.reloading && sw.input.pressed && lockReady && !sw.cd && !sw.pulsesLeft && !sw.misLeft) {
+    if(tryFire(wp, wt, s, slot, ctx.bul) && wp.targetLockRange) sw.lastLockActivityFrame = G.fr;
+  }
 }

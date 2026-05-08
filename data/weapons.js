@@ -23,6 +23,7 @@ function mkWeaponSlot(overrides = {}) {
     reloadFrames:0,
     lockedTargetId:null,
     lockCooldowns:new Map(),
+    lastLockActivityFrame:null,
     stickyMissileId:null,
     input:{pressed:false, pressedFrames:0, justReleased:false, releasedAfterFrames:0},
     ...overrides,
@@ -36,7 +37,7 @@ function weaponSlot(s, slot) {
   w.charge = Math.max(0, w.charge || 0);
   w.chargeFrames = Math.max(0, w.chargeFrames || 0);
   if(!w.input) w.input = {pressed:false, pressedFrames:0, justReleased:false, releasedAfterFrames:0};
-  if(!w.lockCooldowns) w.lockCooldowns = new Map();
+  if(!(w.lockCooldowns instanceof Map)) w.lockCooldowns = new Map();
   return w;
 }
 

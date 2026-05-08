@@ -247,7 +247,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### F-06. Target lock state + selection square
+### F-06. Target lock state + selection square ✅
 
 **Goal:** Per-slot target lock for missile weapons that need a designated target (Hydra). Cycle on tap, lock, fire on hold.
 

@@ -24,6 +24,14 @@ function encBeamTargets(enc){
   }
   return tgts;
 }
+function encLockTargets(enc){
+  const tgts=[];
+  enc.en.forEach((e,i)=>{if(e.alive)tgts.push({id:'enc-enemy:'+(e.eid ?? i),x:e.x,y:e.y,r:enemyCollisionRadius(e)||12,kind:'enemy',idx:i,entity:e,alive:true});});
+  if(enc.isHBase){
+    enc.hbase.turrets.forEach((t,i)=>{if(t.alive)tgts.push({id:'enc-turret:'+i,x:t.x,y:t.y,r:defenseRadius(t),kind:'turret',idx:i,entity:t,alive:true});});
+  }
+  return tgts;
+}
 function encHandleBeamHit(enc,tg,wp,res){
   if(tg.kind==='rock'){
     const rk=enc.rocks[tg.idx];rk.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,'#778',3);
@@ -226,7 +234,12 @@ function updEnc(){
   if(enc.isHBase){const{hexPoly,hx,hy}=enc.hbase;let hbHit=pip(s.x,s.y,hexPoly);if(!hbHit){for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;if(dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1])<7){hbHit=true;break;}}}if(hbHit){let best=Infinity,nx=0,ny=0;for(let i=0;i<hexPoly.length;i++){const j=(i+1)%hexPoly.length;const dist=dseg(s.x,s.y,hexPoly[i][0],hexPoly[i][1],hexPoly[j][0],hexPoly[j][1]);if(dist<best){best=dist;const dx=hexPoly[j][0]-hexPoly[i][0],dy=hexPoly[j][1]-hexPoly[i][1],len=Math.hypot(dx,dy)||1;nx=-dy/len;ny=dx/len;if(nx*(s.x-hx)+ny*(s.y-hy)<0){nx=-nx;ny=-ny;}}}s.x+=nx*10;s.y+=ny*10;const{hit}=applyShipBounce(s,nx,ny,{x:s.x-nx*12,y:s.y-ny*12},{skipDamage:s.inv>0});if(hit?.hullDamage>0)s.inv=40;if(s.hp<=0){encKillShip();return;}}}
   const encWalls=enc.isHBase?enc.hbase.hexPoly.map((p,i,hp)=>{const j=(i+1)%hp.length;return[p[0],p[1],hp[j][0],hp[j][1]];}):[];
   const beamSpace=encToroidalActive(enc)?{toroidal:true,worldW:ew,worldH:eh}:null;
-  const encCtx={tgts:()=>encBeamTargets(enc),walls:encWalls,space:beamSpace,lsb:enc.lsb,mis:enc.mis,bul:enc.bul,onBeamHit:(tg,wp,res)=>encHandleBeamHit(enc,tg,wp,res)};
+  const encCtx={
+    tgts:()=>encBeamTargets(enc),walls:encWalls,space:beamSpace,lsb:enc.lsb,mis:enc.mis,bul:enc.bul,
+    lockTargets:()=>encLockTargets(enc),
+    lockDelta:(ship,t)=>encDelta(enc,t.x,t.y,ship.x,ship.y),
+    onBeamHit:(tg,wp,res)=>encHandleBeamHit(enc,tg,wp,res)
+  };
   runPlayerWeaponSlot(s,0,encCtx);if(s.hp<=0){encKillShip();return;}
   runPlayerWeaponSlot(s,1,encCtx);if(s.hp<=0){encKillShip();return;}
   for(let i=enc.bul.length-1;i>=0;i--){
@@ -326,6 +339,13 @@ function drawEnc(){
       cx.beginPath();cx.arc(sp.x,sp.y,8,0,Math.PI*2);cx.stroke();cx.restore();
     }
     for(const t of turrets){if(t.alive)drawDefense(t);}
+  }
+  if(enc.s.alive){
+    const lockCtx={lockTargets:()=>encLockTargets(enc)};
+    for(let slot=0;slot<2;slot++){
+      const target=lockedTargetEntity(enc.s,slot,lockCtx);
+      if(target)drawAt(target.x,target.y,target.r+10,(x,y)=>drawTargetLockSquare({...target,x,y}));
+    }
   }
   for(const f of enc.fu)drawAt(f.x,f.y,12,(x,y)=>drEnergy(x,y,'#0f8'));
   for(const b of enc.bul)drawAt(b.x,b.y,5,(x,y)=>drBullet(x,y,'#fff'));
