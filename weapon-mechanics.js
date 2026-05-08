@@ -22,6 +22,188 @@ function spawnMissile(wp, s, mis) {
   tone(360,.10,'square',.06);
 }
 
+function reflectVector(vx, vy, nx, ny) {
+  const dot = vx * nx + vy * ny;
+  return {vx:vx - 2 * dot * nx, vy:vy - 2 * dot * ny};
+}
+
+function nearestWallHit(x0, y0, x1, y1, walls=[], radius=0) {
+  let best = null;
+  for(const wall of walls || []) {
+    const [ax, ay, bx, by] = wall;
+    const t = segHitParam(x0, y0, x1, y1, ax, ay, bx, by);
+    const near = t == null && radius > 0 && dseg(x1, y1, ax, ay, bx, by) <= radius ? 1 : t;
+    if(near == null) continue;
+    if(!best || near < best.t) {
+      const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
+      best = {t:near, x:x0 + (x1 - x0) * near, y:y0 + (y1 - y0) * near, nx:-dy / len, ny:dx / len};
+    }
+  }
+  return best;
+}
+
+function ricochetTerrainHit(b, ctx, walls, px, py) {
+  if(typeof ctx?.terrainHit === 'function' && ctx.terrainHit(b, px, py)) {
+    const n = typeof ctx.terrainNormal === 'function' ? ctx.terrainNormal(b, px, py) : null;
+    return {x:b.x, y:b.y, nx:n?.nx ?? -Math.sign(b.vx || 1), ny:n?.ny ?? -Math.sign(b.vy || 1)};
+  }
+  return nearestWallHit(px, py, b.x, b.y, walls, b.r ?? 0);
+}
+
+function stepRicochetBullet(b, ctx={}, walls=ctx.walls || []) {
+  const maxStep = ctx.maxStep ?? 4;
+  const sx = b.vx || 0, sy = b.vy || 0, sp = Math.hypot(sx, sy);
+  const n = Math.max(1, Math.ceil(sp / maxStep));
+  const dx = sx / n, dy = sy / n, dl = sp / n;
+  const wrapX = ctx.wrapX ?? ctx.worldW ?? 0, wrapY = ctx.wrapY ?? ctx.worldH ?? 0;
+  for(let k=0;k<n;k++) {
+    const px = b.x, py = b.y;
+    b.x = wrapX ? wrap(b.x + dx, wrapX) : b.x + dx;
+    b.y = wrapY ? wrap(b.y + dy, wrapY) : b.y + dy;
+    b.l -= dl;
+    if(b.l <= 0) return true;
+    if(typeof ctx.onProjectileStep === 'function' && ctx.onProjectileStep(b)) return true;
+    const hit = ricochetTerrainHit(b, ctx, walls, px, py);
+    if(!hit) continue;
+    if((b.ricochetsLeft || 0) <= 0) return true;
+    const r = reflectVector(b.vx, b.vy, hit.nx, hit.ny);
+    b.vx = r.vx; b.vy = r.vy;
+    b.x = hit.x + hit.nx * ((b.r ?? 0) + .5);
+    b.y = hit.y + hit.ny * ((b.r ?? 0) + .5);
+    b.ricochetsLeft--;
+    if(typeof ctx.onRicochet === 'function') ctx.onRicochet(b, hit);
+    return false;
+  }
+  return false;
+}
+
+function targetIdForSticky(target, kind) {
+  return target?.id ?? target?.eid ?? target?.idx ?? `${kind}:${Math.round(target?.x ?? 0)},${Math.round(target?.y ?? 0)}`;
+}
+
+function stickProjectile(m, target, kind) {
+  if(!m || !target) return null;
+  const id = targetIdForSticky(target, kind);
+  m.stuckTo = {
+    kind, id,
+    offsetX:(m.x ?? 0) - (target.x ?? 0),
+    offsetY:(m.y ?? 0) - (target.y ?? 0),
+  };
+  m.vx = 0; m.vy = 0; m.spd = 0;
+  return m.stuckTo;
+}
+
+function updateStickyProjectile(m, ctx={}) {
+  const st = m?.stuckTo;
+  if(!st || st.kind === 'terrain') return st?.kind || null;
+  const target = typeof ctx.stickyTarget === 'function' ? ctx.stickyTarget(st) : null;
+  if(target && target.alive !== false) {
+    m.x = (target.x ?? 0) + st.offsetX;
+    m.y = (target.y ?? 0) + st.offsetY;
+    return st.kind;
+  }
+  if(st.kind === 'enemy' || st.kind === 'building' || st.kind === 'turret') {
+    m.stuckTo = {kind:'free-fall', id:st.id, offsetX:0, offsetY:0};
+    return 'free-fall';
+  }
+  return st.kind;
+}
+
+function mineTargetDistance(m, target, ctx) {
+  if(typeof ctx?.targetDistance === 'function') return ctx.targetDistance(m, target);
+  const dx = (target.x ?? 0) - (m.x ?? 0), dy = (target.y ?? 0) - (m.y ?? 0);
+  return Math.hypot(dx, dy);
+}
+
+function mineTargetDelta(m, target, ctx) {
+  if(typeof ctx?.targetDelta === 'function') return ctx.targetDelta(m, target);
+  return {dx:(target.x ?? 0) - (m.x ?? 0), dy:(target.y ?? 0) - (m.y ?? 0)};
+}
+
+function mineTriggerCheck(m, ctx={}) {
+  if(!m || m.triggered) return null;
+  const targets = typeof ctx.mineTargets === 'function' ? ctx.mineTargets(m) : [];
+  let best = null, bestDist = Infinity;
+  for(const t of targets || []) {
+    if(!t || t.alive === false) continue;
+    const dist = mineTargetDistance(m, t, ctx) - (t.r || 0);
+    if(dist <= (m.triggerR || 0) && dist < bestDist) { best = t; bestDist = dist; }
+  }
+  if(!best) return null;
+  m.triggered = true;
+  m.triggerTimer = m.triggerDelay ?? 0;
+  m.triggerTargetId = targetIdForSticky(best, best.kind || 'enemy');
+  m.triggerTargetKind = best.kind || 'enemy';
+  const d = mineTargetDelta(m, best, ctx), len = Math.hypot(d.dx, d.dy) || 1;
+  m.vx = (m.vx || 0) + d.dx / len * (m.pursuitAccel || 0);
+  m.vy = (m.vy || 0) + d.dy / len * (m.pursuitAccel || 0);
+  const sp = Math.hypot(m.vx, m.vy), max = m.pursuitMaxSpd || sp;
+  if(sp > max) { m.vx = m.vx / sp * max; m.vy = m.vy / sp * max; }
+  return best;
+}
+
+function heatSeekTurn(m, ctx={}, opts={}) {
+  const kinds = opts.kinds || m.seekTargetKinds || ['enemy'];
+  const targets = typeof ctx.seekTargets === 'function' ? ctx.seekTargets(m, kinds) : (typeof ctx.lockTargets === 'function' ? ctx.lockTargets(m, null) : []);
+  let best = null, bestDist = Infinity, bestDelta = null;
+  for(const t of targets || []) {
+    if(!t || t.alive === false || (kinds.length && !kinds.includes(t.kind))) continue;
+    const d = typeof ctx.seekDelta === 'function' ? ctx.seekDelta(m, t) : mineTargetDelta(m, t, ctx);
+    const dist = Math.hypot(d.dx, d.dy);
+    if(dist < bestDist) { best = t; bestDist = dist; bestDelta = d; }
+  }
+  if(!best) return null;
+  const targetA = Math.atan2(bestDelta.dx, -bestDelta.dy);
+  const turn = Math.max(0, m.seekTurnRate ?? opts.turnRate ?? 0);
+  const da = angDiff(m.a || 0, targetA);
+  m.a = (m.a || 0) + Math.max(-turn, Math.min(turn, da));
+  return best;
+}
+
+function persistentProjectileTick(p, ctx={}) {
+  p.x += p.vx || 0;
+  p.y += p.vy || 0;
+  if(Number.isFinite(p.l) && --p.l <= 0) return true;
+  if(typeof ctx.terrainHit === 'function' && ctx.terrainHit(p)) return true;
+  const targets = typeof ctx.radiusTargets === 'function' ? ctx.radiusTargets(p) : [];
+  const outerEvery = Math.max(1, p.outerTickInterval || 1);
+  for(const t of targets || []) {
+    if(!t || t.alive === false) continue;
+    const dist = mineTargetDistance(p, t, ctx);
+    const r = t.r || 0;
+    if(p.innerR && dist <= p.innerR + r) {
+      if(typeof ctx.damageRadiusTarget === 'function') ctx.damageRadiusTarget(t, p.innerDmgPerTick || 0, p);
+    } else if(p.outerR && dist <= p.outerR + r && (((typeof G !== 'undefined' ? G.fr : 0) % outerEvery) === 0)) {
+      if(typeof ctx.damageRadiusTarget === 'function') ctx.damageRadiusTarget(t, p.outerDmgPerTick || 0, p);
+      if(ctx.lsb) ctx.lsb.push({x1:p.x, y1:p.y, x2:t.x, y2:t.y, l:8, col:p.outerBeamColor || '#9df', w:p.outerBeamWidth || 1, wpId:p.wpId});
+    }
+  }
+  return false;
+}
+
+function weaponMechanicsInlineTest() {
+  const b = {x:0,y:0,vx:10,vy:0,l:20,ricochetsLeft:1,r:0};
+  const ricochetConsumed = stepRicochetBullet(b, {}, [[5,-5,5,5]]);
+  const m = {x:2,y:3};
+  const stuck = stickProjectile(m, {id:'t',x:1,y:1}, 'enemy');
+  const mine = {x:0,y:0,vx:0,vy:0,triggerR:10,triggerDelay:3,pursuitAccel:1,pursuitMaxSpd:2};
+  const mineTarget = mineTriggerCheck(mine, {mineTargets:()=>[{id:'e',kind:'enemy',x:5,y:0,r:1,alive:true}]});
+  const seek = {x:0,y:0,a:0,seekTurnRate:.1};
+  const seekTarget = heatSeekTurn(seek, {seekTargets:()=>[{id:'e',kind:'enemy',x:10,y:0,alive:true}]});
+  let radiusDamage = 0;
+  const expired = persistentProjectileTick({x:0,y:0,vx:0,vy:0,l:2,innerR:5,innerDmgPerTick:2}, {
+    radiusTargets:()=>[{id:'e',kind:'enemy',x:3,y:0,r:1,alive:true}],
+    damageRadiusTarget:()=>{radiusDamage += 2;}
+  });
+  return {
+    ricochet:!ricochetConsumed && b.ricochetsLeft === 0 && b.vx < 0,
+    sticky:stuck?.id === 't' && stuck.offsetX === 1 && stuck.offsetY === 2,
+    mine:mineTarget?.id === 'e' && mine.triggered === true,
+    heatSeek:seekTarget?.id === 'e' && seek.a > 0,
+    persistent:expired === false && radiusDamage === 2,
+  };
+}
+
 // Weapon firing mechanic behavior - keyed by wp.fireMode.
 const WEAPON_TYPES = {
   'projectile': {

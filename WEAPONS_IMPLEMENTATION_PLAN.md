@@ -268,7 +268,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### F-07. Mechanics helpers
+### F-07. Mechanics helpers ✅
 
 **Goal:** Add reusable helpers for ricochet, sticky, mine-trigger, heat-seek, and persistent-projectile-radius. Used by the weapons in Phases 1–4.
 
