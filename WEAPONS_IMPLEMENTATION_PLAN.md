@@ -415,7 +415,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### P1-03. Tungsten Slugthrower
+### P1-03. Tungsten Slugthrower ✅
 
 **Goal:** Add TUNGSTEN SLUGTHROWER. Kinetic projectile that ricochets off level geometry up to 3 times.
 

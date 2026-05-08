@@ -111,6 +111,46 @@ function activeSolidSiteData(li=G.lv){
 // intersecting shapes do not leave visible or physical seams.
 function wHit(x,y,r,li){if(y<0)return false;const d=activeSolidSiteData(li);for(const s of siteBoundarySegments(d))if(dseg(x,y,s[0],s[1],s[2],s[3])<r)return true;return !sitePointEmpty(d,x,y);}
 
+function stepSiteProjectile(b, wrapX, walls, onStep) {
+  if(b.ricochetProjectile) {
+    return stepRicochetBullet(b, {wrapX, maxStep:4, terrainFirst:true, walls, onProjectileStep:onStep});
+  }
+  return stepBullet(b, wrapX, 0, 4, onStep);
+}
+
+function cavePlayerBulletStep(site,b,{terrain=true}={}) {
+  const d=site.d;
+  if(terrain) {
+    if(b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,G.lv))return true;
+  } else if(b.y<0||b.y>(d.worldH||H)+20) return true;
+  for(const e of site.en){if(!e.alive)continue;if(Math.hypot(b.x-e.x,b.y-e.y)<defenseRadius(e)){damageDefense(site,e,b.dmg,b.x,b.y);return true;}}
+  for(const bd of siteBuildings(site)){if(bd.alive&&pointInBuildingHitBox(bd,b.x,b.y)){damageBuilding(site,bd,b.dmg,b.x,b.y);return true;}}
+  for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){siteExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
+  const rx=site.rx;if(rx?.alive&&Math.hypot(b.x-rx.x,b.y-rx.y)<18){rx.hp-=10;addStake(100);tone(350,.1,'square',.08);if(rx.hp<=0){rx.alive=false;site.rdone=true;site.esc=1200;G.st='esc';addStake(2000);boomAt(site.pts,rx.x,rx.y,d.col,40);boomAt(site.pts,rx.x,rx.y,'#fff',20);tone(150,.8,'sawtooth',.18);}return true;}
+  return false;
+}
+
+function caveEnemyBulletStep(site,b,s,{terrain=true}={}) {
+  const d=site.d;
+  if(terrain) {
+    if(b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,G.lv))return true;
+  } else if(b.y<0||b.y>(d.worldH||H)+20) return true;
+  for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){siteExplodeMissile(site,m,false);site.mis.splice(mi,1);}return true;}}
+  const bHitOpts={source:{x:b.x,y:b.y},kind:'projectile',weapon:b};
+  if(Math.hypot(b.x-s.x,b.y-s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,bHitOpts)){
+    const shieldHit=applyShipShieldDamage(s,b.dmg,bHitOpts);
+    b.dmg=shieldHit.passthroughDamage;
+    shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
+    if(shieldHit.blocked||b.dmg<=0)return true;
+  }
+  if(Math.hypot(b.x-s.x,b.y-s.y)<shipHitRadius(s)){
+    const hit=applyShipDamage(s,b.dmg,bHitOpts);
+    shipDamageTone(hit);
+    return true;
+  }
+  return false;
+}
+
 // Detonate a site missile: applies expDmg to entities within expR + visual/audio.
 // Player missile (isEnemy=false) damages turrets + reactor. Enemy missile (isEnemy=true) damages the player ship.
 function siteExplodeMissile(site, m, isEnemy){
@@ -468,14 +508,7 @@ function updCaveSite(){
   runPlayerWeaponSlot(s,1,caveCtx);
   for(let i=site.bul.length-1;i>=0;i--){
     const b=site.bul[i];
-    const consumed=stepBullet(b,0,0,4,()=>{
-      if(b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,G.lv))return true;
-      for(const e of site.en){if(!e.alive)continue;if(Math.hypot(b.x-e.x,b.y-e.y)<defenseRadius(e)){damageDefense(site,e,b.dmg,b.x,b.y);return true;}}
-      for(const bd of siteBuildings(site)){if(bd.alive&&pointInBuildingHitBox(bd,b.x,b.y)){damageBuilding(site,bd,b.dmg,b.x,b.y);return true;}}
-      for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){siteExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
-      const rx=site.rx;if(rx?.alive&&Math.hypot(b.x-rx.x,b.y-rx.y)<18){rx.hp-=10;addStake(100);tone(350,.1,'square',.08);if(rx.hp<=0){rx.alive=false;site.rdone=true;site.esc=1200;G.st='esc';addStake(2000);boomAt(site.pts,rx.x,rx.y,d.col,40);boomAt(site.pts,rx.x,rx.y,'#fff',20);tone(150,.8,'sawtooth',.18);}return true;}
-      return false;
-    });
+    const consumed=stepSiteProjectile(b,0,siteBeamWalls(site),()=>cavePlayerBulletStep(site,b,{terrain:!b.ricochetProjectile}));
     if(consumed)site.bul.splice(i,1);
     if(s.hp<=0){siteKillShip();return;}
   }
@@ -483,23 +516,7 @@ function updCaveSite(){
   for(const e of site.en)updateDefense(site,e);
   for(let i=site.ebu.length-1;i>=0;i--){
     const b=site.ebu[i];
-    const consumed=stepBullet(b,0,0,4,()=>{
-      if(b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,G.lv))return true;
-      for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){siteExplodeMissile(site,m,false);site.mis.splice(mi,1);}return true;}}
-      const bHitOpts={source:{x:b.x,y:b.y},kind:'projectile',weapon:b};
-      if(Math.hypot(b.x-s.x,b.y-s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,bHitOpts)){
-        const shieldHit=applyShipShieldDamage(s,b.dmg,bHitOpts);
-        b.dmg=shieldHit.passthroughDamage;
-        shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
-        if(shieldHit.blocked||b.dmg<=0)return true;
-      }
-      if(Math.hypot(b.x-s.x,b.y-s.y)<shipHitRadius(s)){
-        const hit=applyShipDamage(s,b.dmg,bHitOpts);
-        shipDamageTone(hit);
-        return true;
-      }
-      return false;
-    });
+    const consumed=stepSiteProjectile(b,0,siteBeamWalls(site),()=>caveEnemyBulletStep(site,b,s,{terrain:!b.ricochetProjectile}));
     if(consumed)site.ebu.splice(i,1);
     if(s.hp<=0){siteKillShip();return;}
   }
@@ -618,35 +635,41 @@ function updSurfaceMissiles(site,mis,isEnemy){
   }
   return false;
 }
+function surfacePlayerBulletStep(site,b,{terrain=true}={}) {
+  const d=site.d;
+  if(b.y<d.exitY-160)return true;
+  if(terrain&&b.y>surfaceYAt(d,b.x))return true;
+  for(const bd of siteBuildings(site)){if(bd.alive&&surfaceBuildingHit(site,bd,b.x,b.y)){damageBuilding(site,bd,b.dmg,b.x,b.y);return true;}}
+  for(const e of site.en){if(e.alive&&surfaceDist(d,b.x,b.y,e.x,e.y)<surfaceEnemyRadius(e)){damageSurfaceEnemy(site,e,b.dmg,b.x,b.y);return true;}}
+  for(const df of site.defenses){if(df.alive&&surfaceDist(d,b.x,b.y,df.x,df.y)<defenseRadius(df)){damageDefense(site,df,b.dmg,b.x,b.y);return true;}}
+  for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(surfaceDist(d,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){surfaceExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
+  return false;
+}
+function surfaceEnemyBulletStep(site,b,s,{terrain=true}={}) {
+  const d=site.d;
+  if(b.y<d.exitY-160)return true;
+  if(terrain&&b.y>surfaceYAt(d,b.x))return true;
+  for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(surfaceDist(d,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){surfaceExplodeMissile(site,m,false);site.mis.splice(mi,1);}return true;}}
+  const src={x:surfaceNearX(d,b.x,s.x),y:b.y},opts={source:src,kind:'projectile',weapon:b};
+  if(surfaceDist(d,b.x,b.y,s.x,s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,opts)){
+    const sh=applyShipShieldDamage(s,b.dmg,opts);b.dmg=sh.passthroughDamage;shipDamageTone({shieldDamage:sh.shieldDamage,hullDamage:0});
+    if(sh.blocked||b.dmg<=0)return true;
+  }
+  if(surfaceDist(d,b.x,b.y,s.x,s.y)<shipHitRadius(s)){
+    const hit=applyShipDamage(s,b.dmg,opts);shipDamageTone(hit);return true;
+  }
+  return false;
+}
 function updSurfaceProjectiles(site){
   const d=site.d,s=site.s;
   for(let i=site.bul.length-1;i>=0;i--){
     const b=site.bul[i];
-    const consumed=stepBullet(b,d.worldW,0,4,()=>{
-      if(b.y<d.exitY-160||b.y>surfaceYAt(d,b.x))return true;
-      for(const bd of siteBuildings(site)){if(bd.alive&&surfaceBuildingHit(site,bd,b.x,b.y)){damageBuilding(site,bd,b.dmg,b.x,b.y);return true;}}
-      for(const e of site.en){if(e.alive&&surfaceDist(d,b.x,b.y,e.x,e.y)<surfaceEnemyRadius(e)){damageSurfaceEnemy(site,e,b.dmg,b.x,b.y);return true;}}
-      for(const df of site.defenses){if(df.alive&&surfaceDist(d,b.x,b.y,df.x,df.y)<defenseRadius(df)){damageDefense(site,df,b.dmg,b.x,b.y);return true;}}
-      for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(surfaceDist(d,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){surfaceExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
-      return false;
-    });
+    const consumed=stepSiteProjectile(b,d.worldW,siteBeamWalls(site),()=>surfacePlayerBulletStep(site,b,{terrain:!b.ricochetProjectile}));
     if(consumed)site.bul.splice(i,1);
   }
   for(let i=site.ebu.length-1;i>=0;i--){
     const b=site.ebu[i];
-    const consumed=stepBullet(b,d.worldW,0,4,()=>{
-      if(b.y<d.exitY-160||b.y>surfaceYAt(d,b.x))return true;
-      for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(surfaceDist(d,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){surfaceExplodeMissile(site,m,false);site.mis.splice(mi,1);}return true;}}
-      const src={x:surfaceNearX(d,b.x,s.x),y:b.y},opts={source:src,kind:'projectile',weapon:b};
-      if(surfaceDist(d,b.x,b.y,s.x,s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,opts)){
-        const sh=applyShipShieldDamage(s,b.dmg,opts);b.dmg=sh.passthroughDamage;shipDamageTone({shieldDamage:sh.shieldDamage,hullDamage:0});
-        if(sh.blocked||b.dmg<=0)return true;
-      }
-      if(surfaceDist(d,b.x,b.y,s.x,s.y)<shipHitRadius(s)){
-        const hit=applyShipDamage(s,b.dmg,opts);shipDamageTone(hit);return true;
-      }
-      return false;
-    });
+    const consumed=stepSiteProjectile(b,d.worldW,siteBeamWalls(site),()=>surfaceEnemyBulletStep(site,b,s,{terrain:!b.ricochetProjectile}));
     if(consumed)site.ebu.splice(i,1);
     if(s.hp<=0){siteKillShip();return;}
   }

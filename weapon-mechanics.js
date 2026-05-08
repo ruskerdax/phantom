@@ -40,16 +40,28 @@ function nearestWallHit(x0, y0, x1, y1, walls=[], radius=0) {
     if(near == null) continue;
     if(!best || near < best.t) {
       const dx = bx - ax, dy = by - ay, len = Math.hypot(dx, dy) || 1;
-      best = {t:near, x:x0 + (x1 - x0) * near, y:y0 + (y1 - y0) * near, nx:-dy / len, ny:dx / len};
+      let nx = -dy / len, ny = dx / len;
+      if((x1 - x0) * nx + (y1 - y0) * ny > 0) { nx = -nx; ny = -ny; }
+      best = {t:near, x:x0 + (x1 - x0) * near, y:y0 + (y1 - y0) * near, nx, ny};
     }
   }
   return best;
 }
 
 function ricochetTerrainHit(b, ctx, walls, px, py) {
-  if(typeof ctx?.terrainHit === 'function' && ctx.terrainHit(b, px, py)) {
-    const n = typeof ctx.terrainNormal === 'function' ? ctx.terrainNormal(b, px, py) : null;
-    return {x:b.x, y:b.y, nx:n?.nx ?? -Math.sign(b.vx || 1), ny:n?.ny ?? -Math.sign(b.vy || 1)};
+  if(typeof ctx?.terrainHit === 'function') {
+    const info = ctx.terrainHit(b, px, py);
+    if(info) {
+      const n = (typeof info === 'object' && Number.isFinite(info.nx) && Number.isFinite(info.ny))
+        ? info
+        : (typeof ctx.terrainNormal === 'function' ? ctx.terrainNormal(b, px, py) : null);
+      return {
+        x:(typeof info === 'object' && Number.isFinite(info.x)) ? info.x : b.x,
+        y:(typeof info === 'object' && Number.isFinite(info.y)) ? info.y : b.y,
+        nx:n?.nx ?? -Math.sign(b.vx || 1),
+        ny:n?.ny ?? -Math.sign(b.vy || 1)
+      };
+    }
   }
   return nearestWallHit(px, py, b.x, b.y, walls, b.r ?? 0);
 }
@@ -66,7 +78,21 @@ function stepRicochetBullet(b, ctx={}, walls=ctx.walls || []) {
     b.y = wrapY ? wrap(b.y + dy, wrapY) : b.y + dy;
     b.l -= dl;
     if(b.l <= 0) return true;
+    if(ctx.terrainFirst) {
+      const hit = ricochetTerrainHit(b, ctx, walls, px, py);
+      if(hit) {
+        if((b.ricochetsLeft || 0) <= 0) return true;
+        const r = reflectVector(b.vx, b.vy, hit.nx, hit.ny);
+        b.vx = r.vx; b.vy = r.vy;
+        b.x = hit.x + hit.nx * ((b.r ?? 0) + .5);
+        b.y = hit.y + hit.ny * ((b.r ?? 0) + .5);
+        b.ricochetsLeft--;
+        if(typeof ctx.onRicochet === 'function') ctx.onRicochet(b, hit);
+        return false;
+      }
+    }
     if(typeof ctx.onProjectileStep === 'function' && ctx.onProjectileStep(b)) return true;
+    if(ctx.terrainFirst) continue;
     const hit = ricochetTerrainHit(b, ctx, walls, px, py);
     if(!hit) continue;
     if((b.ricochetsLeft || 0) <= 0) return true;
@@ -301,6 +327,8 @@ const WEAPON_TYPES = {
           x:s.x+Math.sin(a)*offset, y:s.y-Math.cos(a)*offset,
           vx:Math.sin(a)*wp.spd+(s.vx || 0)*inherit, vy:-Math.cos(a)*wp.spd+(s.vy || 0)*inherit,
           l:wp.life*wp.spd, dmg:wp.dmg, col:ctx.projectileColor, wpId:wp.id,
+          ricochetProjectile:wp.ricochetsMax !== undefined,
+          ricochetsLeft:wp.ricochetsMax ?? 0,
         });
       }
       sw.cd = ctx.cooldownFrames ?? Math.round(wp.cd*60);

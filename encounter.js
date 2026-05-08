@@ -55,6 +55,64 @@ function encHandleBeamHit(enc,tg,wp,res){
     enc.hbase.softpts[tg.idx].alive=false;boomAt(enc.pts,res.x2,res.y2,'#ff8800',10);tone(350,.15,'square',.08);
   }
 }
+function encRicochetRockHit(enc,b){
+  for(const rk of enc.rocks){
+    const p=encPointNear(enc,b.x,b.y,rk.x,rk.y),dx=p.x-rk.x,dy=p.y-rk.y,dist=Math.hypot(dx,dy);
+    if(dist<rk.r+(b.r||0)){
+      let nx,ny;
+      if(dist>0){nx=dx/dist;ny=dy/dist;}
+      else {const sp=Math.hypot(b.vx||0,b.vy||0)||1;nx=-(b.vx||0)/sp;ny=-(b.vy||0)/sp;}
+      return {x:rk.x+nx*rk.r,y:rk.y+ny*rk.r,nx,ny};
+    }
+  }
+  return null;
+}
+function encPlayerBulletStep(enc,b,{rocks=true}={}){
+  if(rocks){
+    for(let ri=enc.rocks.length-1;ri>=0;ri--){
+      const rk=enc.rocks[ri];
+      if(encDist(enc,b.x,b.y,rk.x,rk.y)<rk.r){
+        rk.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,'#778',4);
+        if(rk.hp<=0)splitRock(enc,ri);
+        return true;
+      }
+    }
+  }
+  for(const e of enc.en){if(!e.alive)continue;if(encEnemyPointHit(enc,e,b.x,b.y)){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,enemyDef(e.t).enc.col,5);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}return true;}}
+  for(let mi=enc.emi.length-1;mi>=0;mi--){const m=enc.emi[mi];if(encDist(enc,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(mi,1);}return true;}}
+  if(enc.isHBase){
+    if(pip(b.x,b.y,enc.hbase.hexPoly)){boomAt(enc.pts,b.x,b.y,'#cc2200',4);return true;}
+    for(const t of enc.hbase.turrets){if(!t.alive)continue;if(Math.hypot(b.x-t.x,b.y-t.y)<defenseRadius(t)){damageDefense(enc,t,b.dmg,b.x,b.y);return true;}}
+    for(const sp of enc.hbase.softpts){if(!sp.alive)continue;if(Math.hypot(b.x-sp.x,b.y-sp.y)<12){sp.alive=false;boomAt(enc.pts,sp.x,sp.y,'#ff8800',10);tone(350,.15,'square',.08);return true;}}
+  }
+  return false;
+}
+function encEnemyBulletStep(enc,b,s,{rocks=true}={}){
+  if(rocks){
+    for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(encDist(enc,b.x,b.y,rk.x,rk.y)<rk.r){rk.hp-=10;boomAt(enc.pts,b.x,b.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);return true;}}
+  }
+  for(let mi=enc.mis.length-1;mi>=0;mi--){const m=enc.mis[mi];if(encDist(enc,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,false);enc.mis.splice(mi,1);}return true;}}
+  if(enc.isHBase&&pip(b.x,b.y,enc.hbase.hexPoly))return true;
+  const bSrc=encPointNear(enc,b.x,b.y,s.x,s.y),bHitOpts={source:bSrc,kind:'projectile',weapon:b};
+  if(encDist(enc,b.x,b.y,s.x,s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,bHitOpts)){
+    const shieldHit=applyShipShieldDamage(s,b.dmg,bHitOpts);
+    b.dmg=shieldHit.passthroughDamage;
+    shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
+    if(shieldHit.blocked||b.dmg<=0)return true;
+  }
+  if(encDist(enc,b.x,b.y,s.x,s.y)<shipHitRadius(s)){
+    const hit=applyShipDamage(s,b.dmg,bHitOpts);
+    shipDamageTone(hit);
+    return true;
+  }
+  return false;
+}
+function stepEncounterProjectile(enc,b,ew,eh,onStep){
+  if(b.ricochetProjectile){
+    return stepRicochetBullet(b,{wrapX:ew,wrapY:eh,worldW:ew,worldH:eh,maxStep:4,terrainFirst:true,terrainHit:bb=>encRicochetRockHit(enc,bb),onProjectileStep:onStep});
+  }
+  return stepBullet(b,ew,eh,4,onStep);
+}
 function encWin(){
   const enc=G.ENC,ow=G.OW;
   const keepVelocity=enc.fleetIdx!=null;
@@ -246,24 +304,7 @@ function updEnc(){
   runPlayerWeaponSlot(s,1,encCtx);if(s.hp<=0){encKillShip();return;}
   for(let i=enc.bul.length-1;i>=0;i--){
     const b=enc.bul[i];
-    const consumed=stepBullet(b,ew,eh,4,()=>{
-      for(let ri=enc.rocks.length-1;ri>=0;ri--){
-        const rk=enc.rocks[ri];
-        if(encDist(enc,b.x,b.y,rk.x,rk.y)<rk.r){
-          rk.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,'#778',4);
-          if(rk.hp<=0)splitRock(enc,ri);
-          return true;
-        }
-      }
-      for(const e of enc.en){if(!e.alive)continue;if(encEnemyPointHit(enc,e,b.x,b.y)){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,enemyDef(e.t).enc.col,5);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}return true;}}
-      for(let mi=enc.emi.length-1;mi>=0;mi--){const m=enc.emi[mi];if(encDist(enc,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,true);enc.emi.splice(mi,1);}return true;}}
-      if(enc.isHBase){
-        if(pip(b.x,b.y,enc.hbase.hexPoly)){boomAt(enc.pts,b.x,b.y,'#cc2200',4);return true;}
-        for(const t of enc.hbase.turrets){if(!t.alive)continue;if(Math.hypot(b.x-t.x,b.y-t.y)<defenseRadius(t)){damageDefense(enc,t,b.dmg,b.x,b.y);return true;}}
-        for(const sp of enc.hbase.softpts){if(!sp.alive)continue;if(Math.hypot(b.x-sp.x,b.y-sp.y)<12){sp.alive=false;boomAt(enc.pts,sp.x,sp.y,'#ff8800',10);tone(350,.15,'square',.08);return true;}}
-      }
-      return false;
-    });
+    const consumed=stepEncounterProjectile(enc,b,ew,eh,()=>encPlayerBulletStep(enc,b,{rocks:!b.ricochetProjectile}));
     if(consumed)enc.bul.splice(i,1);
     if(s.hp<=0){encKillShip();return;}
   }
@@ -280,24 +321,7 @@ function updEnc(){
   }
   for(let i=enc.ebu.length-1;i>=0;i--){
     const b=enc.ebu[i];
-    const consumed=stepBullet(b,ew,eh,4,()=>{
-      for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(encDist(enc,b.x,b.y,rk.x,rk.y)<rk.r){rk.hp-=10;boomAt(enc.pts,b.x,b.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);return true;}}
-      for(let mi=enc.mis.length-1;mi>=0;mi--){const m=enc.mis[mi];if(encDist(enc,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){encExplodeMissile(enc,m,false);enc.mis.splice(mi,1);}return true;}}
-      if(enc.isHBase&&pip(b.x,b.y,enc.hbase.hexPoly))return true;
-      const bSrc=encPointNear(enc,b.x,b.y,s.x,s.y),bHitOpts={source:bSrc,kind:'projectile',weapon:b};
-      if(encDist(enc,b.x,b.y,s.x,s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,bHitOpts)){
-        const shieldHit=applyShipShieldDamage(s,b.dmg,bHitOpts);
-        b.dmg=shieldHit.passthroughDamage;
-        shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
-        if(shieldHit.blocked||b.dmg<=0)return true;
-      }
-      if(encDist(enc,b.x,b.y,s.x,s.y)<shipHitRadius(s)){
-        const hit=applyShipDamage(s,b.dmg,bHitOpts);
-        shipDamageTone(hit);
-        return true;
-      }
-      return false;
-    });
+    const consumed=stepEncounterProjectile(enc,b,ew,eh,()=>encEnemyBulletStep(enc,b,s,{rocks:!b.ricochetProjectile}));
     if(consumed)enc.ebu.splice(i,1);
     if(s.hp<=0){encKillShip();return;}
   }
