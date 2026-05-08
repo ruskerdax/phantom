@@ -288,7 +288,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### F-08. Enemy ammo + energy state + depletion AI
+### F-08. Enemy ammo + energy state + depletion AI ✅
 
 **Goal:** Enemies track ammo and energy. When unable to fire, they disengage per the rules in Conventions.
 

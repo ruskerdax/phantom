@@ -5,7 +5,13 @@ let NEXT_ENC_ENEMY_ID = 1;
 function mkEncEnemy(typeOrClass, x, y, timer) {
   const et=enemySpawnDef(typeOrClass),ec=et.enc;
   const wp=WEAPON_MAP[ec.fire.wpn];
-  return {x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, alive:true, t:et.id, eid:NEXT_ENC_ENEMY_ID++, spin:0, weapons:[mkWeaponSlot({cd:timer ?? 0, ammo:ammoForMountedWeapon(wp)})]};
+  const energyMax=et.energyMax??ec.energyMax,energyRegenPerSec=et.energyRegenPerSec??ec.energyRegenPerSec;
+  return {
+    x, y, vx:0, vy:0, a:Math.PI, hp:ec.hp, mhp:ec.hp, alive:true, t:et.id, eid:NEXT_ENC_ENEMY_ID++, spin:0,
+    weaponIds:[ec.fire.wpn],
+    ...(Number.isFinite(energyMax)?{energyMax,energy:energyMax,energyRegenPerSec:energyRegenPerSec??0}:{}),
+    weapons:[mkWeaponSlot({cd:timer ?? 0, ammo:ammoForMountedWeapon(wp)})]
+  };
 }
 
 function enemyInitialCooldown(typeOrClass, stagger=0) {
@@ -62,13 +68,23 @@ function enemyUpdate(e, s, enc, ew, eh) {
   const ai=ENEMY_AI[ecDef.type];
   if(!ai)throw new Error(`Enemy type ${ecDef.type} has no AI behavior`);
   enemySetSpeedLimit(e,ec.spd);
-  ai.update(e, ec, s, ew, eh);
+  const disengaging=enemyTickDisengage(e,{
+    s,worldW:ew,worldH:eh,cam:enc.cam,radius:enemyCollisionRadius(e),
+    deltaFromPlayer:enemy=>tor?wrapDelta(enemy.x,enemy.y,s.x,s.y,ew,eh):{dx:enemy.x-s.x,dy:enemy.y-s.y}
+  });
+  if(!e.alive)return false;
+  if(!disengaging)ai.update(e, ec, s, ew, eh);
   enemyTickPursuitBoost(e,s,ew,eh,ecDef.type);
   e.vx*=.975;e.vy*=.975;enemyApplySpeedLimit(e,ec.spd);
-  e.x=wrap(e.x+e.vx,ew);e.y=wrap(e.y+e.vy,eh);
+  if(e.disengaging&&e.disengageKind==='permanent'){e.x+=e.vx;e.y+=e.vy;}
+  else {e.x=wrap(e.x+e.vx,ew);e.y=wrap(e.y+e.vy,eh);}
   for(const rk of enc.rocks){const d=tor?wrapDelta(e.x,e.y,rk.x,rk.y,ew,eh):{dx:e.x-rk.x,dy:e.y-rk.y},rd=Math.hypot(d.dx,d.dy)||1;if(rd<rk.r+16){e.vx+=(d.dx/rd)*.3;e.vy+=(d.dy/rd)*.3;}}
   for(const oe of enc.en){if(oe===e||!oe.alive)continue;const oec=enemyDef(oe.t).enc,d=tor?wrapDelta(e.x,e.y,oe.x,oe.y,ew,eh):{dx:e.x-oe.x,dy:e.y-oe.y},od=Math.hypot(d.dx,d.dy)||1;const minD=ec.r+oec.r;if(od<minD){const nx=d.dx/od,ny=d.dy/od;const push=(minD-od)/minD*.5;e.vx+=nx*push;e.vy+=ny*push;}}
-  enemyLaunchDrones(e,enc,ec,ew,eh);
+  if(!e.disengaging)enemyLaunchDrones(e,enc,ec,ew,eh);
+  if(e.disengaging&&e.disengageKind==='permanent'&&enemyPastEncounterBoundary(e,{worldW:ew,worldH:eh,radius:enemyCollisionRadius(e)})&&enemyOffscreen(e,{cam:enc.cam,radius:enemyCollisionRadius(e)})){
+    e.alive=false;
+    return false;
+  }
 
   const {dx,dy}=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(dx,dy)||1;
   const fw=ec.fire,ewp=WEAPON_MAP[fw.wpn],ta=enemyAimAngle(e,s,ew,eh,fw,ewp);
@@ -107,9 +123,13 @@ function enemyUpdate(e, s, enc, ew, eh) {
     sw.pulsesLeft--;
     if(sw.pulsesLeft>0)sw.pulseTimer=ewp.pulseCd;else sw.cd=weaponCooldownFrames(ewp);
   } else if(sw.pulsesLeft===0&&--sw.cd<=0){
+    if(e.disengaging&&e.disengageKind==='permanent'){
+      sw.cd=8+Math.floor(Math.random()*12);
+    } else
     if(!enemyCanStartFire(e,dist,ta,fw,ewp)){
       sw.cd=8+Math.floor(Math.random()*12);
     } else if(ewp.fireMode==='beam'){
+      if(!consumeEnemyWeaponCosts(e,0,ewp,1)){sw.cd=8+Math.floor(Math.random()*12);return false;}
       e.a=ta;
       sw.pulsesLeft=ewp.pulses;
       sw.pulseTimer=1;
@@ -119,7 +139,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
       const cnt=fw.count||1;
       const shots=weaponHasAmmo(ewp)?Math.min(cnt,currentAmmoForSlot(e,0)):cnt;
       if(shots<=0){sw.cd=8+Math.floor(Math.random()*12);return false;}
-      if(weaponHasAmmo(ewp))consumeAmmo(e,0,shots);
+      if(!consumeEnemyWeaponCosts(e,0,ewp,shots)){sw.cd=8+Math.floor(Math.random()*12);return false;}
       const bas=Array.from({length:shots},(_,k)=>ta+(k-(shots-1)/2)*(fw.spread||0));
       const md=MISSILE_TYPES[ewp.missileType]||MISSILE_TYPES['standard'];
       for(const ba of bas){
@@ -140,7 +160,7 @@ function enemyUpdate(e, s, enc, ew, eh) {
       const cnt=fw.count||1,spread=fw.spread||0;
       const shots=weaponHasAmmo(ewp)?Math.min(cnt,currentAmmoForSlot(e,0)):cnt;
       if(shots<=0){sw.cd=8+Math.floor(Math.random()*12);return false;}
-      if(weaponHasAmmo(ewp))consumeAmmo(e,0,shots);
+      if(!consumeEnemyWeaponCosts(e,0,ewp,shots)){sw.cd=8+Math.floor(Math.random()*12);return false;}
       const bas=fw.mode==='spin'?Array.from({length:shots},(_,k)=>e.spin+k*Math.PI*2/shots):Array.from({length:shots},(_,k)=>ta+(k-(shots-1)/2)*spread);
       for(const ba of bas)enc.ebu.push({x:e.x+Math.sin(ba)*fw.offset,y:e.y-Math.cos(ba)*fw.offset,vx:Math.sin(ba)*ewp.spd,vy:-Math.cos(ba)*ewp.spd,l:ewp.life*ewp.spd,dmg:ewp.dmg,col:ecDef.col});
       tone(550+enemyTypeIndex(e.t)*80,.04,'square',.03);

@@ -454,9 +454,8 @@ function tickReload(s, slot) {
   sw.reloading = false;
 }
 
-// Fire a weapon, deducting energyCost if defined and the ship tracks energy.
-// Returns false if the ship lacks energy, true otherwise.
-// Enemies (no s.energy) ignore energyCost and always fire.
+// Fire a weapon, deducting energyCost/ammo if defined and the actor tracks them.
+// Returns false if the actor lacks energy/ammo, true otherwise.
 function tryFire(wp, wt, s, slot, bul) {
   if (weaponHasMagazine(wp)) {
     const mag = currentMagForSlot(s, slot);

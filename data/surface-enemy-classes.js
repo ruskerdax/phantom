@@ -41,7 +41,7 @@ const SURFACE_ENEMY_CLASSES = [
     id:SURFACE_ENEMY_CLASS_IDS.BASE_DEFENSE_DRONE,
     className:'BaseDefenseDrone', type:SURFACE_ENEMY_TYPES.SURFACE_DRONE, typeName:'Surface Drone',
     name:'BASE DEFENSE DRONE',
-    col:'#66ffcc', col2:'#33aa88', sc:90,
+    col:'#66ffcc', col2:'#33aa88', sc:90, energyMax:25, energyRegenPerSec:4,
     hull:{angle:'flight', boundsR:8, parts:[{kind:'poly', pts:[[0,-8],[8,0],[0,8],[-8,0]]},{kind:'circle', x:0, y:0, r:3}]},
     surf:{hp:10, r:8, spd:1.6, fire:{wpn:'mining laser', offset:9, arc:Math.PI, senseRange:260}},
     drawSurface(e){drawSurfaceHullEnemy(this,e);}

@@ -13,20 +13,30 @@ function defenseCooldown(def) {
 function mkDefense(typeOrClass, x, y, extra = {}, rng = null) {
   const def = defenseSpawnDef(typeOrClass, rng), dc = def.defense;
   const wp = defenseWeapon(def);
+  const energyMax=def.energyMax??dc.energyMax,energyRegenPerSec=def.energyRegenPerSec??dc.energyRegenPerSec;
   const {timer, ...rest} = extra;
-  return {x, y, a:0, hp:dc.hp, mhp:dc.hp, alive:true, t:def.id, weapons:[mkWeaponSlot({cd:timer ?? defenseCooldown(def), ammo:ammoForMountedWeapon(wp)})], ...rest};
+  return {
+    x, y, a:0, hp:dc.hp, mhp:dc.hp, alive:true, t:def.id,
+    weaponIds:[dc.fire.wpn],
+    ...(Number.isFinite(energyMax)?{energyMax,energy:energyMax,energyRegenPerSec:energyRegenPerSec??0}:{}),
+    weapons:[mkWeaponSlot({cd:timer ?? defenseCooldown(def), ammo:ammoForMountedWeapon(wp)})],
+    ...rest
+  };
 }
 
 function initDefense(d, alive = true, defaultClass = DEFENSE_CLASS_IDS.CAVE_TURRET) {
   const def = defenseDef(d.t ?? defaultClass), dc = def.defense;
   const baseSlot = d.weapons?.[0] || {};
   const wp = defenseWeapon(def);
+  const energyMax=def.energyMax??dc.energyMax,energyRegenPerSec=def.energyRegenPerSec??dc.energyRegenPerSec;
   return {
     ...d,
     t:def.id,
     hp:d.hp ?? dc.hp,
     mhp:d.mhp ?? dc.hp,
     alive,
+    weaponIds:[dc.fire.wpn],
+    ...(Number.isFinite(energyMax)?{energyMax,energy:d.energy ?? energyMax,energyRegenPerSec:energyRegenPerSec??0}:{}),
     weapons:[mkWeaponSlot({...baseSlot, cd:d.timer ?? baseSlot.cd ?? defenseCooldown(def), ammo:ammoForMountedWeapon(wp, baseSlot)})],
   };
 }
@@ -69,7 +79,7 @@ function defenseBeamSpace(site) {
 function fireDefenseKinetic(site, d, def, aimAngle) {
   const wp = defenseWeapon(def), fw = def.defense.fire, cnt = fw.count || 1, spread = fw.spread || 0;
   const shots = weaponHasAmmo(wp) ? Math.min(cnt, currentAmmoForSlot(d, 0)) : cnt;
-  if(weaponHasAmmo(wp)) consumeAmmo(d, 0, shots);
+  if(shots <= 0 || !consumeEnemyWeaponCosts(d, 0, wp, shots)) return false;
   for(let k = 0; k < shots; k++) {
     const a = aimAngle + (k - (shots - 1) / 2) * spread;
     site.ebu.push({
@@ -79,11 +89,12 @@ function fireDefenseKinetic(site, d, def, aimAngle) {
     });
   }
   tone(550, .04, 'square', .03);
+  return true;
 }
 
 function fireDefenseMissile(site, d, def, aimAngle) {
   const wp = defenseWeapon(def), fw = def.defense.fire, md = MISSILE_TYPES[wp.missileType] || MISSILE_TYPES['standard'];
-  if(weaponHasAmmo(wp)) consumeAmmo(d, 0, 1);
+  if(!consumeEnemyWeaponCosts(d, 0, wp, 1)) return false;
   site.emi.push({
     x:d.x + Math.sin(aimAngle) * fw.offset, y:d.y - Math.cos(aimAngle) * fw.offset, a:aimAngle,
     vx:Math.sin(aimAngle) * wp.spd, vy:-Math.cos(aimAngle) * wp.spd,
@@ -94,10 +105,12 @@ function fireDefenseMissile(site, d, def, aimAngle) {
     seek:!!wp.seek, trailTimer:0,
   });
   tone(360, .10, 'square', .06);
+  return true;
 }
 
 function fireDefenseBeam(site, d, def, aimAngle) {
   const wp = defenseWeapon(def), fw = def.defense.fire, s = site.s;
+  if(!consumeEnemyWeaponCosts(d, 0, wp, 1)) return false;
   const ox = d.x + Math.sin(aimAngle) * fw.offset, oy = d.y - Math.cos(aimAngle) * fw.offset;
   const src = site.mode === 'surface' ? {x:surfaceNearX(site.d, ox, s.x), y:oy} : {x:ox, y:oy};
   const hit = {source:src, kind:'beam', weapon:wp};
@@ -128,24 +141,26 @@ function fireDefenseBeam(site, d, def, aimAngle) {
   }
   if(s.hp <= 0) siteKillShip();
   tone(550, .08, 'sine', .04);
+  return true;
 }
 
 function fireDefenseWeapon(site, d, def, aimAngle) {
   const wp = defenseWeapon(def);
-  if(weaponHasAmmo(wp) && currentAmmoForSlot(d, 0) <= 0) {
+  if(!enemyCanFireAnyWeapon(d)) {
     weaponSlot(d,0).cd = 8 + Math.floor(Math.random() * 12);
     return;
   }
   d.a = aimAngle;
-  if(wp.fireMode === 'missile') fireDefenseMissile(site, d, def, aimAngle);
-  else if(wp.fireMode === 'beam') fireDefenseBeam(site, d, def, aimAngle);
-  else fireDefenseKinetic(site, d, def, aimAngle);
-  weaponSlot(d,0).cd = defenseCooldown(def);
+  const fired = wp.fireMode === 'missile' ? fireDefenseMissile(site, d, def, aimAngle)
+    : wp.fireMode === 'beam' ? fireDefenseBeam(site, d, def, aimAngle)
+    : fireDefenseKinetic(site, d, def, aimAngle);
+  weaponSlot(d,0).cd = fired ? defenseCooldown(def) : 8 + Math.floor(Math.random() * 12);
 }
 
 function updateDefense(site, d) {
   if(!d.alive) return;
   const def = defenseDef(d), dc = def.defense;
+  tickEnemyEnergy(d);
   if(site.mode === 'surface' && d.towerId != null) {
     const tower = site.buildings?.[d.towerId];
     if(!tower?.alive) {
@@ -164,7 +179,7 @@ function updateDefense(site, d) {
   d.a += angDiff(d.a, aim.a) * (dc.turn ?? .04);
   const sw = weaponSlot(d,0);
   if(--sw.cd <= 0) {
-    if(defenseCanFire(d, def, aim.dist, aim.a)) fireDefenseWeapon(site, d, def, aim.a);
+    if(enemyCanFireAnyWeapon(d) && defenseCanFire(d, def, aim.dist, aim.a)) fireDefenseWeapon(site, d, def, aim.a);
     else sw.cd = 8 + Math.floor(Math.random() * 12);
   }
 }

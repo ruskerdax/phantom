@@ -100,6 +100,132 @@ function enemyApplySpeedLimit(e, fallback) {
   if(es>speedLimit){e.vx=e.vx/es*speedLimit;e.vy=e.vy/es*speedLimit;}
 }
 
+function enemyWeaponDefs(e) {
+  const ids=Array.isArray(e?.weaponIds)?e.weaponIds:[];
+  return ids.map(id=>WEAPON_MAP[id]||null);
+}
+
+function enemyWeaponUsable(e, slot, wp) {
+  if(!wp)return false;
+  if(weaponHasAmmo(wp)&&(currentAmmoForSlot(e,slot)??0)<=0)return false;
+  if(wp.energyCost!==undefined&&e.energy!==undefined&&e.energy<wp.energyCost)return false;
+  return true;
+}
+
+function enemyCanFireAnyWeapon(e) {
+  return enemyWeaponDefs(e).some((wp,slot)=>enemyWeaponUsable(e,slot,wp));
+}
+
+function enemyCanRecover(e) {
+  if(!(Number.isFinite(e?.energyMax)&&e.energyMax>0))return false;
+  return enemyWeaponDefs(e).some(wp=>wp&&wp.energyCost!==undefined&&!weaponHasAmmo(wp));
+}
+
+function tickEnemyEnergy(e) {
+  if(!(Number.isFinite(e?.energyMax)&&e.energyMax>0))return;
+  const regen=Math.max(0,e.energyRegenPerSec||0)/60;
+  if(!Number.isFinite(e.energy))e.energy=e.energyMax;
+  e.energy=Math.min(e.energyMax,Math.max(0,e.energy+regen));
+}
+
+function consumeEnemyWeaponCosts(e, slot, wp, shots=1) {
+  if(!enemyWeaponUsable(e,slot,wp))return false;
+  if(wp.energyCost!==undefined&&e.energy!==undefined)e.energy=Math.max(0,e.energy-wp.energyCost);
+  if(weaponHasAmmo(wp))consumeAmmo(e,slot,Math.max(1,shots));
+  return true;
+}
+
+function enemyDisengageStart(e, kind, ctx={}) {
+  if(e.disengageKind!==kind){
+    e.disengageDirX=null;
+    e.disengageDirY=null;
+  }
+  e.disengaging=true;
+  e.disengageKind=kind;
+  if(Number.isFinite(e.disengageDirX)&&Number.isFinite(e.disengageDirY))return;
+  let dx=0,dy=-1;
+  if(ctx.surface){
+    dy=-1;
+    dx=(Math.random()-.5)*.45;
+  }else if(ctx.s){
+    const d=ctx.deltaFromPlayer?ctx.deltaFromPlayer(e):{dx:e.x-ctx.s.x,dy:e.y-ctx.s.y};
+    dx=d.dx;dy=d.dy;
+  }
+  const len=Math.hypot(dx,dy)||1;
+  e.disengageDirX=dx/len;
+  e.disengageDirY=dy/len;
+  e.disengagePhase=Math.random()*Math.PI*2;
+  e.disengageWeave=Math.random()<.5?-1:1;
+}
+
+function enemyApplyDisengageMotion(e, ctx={}) {
+  const dx=e.disengageDirX??0,dy=e.disengageDirY??-1;
+  const px=-dy,py=dx;
+  const wave=Math.sin((G.fr||0)*.075+(e.disengagePhase||0))*(e.disengageWeave||1);
+  const accel=ctx.surface?.055:.045;
+  e.vx+=(dx+px*wave*.32)*accel;
+  e.vy+=(dy+py*wave*.32)*accel;
+  e.a=Math.atan2(e.vx||dx,-(e.vy||dy));
+}
+
+function enemyOffscreen(e, ctx={}) {
+  const cam=ctx.cam;
+  if(!cam)return true;
+  const z=cam.z||1,margin=(ctx.radius||e.r||24)+40;
+  return e.x<cam.x-margin||e.x>cam.x+W/z+margin||e.y<cam.y-margin||e.y>cam.y+H/z+margin;
+}
+
+function enemyPastEncounterBoundary(e, ctx={}) {
+  const r=ctx.radius||24,w=ctx.worldW||W,h=ctx.worldH||H;
+  return e.x<-r||e.x>w+r||e.y<-r||e.y>h+r;
+}
+
+function enemyPastSurfaceBoundary(e, ctx={}) {
+  const r=ctx.radius||24,top=(ctx.exitY??0)-r;
+  return e.y<top;
+}
+
+function permanentDisengage(e, ctx={}) {
+  enemyDisengageStart(e,'permanent',ctx);
+  for(const w of e.weapons||[]){
+    if(!w)continue;
+    w.pulsesLeft=0;
+    w.misLeft=0;
+  }
+  enemyApplyDisengageMotion(e,ctx);
+  const past=ctx.surface?enemyPastSurfaceBoundary(e,ctx):enemyPastEncounterBoundary(e,ctx);
+  if(past&&enemyOffscreen(e,ctx))e.alive=false;
+}
+
+function tempDisengage(e, ctx={}) {
+  enemyDisengageStart(e,'temp',ctx);
+  enemyApplyDisengageMotion(e,ctx);
+  if(Number.isFinite(e.energyMax)&&e.energy>=e.energyMax*.2){
+    e.disengaging=false;
+    e.disengageKind=null;
+  }
+}
+
+function enemyTickDisengage(e, ctx={}) {
+  tickEnemyEnergy(e);
+  if(e.disengaging&&e.disengageKind==='temp'&&Number.isFinite(e.energyMax)&&e.energy>=e.energyMax*.2){
+    e.disengaging=false;
+    e.disengageKind=null;
+    return false;
+  }
+  if(!e.disengaging&&!enemyCanFireAnyWeapon(e)){
+    if(enemyCanRecover(e))tempDisengage(e,ctx);
+    else permanentDisengage(e,ctx);
+    return true;
+  }
+  if(e.disengaging){
+    if(e.disengageKind==='permanent')permanentDisengage(e,ctx);
+    else tempDisengage(e,ctx);
+    return true;
+  }
+  return false;
+}
+
 function enemySteerTowardPoint(ctx, x, y, opts={}) {
   const {e,ec,ew,eh}=ctx;
   const d=wrapDelta(x,y,e.x,e.y,ew,eh);

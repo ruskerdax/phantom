@@ -12,19 +12,29 @@ function surfaceEnemyCooldown(def) {
 function mkSurfaceEnemy(typeOrClass, x, y, extra = {}, rng = null) {
   const def = surfaceEnemySpawnDef(typeOrClass, rng), sf = def.surf;
   const wp = surfaceEnemyWeapon(def);
-  return {x, y, vx:0, vy:0, a:Math.PI/2, hp:sf.hp, mhp:sf.hp, alive:true, t:def.id, weapons:[mkWeaponSlot({ammo:ammoForMountedWeapon(wp)})], ...extra};
+  const energyMax=def.energyMax??sf.energyMax,energyRegenPerSec=def.energyRegenPerSec??sf.energyRegenPerSec;
+  return {
+    x, y, vx:0, vy:0, a:Math.PI/2, hp:sf.hp, mhp:sf.hp, alive:true, t:def.id,
+    weaponIds:[sf.fire.wpn],
+    ...(Number.isFinite(energyMax)?{energyMax,energy:energyMax,energyRegenPerSec:energyRegenPerSec??0}:{}),
+    weapons:[mkWeaponSlot({ammo:ammoForMountedWeapon(wp)})],
+    ...extra
+  };
 }
 
 function initSurfaceEnemy(e, alive = true) {
   const def = surfaceEnemyDef(e), sf = def.surf;
   const baseSlot = e.weapons?.[0] || {};
   const wp = surfaceEnemyWeapon(def);
+  const energyMax=def.energyMax??sf.energyMax,energyRegenPerSec=def.energyRegenPerSec??sf.energyRegenPerSec;
   return {
     ...e,
     t:def.id,
     hp:e.hp ?? sf.hp,
     mhp:e.mhp ?? sf.hp,
     alive,
+    weaponIds:[sf.fire.wpn],
+    ...(Number.isFinite(energyMax)?{energyMax,energy:e.energy ?? energyMax,energyRegenPerSec:energyRegenPerSec??0}:{}),
     weapons:[mkWeaponSlot({...baseSlot, cd:e.timer ?? baseSlot.cd ?? surfaceEnemyCooldown(def), ammo:ammoForMountedWeapon(wp, baseSlot)})],
     phase:e.phase ?? Math.random() * Math.PI * 2,
   };
@@ -226,7 +236,7 @@ function damageSurfaceEnemy(site, e, dmg, x = e.x, y = e.y) {
 function fireSurfaceEnemyKinetic(site, e, def, aimAngle) {
   const wp = surfaceEnemyWeapon(def), fw = def.surf.fire, cnt = fw.count || 1, spread = fw.spread || 0;
   const shots = weaponHasAmmo(wp) ? Math.min(cnt, currentAmmoForSlot(e, 0)) : cnt;
-  if(weaponHasAmmo(wp)) consumeAmmo(e, 0, shots);
+  if(shots <= 0 || !consumeEnemyWeaponCosts(e, 0, wp, shots)) return false;
   for(let k = 0; k < shots; k++) {
     const a = aimAngle + (k - (shots - 1) / 2) * spread;
     site.ebu.push({
@@ -236,11 +246,12 @@ function fireSurfaceEnemyKinetic(site, e, def, aimAngle) {
     });
   }
   tone(520, .04, 'square', .03);
+  return true;
 }
 
 function fireSurfaceEnemyMissile(site, e, def, aimAngle) {
   const wp = surfaceEnemyWeapon(def), fw = def.surf.fire, md = MISSILE_TYPES[wp.missileType] || MISSILE_TYPES['standard'];
-  if(weaponHasAmmo(wp)) consumeAmmo(e, 0, 1);
+  if(!consumeEnemyWeaponCosts(e, 0, wp, 1)) return false;
   site.emi.push({
     x:e.x + Math.sin(aimAngle) * fw.offset, y:e.y - Math.cos(aimAngle) * fw.offset, a:aimAngle,
     vx:Math.sin(aimAngle) * wp.spd, vy:-Math.cos(aimAngle) * wp.spd,
@@ -251,10 +262,12 @@ function fireSurfaceEnemyMissile(site, e, def, aimAngle) {
     seek:!!wp.seek, trailTimer:0,
   });
   tone(360, .10, 'square', .06);
+  return true;
 }
 
 function fireSurfaceEnemyBeam(site, e, def, aimAngle) {
   const wp = surfaceEnemyWeapon(def), fw = def.surf.fire, s = site.s;
+  if(!consumeEnemyWeaponCosts(e, 0, wp, 1)) return false;
   const ox = e.x + Math.sin(aimAngle) * fw.offset, oy = e.y - Math.cos(aimAngle) * fw.offset;
   const src = {x:surfaceNearX(site.d, ox, s.x), y:oy}, hit = {source:src, kind:'beam', weapon:wp};
   const tgts = [];
@@ -279,19 +292,20 @@ function fireSurfaceEnemyBeam(site, e, def, aimAngle) {
   }
   if(s.hp <= 0) siteKillShip();
   tone(550, .08, 'sine', .04);
+  return true;
 }
 
 function fireSurfaceEnemyWeapon(site, e, def, aimAngle) {
   const wp = surfaceEnemyWeapon(def);
-  if(weaponHasAmmo(wp) && currentAmmoForSlot(e, 0) <= 0) {
+  if(!enemyCanFireAnyWeapon(e)) {
     weaponSlot(e,0).cd = 8 + Math.floor(Math.random() * 12);
     return;
   }
   e.a = aimAngle;
-  if(wp.fireMode === 'missile') fireSurfaceEnemyMissile(site, e, def, aimAngle);
-  else if(wp.fireMode === 'beam') fireSurfaceEnemyBeam(site, e, def, aimAngle);
-  else fireSurfaceEnemyKinetic(site, e, def, aimAngle);
-  weaponSlot(e,0).cd = surfaceEnemyCooldown(def);
+  const fired = wp.fireMode === 'missile' ? fireSurfaceEnemyMissile(site, e, def, aimAngle)
+    : wp.fireMode === 'beam' ? fireSurfaceEnemyBeam(site, e, def, aimAngle)
+    : fireSurfaceEnemyKinetic(site, e, def, aimAngle);
+  weaponSlot(e,0).cd = fired ? surfaceEnemyCooldown(def) : 8 + Math.floor(Math.random() * 12);
 }
 
 function maybeFireSurfaceEnemy(site, e, def, dist, aimAngle) {
@@ -305,8 +319,15 @@ function updSurfaceEnemy(site, e) {
   if(!e.alive) return;
   const d = site.d, s = site.s, def = surfaceEnemyDef(e), sf = def.surf, ground = surfaceYAt(d, e.x);
   const delta = surfaceDelta(d, s.x, s.y, e.x, e.y), dist = Math.hypot(delta.dx, delta.dy) || 1, aimAngle = Math.atan2(delta.dx, -delta.dy);
+  const disengaging = enemyTickDisengage(e, {
+    surface:true, s, worldW:d.worldW, worldH:d.worldH, exitY:d.exitY ?? 0, cam:site.cam, radius:surfaceEnemyRadius(e),
+    deltaFromPlayer:enemy=>surfaceDelta(d, enemy.x, enemy.y, s.x, s.y)
+  });
+  if(!e.alive) return;
 
-  if(def.type === SURFACE_ENEMY_TYPES.SURFACE_DRONE) {
+  if(disengaging) {
+    // Disengage motion replaces the normal surface role update.
+  } else if(def.type === SURFACE_ENEMY_TYPES.SURFACE_DRONE) {
     steerSurfaceDrone(site, e, dist, aimAngle);
   } else if(e.role === 'guard') {
     const base = siteBuildings(site).find(b => b.alive && b.classId === BUILDING_CLASS_IDS.AIR_DEFENSE_BASE && b.idx === e.guardOf);
@@ -341,8 +362,12 @@ function updSurfaceEnemy(site, e) {
   if(sp > max) { e.vx = e.vx / sp * max; e.vy = e.vy / sp * max; }
   e.x = wrap(e.x + e.vx, d.worldW); e.y += e.vy;
   const g2 = surfaceYAt(d, e.x);
-  if(e.y > g2 - 22) { e.y = g2 - 22; e.vy = -Math.abs(e.vy) * .7; }
-  if(e.y < 35) { e.y = 35; e.vy = Math.abs(e.vy) * .5; }
+  if(!e.disengaging && e.y > g2 - 22) { e.y = g2 - 22; e.vy = -Math.abs(e.vy) * .7; }
+  if(!e.disengaging && e.y < 35) { e.y = 35; e.vy = Math.abs(e.vy) * .5; }
+  if(e.disengaging&&e.disengageKind==='permanent'&&enemyPastSurfaceBoundary(e,{exitY:d.exitY ?? 0,radius:surfaceEnemyRadius(e)})&&enemyOffscreen(e,{cam:site.cam,radius:surfaceEnemyRadius(e)})){
+    e.alive=false;
+    return;
+  }
   e.a = Math.atan2(e.vx, -e.vy || -.01);
   const fireDelta = surfaceDelta(d, s.x, s.y, e.x, e.y), fireDist = Math.hypot(fireDelta.dx, fireDelta.dy) || 1, fireAim = Math.atan2(fireDelta.dx, -fireDelta.dy);
   maybeFireSurfaceEnemy(site, e, def, fireDist, fireAim);
