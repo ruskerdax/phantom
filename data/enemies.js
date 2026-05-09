@@ -55,16 +55,23 @@ function enemyDisplayRadius(typeOrClass) {
   return (h.boundsR??def.enc.r)*scale;
 }
 
-function enemyPointHit(e, x, y, pad=0) {
-  const h=enemyHullWorld(e);
-  if(Math.hypot(x-e.x,y-e.y)>h.boundsR+pad)return false;
-  return hullPointHit(h,x,y,pad);
-}
-
 function enemyCircleHit(e, x, y, r) {
   const h=enemyHullWorld(e);
   if(Math.hypot(x-e.x,y-e.y)>h.boundsR+r)return false;
   return hullCircleHit(h,x,y,r);
+}
+
+// Swept hit: returns true if the segment (x1,y1)→(x2,y2) intersects the enemy's
+// hull (with optional pad). Use for projectile collision with (b.px,b.py)→(b.x,b.y)
+// to prevent tunneling on thin hull parts at any speed.
+function enemySegmentHit(e, x1, y1, x2, y2, pad=0) {
+  const h=enemyHullWorld(e),br=h.boundsR+pad;
+  // Closest-point-on-segment test against the bounds circle for early reject.
+  const dx=x2-x1,dy=y2-y1,len2=dx*dx+dy*dy;
+  const t=len2>0?Math.max(0,Math.min(1,((e.x-x1)*dx+(e.y-y1)*dy)/len2)):0;
+  const cx2=x1+t*dx,cy2=y1+t*dy;
+  if(Math.hypot(cx2-e.x,cy2-e.y)>br)return false;
+  return hullSegmentHit(h,x1,y1,x2,y2,pad).hit;
 }
 
 function enemyBeamTarget(e, idx) {

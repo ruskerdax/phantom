@@ -5,8 +5,13 @@ function encToroidalActive(enc){return !!(enc&&!enc.isHBase&&!enc.cleared);}
 function encDist(enc,ax,ay,bx,by){return encToroidalActive(enc)?toroidalDistance(ax,ay,bx,by,enc.ew,enc.eh):Math.hypot(ax-bx,ay-by);}
 function encDelta(enc,ax,ay,bx,by){return encToroidalActive(enc)?wrapDelta(ax,ay,bx,by,enc.ew,enc.eh):{dx:ax-bx,dy:ay-by};}
 function encPointNear(enc,x,y,refX,refY){return encToroidalActive(enc)?toroidalPointNear(x,y,refX,refY,enc.ew,enc.eh):{x,y};}
-function encEnemyPointHit(enc,e,x,y,pad=0){const p=encPointNear(enc,x,y,e.x,e.y);return enemyPointHit(e,p.x,p.y,pad);}
 function encEnemyCircleHit(enc,e,x,y,r){const p=encPointNear(enc,x,y,e.x,e.y);return enemyCircleHit(e,p.x,p.y,r);}
+function encEnemySegmentHit(enc,e,x1,y1,x2,y2,pad=0){
+  if(!encToroidalActive(enc))return enemySegmentHit(e,x1,y1,x2,y2,pad);
+  const ep=encPointNear(enc,e.x,e.y,x1,y1);
+  const sx2=wrapCoordNear(x2,x1,enc.ew),sy2=wrapCoordNear(y2,y1,enc.eh);
+  return enemySegmentHit({...e,x:ep.x,y:ep.y},x1,y1,sx2,sy2,pad);
+}
 function updEncPts(enc){if(encToroidalActive(enc)){for(let i=enc.pts.length-1;i>=0;i--){const p=enc.pts[i];p.x=wrap(p.x+p.vx,enc.ew);p.y=wrap(p.y+p.vy,enc.eh);p.l--;if(p.l<=0)enc.pts.splice(i,1);}}else updPts(enc.pts);}
 function clampEncCameraForExit(enc){enc.cam=updateWorldCamera(enc.cam,enc.s.x,enc.s.y,enc.ew,enc.eh,encounterZoomTarget(enc),.5,.5,1);}
 function encKillShip(){
@@ -86,7 +91,7 @@ function encPlayerBulletStep(enc,b,{rocks=true}={}){
       }
     }
   }
-  for(const e of enc.en){if(!e.alive)continue;if(encEnemyPointHit(enc,e,b.x,b.y)){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,enemyDef(e.t).enc.col,5);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}return true;}}
+  for(const e of enc.en){if(!e.alive)continue;if(encEnemySegmentHit(enc,e,b.px??b.x,b.py??b.y,b.x,b.y,1)){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,enemyDef(e.t).enc.col,5);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}return true;}}
   for(let mi=enc.emi.length-1;mi>=0;mi--){const m=enc.emi[mi];if(encDist(enc,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);encExplodeMissile(enc,m,true);enc.emi.splice(mi,1);}return true;}}
   if(enc.isHBase){
     if(pip(b.x,b.y,enc.hbase.hexPoly)){boomAt(enc.pts,b.x,b.y,'#cc2200',4);return true;}
@@ -202,6 +207,7 @@ function updEncMissiles(enc, mis, isEnemy, ew, eh){
     const m=mis[i];
     let det=false;
     const sticky = !!m.stickyMissile;
+    m.px=m.x;m.py=m.y;
     if(sticky){
       const state=tickStickyMissileState(m,{stickyTarget:st=>encStickyTarget(enc,st),flash:mm=>encStickyFlash(enc,mm)});
       if(state.expired){finishStickyMissile(m);mis.splice(i,1);continue;}
@@ -246,7 +252,7 @@ function updEncMissiles(enc, mis, isEnemy, ew, eh){
     if(!det){
       if(!isEnemy){
         for(const e of enc.en){if(!e.alive)continue;
-          if(encEnemyPointHit(enc,e,m.x,m.y)){
+          if(encEnemySegmentHit(enc,e,m.px,m.py,m.x,m.y,1)){
             if(sticky){stickProjectile(m,e,'enemy');tone(220,.06,'square',.05);}
             else{
               e.hp-=m.dmg;boomAt(enc.pts,m.x,m.y,enemyDef(e.t).enc.col,5);

@@ -133,6 +133,7 @@ function stepRicochetBullet(b, ctx={}, walls=ctx.walls || []) {
   const wrapX = ctx.wrapX ?? ctx.worldW ?? 0, wrapY = ctx.wrapY ?? ctx.worldH ?? 0;
   for(let k=0;k<n;k++) {
     const px = b.x, py = b.y;
+    b.px = px; b.py = py;
     b.x = wrapX ? wrap(b.x + dx, wrapX) : b.x + dx;
     b.y = wrapY ? wrap(b.y + dy, wrapY) : b.y + dy;
     b.l -= dl;
