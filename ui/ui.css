@@ -224,6 +224,12 @@
   box-shadow: var(--glow);
 }
 
+/* ---- TabBar ---------------------------------------------------------------- */
+.tab-bar { display:flex; gap:0; border-bottom:1.5px solid var(--accent-dim); }
+.tab-bar .tab { padding:6px 12px; font-size:var(--fs-tab); letter-spacing:.1em; text-transform:lowercase; color:var(--text-dim); border:1.5px solid transparent; border-bottom:none; }
+.tab-bar .tab.is-active { color:var(--accent); border-color:var(--accent-dim); border-bottom-color:var(--panel-bg); background:var(--panel-bg); }
+.tab-bar .tab .tab-badge { margin-left:6px; color:var(--accent); font-weight:700; }
+
 /* ---- Button pair (BACK | CONFIRM) ----------------------------------------- */
 .button-pair {
   display: flex;

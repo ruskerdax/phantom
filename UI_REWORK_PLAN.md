@@ -156,7 +156,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-06. Tabs → TabBar rename
+### F-06. Tabs → TabBar rename ✅
 
 **Goal:** Rename the existing non-focusable `Tabs` widget into a focusable `TabBar` with badges and migrate the only caller.
 

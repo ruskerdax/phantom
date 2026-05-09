@@ -517,30 +517,63 @@ class StatCompareRow extends Widget {
   }
 }
 
-// ----- Tabs (horizontal, used by base shop) ---------------------------------
-class Tabs extends Widget {
+// ----- TabBar (horizontal tab strip, focusable, left/right to switch) -------
+class TabBar extends Widget {
   constructor(opts) {
     super(opts);
-    this.tabs = opts.tabs;            // [{id,label}]
+    this.tabs = opts.tabs;            // [{id, label, badge?}]
     this.get = opts.get;
     this.set = opts.set;
-    this.focusable = false;           // tab strip is informational; left/right is owned by parent screen
+    this.onChange = opts.onChange;
   }
   build() {
     const el = document.createElement('div');
-    el.className = 'tabs';
+    el.className = 'tab-bar';
     for (const t of this.tabs) {
       const item = document.createElement('div');
       item.className = 'tab';
       item.dataset.id = t.id;
-      item.textContent = t.label;
+      const lbl = document.createElement('span');
+      lbl.textContent = t.label;
+      item.appendChild(lbl);
+      if (t.badge !== undefined) {
+        const badge = document.createElement('span');
+        badge.className = 'tab-badge';
+        item.appendChild(badge);
+      }
       el.appendChild(item);
     }
     return el;
   }
   refresh() {
+    super.refresh();
     if (!this._el) return;
     const cur = this.get();
-    this._el.querySelectorAll('.tab').forEach(t => t.classList.toggle('is-focused', t.dataset.id === cur));
+    this._el.querySelectorAll('.tab').forEach(t => {
+      t.classList.toggle('is-active', t.dataset.id === cur);
+    });
+    this.tabs.forEach((t, i) => {
+      if (t.badge !== undefined) {
+        const badgeEl = this._el.children[i].querySelector('.tab-badge');
+        if (badgeEl) {
+          const val = typeof t.badge === 'function' ? t.badge() : t.badge;
+          badgeEl.textContent = val != null ? String(val) : '';
+        }
+      }
+    });
+  }
+  handle(input) {
+    if (!input.left && !input.right) return false;
+    const tabs = this.tabs;
+    const cur = this.get();
+    const idx = tabs.findIndex(t => t.id === cur);
+    const i = idx < 0 ? 0 : idx;
+    const next = input.left
+      ? (i - 1 + tabs.length) % tabs.length
+      : (i + 1) % tabs.length;
+    const newId = tabs[next].id;
+    this.set(newId);
+    if (this.onChange) this.onChange(newId);
+    return true;
   }
 }

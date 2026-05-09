@@ -28,6 +28,15 @@ function makeBaseScreen() {
     onCancel: () => { returnToOverworld(); saveGame(); },
   });
 
+  // ---- TabBar widget -------------------------------------------------------
+  const tabBar = new TabBar({
+    tabs: baseTabsList(),
+    get: () => { const list = baseTabsList(); return (list[G.baseTab] || list[0]).id; },
+    set: (id) => { const idx = baseTabsList().findIndex(t => t.id === id); if (idx >= 0) G.baseTab = idx; },
+    onChange: () => {},
+  });
+  screen._tabBar = tabBar;
+
   // ---- Custom DOM ---------------------------------------------------------
   screen.buildDOM = function() {
     const el = document.createElement('div');
@@ -43,10 +52,7 @@ function makeBaseScreen() {
     title.textContent = this.title;
     panel.appendChild(title);
 
-    const tabs = document.createElement('div');
-    tabs.className = 'tabs';
-    panel.appendChild(tabs);
-    this._tabsEl = tabs;
+    panel.appendChild(this._tabBar.render());
 
     const hr = document.createElement('hr'); hr.className = 'panel-divider'; panel.appendChild(hr);
 
@@ -83,17 +89,6 @@ function makeBaseScreen() {
 
   // ---- Build tab strip + item list ---------------------------------------
   function rebuildTabsAndItems() {
-    // Tabs
-    screen._tabsEl.innerHTML = '';
-    const tabsList = baseTabsList();
-    for (let i = 0; i < tabsList.length; i++) {
-      const t = tabsList[i];
-      const tabEl = document.createElement('div');
-      tabEl.className = 'tab' + (i === G.baseTab ? ' is-focused' : '');
-      tabEl.textContent = t.label;
-      screen._tabsEl.appendChild(tabEl);
-    }
-
     // Widgets — rebuild list per tab.
     screen.widgets = [];
     const tabId = baseTabId();
@@ -171,6 +166,7 @@ function makeBaseScreen() {
       _lastTab = G.baseTab;
       this.populateBody();
     }
+    this._tabBar.refresh();
     baseRefresh();
     refreshDetailPanel();
   };
@@ -179,7 +175,7 @@ function makeBaseScreen() {
   const baseHandle = screen.handle.bind(screen);
   screen.handle = function(input) {
     if (input.left || input.right) {
-      G.baseTab = moveTabSelection(G.baseTab, baseTabs(), input.left, input.right);
+      this._tabBar.handle(input);
       this.focusIdx = 0;
       this.refresh();
       return;
