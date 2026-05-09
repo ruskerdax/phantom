@@ -209,7 +209,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-09. SiteMap widget
+### F-09. SiteMap widget ✅
 
 **Goal:** Single radar/star-map widget used by pause's system map (mode `'system'`) and slipgate (mode `'slipgate'`).
 

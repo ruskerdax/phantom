@@ -500,6 +500,13 @@
 .ship-diagram .slot.is-focused { stroke:var(--accent); stroke-width:2; filter:drop-shadow(0 0 6px var(--accent)); animation: ship-slot-pulse 1.2s ease-in-out infinite; }
 @keyframes ship-slot-pulse { 0%,100% { opacity:1 } 50% { opacity:.55 } }
 
+/* --- SiteMap --------------------------------------------------------------- */
+.site-map { width:100%; height:100%; }
+.site-map .node { fill:var(--text); }
+.site-map .node.is-current { fill:var(--accent); }
+.site-map .node.is-focused { stroke:var(--accent); stroke-width:2; filter:drop-shadow(0 0 6px var(--accent)); animation: ship-slot-pulse 1.2s ease-in-out infinite; }
+.site-map .orbit { fill:none; stroke:var(--divider); stroke-dasharray:3 4; }
+
 /* GP indicator */
 .gp-indicator {
   position: absolute;

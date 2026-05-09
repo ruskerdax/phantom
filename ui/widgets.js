@@ -632,6 +632,141 @@ class ShipDiagram extends Widget {
   }
 }
 
+// ----- SiteMap (radar / star-map, focusable, directional nav) ----------------
+class SiteMap extends Widget {
+  constructor(opts) {
+    super(opts);
+    this.mode = opts.mode;            // 'system' | 'slipgate'
+    this.nodes = opts.nodes;          // () => [{id, x, y, kind, label}]
+    this.get = opts.get;              // () => focused id
+    this.set = opts.set;              // (id) => void
+    this.onConfirm = opts.onConfirm;
+    this._nodeEls = new Map();        // String(id) -> SVGCircleElement
+  }
+
+  _rawNodes() {
+    return typeof this.nodes === 'function' ? this.nodes() : (this.nodes || []);
+  }
+
+  // Returns nodes augmented with svgX/svgY in a 0..200 coordinate space.
+  // For slipgate, positions are computed deterministically from each node's id (seed).
+  // For system, caller-supplied x/y in [-1,1] are mapped to that space.
+  _positionedNodes() {
+    return this._rawNodes().map(n => {
+      if (this.mode === 'slipgate') {
+        const seed = n.id >>> 0;
+        const u = (seed * 0x9E3779B1) >>> 0;
+        const angle = (u / 0xFFFFFFFF) * Math.PI * 2;
+        const r = 0.55 + ((seed >> 8) & 0xFF) / 512;
+        return { ...n, svgX: 100 + Math.cos(angle) * r * 90, svgY: 100 + Math.sin(angle) * r * 90 };
+      }
+      return { ...n, svgX: 100 + (n.x ?? 0) * 90, svgY: 100 + (n.y ?? 0) * 90 };
+    });
+  }
+
+  build() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('class', 'site-map');
+    svg.setAttribute('viewBox', '0 0 200 200');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+
+    const orbit = document.createElementNS(ns, 'circle');
+    orbit.setAttribute('class', 'orbit');
+    orbit.setAttribute('cx', '100');
+    orbit.setAttribute('cy', '100');
+    orbit.setAttribute('r', '67.5');
+    svg.appendChild(orbit);
+
+    // For slipgate mode, render the current system at center as a fixed, non-focusable marker.
+    if (this.mode === 'slipgate') {
+      const center = document.createElementNS(ns, 'circle');
+      center.setAttribute('class', 'node is-current');
+      center.setAttribute('cx', '100');
+      center.setAttribute('cy', '100');
+      center.setAttribute('r', '5');
+      svg.appendChild(center);
+    }
+
+    return svg;
+  }
+
+  refresh() {
+    if (!this._el) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    const nodes = this._positionedNodes();
+    const focusedId = this.get ? String(this.get()) : null;
+
+    // Remove elements for nodes no longer in the list.
+    const activeIds = new Set(nodes.map(n => String(n.id)));
+    for (const [id, el] of this._nodeEls) {
+      if (!activeIds.has(id)) { el.remove(); this._nodeEls.delete(id); }
+    }
+
+    for (const n of nodes) {
+      const sid = String(n.id);
+      let el = this._nodeEls.get(sid);
+      if (!el) {
+        el = document.createElementNS(ns, 'circle');
+        el.setAttribute('r', '4');
+        this._el.appendChild(el);
+        this._nodeEls.set(sid, el);
+      }
+      el.setAttribute('cx', String(n.svgX));
+      el.setAttribute('cy', String(n.svgY));
+      el.setAttribute('class', 'node' + (sid === focusedId ? ' is-focused' : ''));
+    }
+  }
+
+  handle(input) {
+    if (input.confirm) {
+      this.onConfirm && this.onConfirm(this.get ? this.get() : null);
+      return true;
+    }
+
+    let dirAngle;
+    if      (input.right) dirAngle = 0;
+    else if (input.down)  dirAngle = Math.PI / 2;
+    else if (input.left)  dirAngle = Math.PI;
+    else if (input.up)    dirAngle = -Math.PI / 2;
+    else return false;
+
+    const nodes = this._positionedNodes();
+    if (!nodes.length) return true;
+
+    const focusedId = this.get ? String(this.get()) : null;
+    const cur = nodes.find(n => String(n.id) === focusedId);
+
+    // If nothing is focused yet, focus the first node.
+    if (!cur) {
+      this.set && this.set(nodes[0].id);
+      this.refresh();
+      return true;
+    }
+
+    const others = nodes.filter(n => String(n.id) !== focusedId);
+    if (!others.length) return true;
+
+    // Score each candidate by angular distance from the pressed direction.
+    const scored = others.map(n => {
+      const angle = Math.atan2(n.svgY - cur.svgY, n.svgX - cur.svgX);
+      let diff = angle - dirAngle;
+      while (diff >  Math.PI) diff -= 2 * Math.PI;
+      while (diff < -Math.PI) diff += 2 * Math.PI;
+      return { n, absDiff: Math.abs(diff) };
+    });
+
+    // Prefer nodes in the pressed quadrant (±90°); fall back to closest by angle.
+    const inQuad = scored.filter(c => c.absDiff <= Math.PI / 2);
+    const pool = inQuad.length ? inQuad : scored;
+    const best = pool.reduce((a, b) => a.absDiff < b.absDiff ? a : b);
+
+    this.set && this.set(best.n.id);
+    this.refresh();
+    return true;
+  }
+}
+
 // ----- NewsTicker (pulsing dot + scrolling event ribbon) --------------------
 class NewsTicker extends Widget {
   constructor(opts) {
