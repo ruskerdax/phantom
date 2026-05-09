@@ -18,6 +18,23 @@
 const UI_SCREEN_FACTORIES = {};   // populated by ui/screens/*.js via registerScreen()
 let UI_LAST_KEY = '';
 
+// Returns '[key/btn]', '[key]', '[btn]', or '[—]' for the given action id.
+// Reads from BND; formats with fmtKey / fmtBtn. Shows gamepad side only when GP.connected.
+function bindPrompt(actionId) {
+  const b = BND?.[actionId];
+  const key = b?.key != null ? fmtKey(b.key).toLowerCase() : null;
+  const btn = (GP?.connected && b?.btn != null) ? fmtBtn(b.btn).toLowerCase() : null;
+  if (key && btn) return '[' + key + '/' + btn + ']';
+  if (key) return '[' + key + ']';
+  if (btn) return '[' + btn + ']';
+  return '[—]';
+}
+
+// Standard footer pattern: '[key/btn] action'.
+function bindHint(actionId, action) {
+  return bindPrompt(actionId) + ' ' + action;
+}
+
 function registerScreen(key, factory) { UI_SCREEN_FACTORIES[key] = factory; }
 function uiInvalidateScreen() {
   UI_LAST_KEY = '';

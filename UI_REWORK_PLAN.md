@@ -105,7 +105,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-03. bindPrompt helper
+### F-03. bindPrompt helper ✅
 
 **Goal:** One helper that emits keyboard+gamepad prompts, replacing all ad-hoc footer-prompt builders.
 

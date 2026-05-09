@@ -10,11 +10,7 @@ function pauseFooterText() {
   return pausePromptDOM('to resume') + (G.cheatMode ? '   ·   seed ' + seedText(G.seed) : '');
 }
 
-// DOM equivalent of pausePrompt() that doesn't depend on canvas.
-function pausePromptDOM(action) {
-  const hardBack = (typeof keyBoundToAction === 'function' && !keyBoundToAction('Backspace')) ? '/backspace' : '';
-  return inputPromptLabel('pause') + hardBack + ' ' + action;
-}
+function pausePromptDOM(action) { return bindHint('pause', action); }
 
 function makePauseScreen() {
   const screen = new Screen({
