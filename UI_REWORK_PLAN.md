@@ -139,7 +139,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-05. StatCompareRow widget
+### F-05. StatCompareRow widget ✅
 
 **Goal:** Side-by-side stat compare row for shop detail.
 

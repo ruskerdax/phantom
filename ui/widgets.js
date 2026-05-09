@@ -442,6 +442,81 @@ class KeyValueRow extends Widget {
   }
 }
 
+// ----- StatCompareRow (non-focusable side-by-side stat comparison) ----------
+class StatCompareRow extends Widget {
+  constructor(opts) {
+    super(opts);
+    this.focusable = false;
+    this.label = opts.label || '';
+    this.current = opts.current ?? 0;
+    this.candidate = opts.candidate ?? 0;
+    this.unit = opts.unit || '';
+    this.betterIsHigher = opts.betterIsHigher !== false;
+  }
+  build() {
+    const el = document.createElement('div');
+    el.className = 'stat-compare';
+
+    const lbl = document.createElement('span');
+    lbl.className = 'sc-label';
+
+    const bars = document.createElement('div');
+    bars.className = 'sc-bars';
+
+    const curBar = document.createElement('div');
+    curBar.className = 'bar';
+    const curFill = document.createElement('div');
+    curFill.className = 'fill';
+    curBar.appendChild(curFill);
+
+    const arrow = document.createElement('span');
+    arrow.className = 'sc-arrow';
+    arrow.textContent = '→';
+
+    const canBar = document.createElement('div');
+    canBar.className = 'bar';
+    const canFill = document.createElement('div');
+    canFill.className = 'fill';
+    canBar.appendChild(canFill);
+
+    bars.appendChild(curBar);
+    bars.appendChild(arrow);
+    bars.appendChild(canBar);
+
+    const delta = document.createElement('span');
+    delta.className = 'delta';
+
+    el.appendChild(lbl);
+    el.appendChild(bars);
+    el.appendChild(delta);
+
+    this._lbl = lbl;
+    this._curFill = curFill;
+    this._canFill = canFill;
+    this._delta = delta;
+    return el;
+  }
+  refresh() {
+    if (!this._el) return;
+    const cur = typeof this.current === 'function' ? this.current() : this.current;
+    const can = typeof this.candidate === 'function' ? this.candidate() : this.candidate;
+    this._lbl.textContent = typeof this.label === 'function' ? this.label() : this.label;
+
+    const max = Math.max(Math.abs(cur), Math.abs(can), 1);
+    this._curFill.style.width = Math.min(100, (Math.abs(cur) / max) * 100) + '%';
+    this._canFill.style.width = Math.min(100, (Math.abs(can) / max) * 100) + '%';
+
+    const diff = can - cur;
+    const unit = this.unit;
+    const sign = diff > 0 ? '+' : '';
+    this._delta.textContent = `${sign}${diff}${unit}`;
+
+    const isGood = (diff > 0 && this.betterIsHigher) || (diff < 0 && !this.betterIsHigher);
+    const isBad  = (diff < 0 && this.betterIsHigher) || (diff > 0 && !this.betterIsHigher);
+    this._delta.className = 'delta' + (isGood ? ' up' : isBad ? ' down' : '');
+  }
+}
+
 // ----- Tabs (horizontal, used by base shop) ---------------------------------
 class Tabs extends Widget {
   constructor(opts) {

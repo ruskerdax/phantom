@@ -456,6 +456,29 @@
 .kv-row .kv-label { color: var(--text-dim); }
 .kv-row .kv-value { color: var(--text-strong); font-weight: 700; }
 
+/* --- StatCompareRow --------------------------------------------------------- */
+.stat-compare {
+  display: grid;
+  grid-template-columns: 80px 1fr 60px;
+  column-gap: var(--gap);
+  row-gap: 3px;
+  font-size: var(--fs-row-detail);
+  align-items: center;
+}
+.stat-compare .sc-label { color: var(--text-dim); }
+.stat-compare .sc-bars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.stat-compare .sc-bars .bar { flex: 1; }
+.stat-compare .sc-arrow { color: var(--text-faint); flex-shrink: 0; font-size: .8em; }
+.stat-compare .bar { height: var(--bar-h); background: var(--compare-bar-bg); position: relative; }
+.stat-compare .bar > .fill { position: absolute; inset: 0 auto 0 0; background: var(--bar-fill-active); }
+.stat-compare .delta { text-align: right; }
+.stat-compare .delta.up { color: var(--stat-up); }
+.stat-compare .delta.down { color: var(--stat-down); }
+
 /* GP indicator */
 .gp-indicator {
   position: absolute;
