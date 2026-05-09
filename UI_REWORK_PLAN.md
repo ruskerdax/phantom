@@ -89,7 +89,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-02. BUILD constant
+### F-02. BUILD constant ✅
 
 **Goal:** Single-source-of-truth build version string for the title screen footer.
 
