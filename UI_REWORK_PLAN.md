@@ -139,7 +139,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-05. StatCompareRow widget ✅
+### F-05. StatCompareRow widget
 
 **Goal:** Side-by-side stat compare row for shop detail.
 
@@ -156,7 +156,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-06. Tabs → TabBar rename ✅
+### F-06. Tabs → TabBar rename
 
 **Goal:** Rename the existing non-focusable `Tabs` widget into a focusable `TabBar` with badges and migrate the only caller.
 
@@ -174,7 +174,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-07. NewsTicker widget
+### F-07. NewsTicker widget ✅
 
 **Goal:** Pulsing dot + scrolling event ribbon.
 

@@ -577,3 +577,39 @@ class TabBar extends Widget {
     return true;
   }
 }
+
+// ----- NewsTicker (pulsing dot + scrolling event ribbon) --------------------
+class NewsTicker extends Widget {
+  constructor(opts) {
+    super(opts);
+    this.focusable = false;
+    this.items = opts.items;
+  }
+  build() {
+    const el = document.createElement('div');
+    el.className = 'news-ticker';
+    const pulse = document.createElement('div');
+    pulse.className = 'pulse';
+    const track = document.createElement('span');
+    track.className = 'track';
+    el.appendChild(pulse);
+    el.appendChild(track);
+    this._track = track;
+    return el;
+  }
+  refresh() {
+    if (!this._el) return;
+    const items = typeof this.items === 'function' ? this.items() : this.items;
+    const empty = !items || items.length === 0;
+    this._el.classList.toggle('hidden', empty);
+    if (!empty) {
+      this._track.innerHTML = '';
+      const all = [...items, ...items];
+      for (const text of all) {
+        const span = document.createElement('span');
+        span.textContent = text;
+        this._track.appendChild(span);
+      }
+    }
+  }
+}

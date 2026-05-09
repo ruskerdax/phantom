@@ -485,6 +485,13 @@
 .stat-compare .delta.up { color: var(--stat-up); }
 .stat-compare .delta.down { color: var(--stat-down); }
 
+/* --- NewsTicker ------------------------------------------------------------- */
+.news-ticker { display:flex; align-items:center; gap:10px; padding:6px 10px; background:var(--ticker-bg); border:1px solid var(--accent-dim); font-size:var(--fs-ticker); overflow:hidden; }
+.news-ticker .pulse { width:8px; height:8px; flex-shrink:0; background:var(--accent); animation: ticker-pulse 1.4s ease-in-out infinite; }
+.news-ticker .track { display:inline-flex; gap:32px; white-space:nowrap; animation: ticker-scroll 30s linear infinite; }
+@keyframes ticker-pulse { 0%,100% { opacity:1 } 50% { opacity:.35 } }
+@keyframes ticker-scroll { from { transform:translateX(0) } to { transform:translateX(-50%) } }
+
 /* GP indicator */
 .gp-indicator {
   position: absolute;
