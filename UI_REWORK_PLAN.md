@@ -190,7 +190,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-08. ShipDiagram widget
+### F-08. ShipDiagram widget ✅
 
 **Goal:** SVG ship silhouette + slot pins reading from the existing canvas chassis polygon (no duplicate art).
 

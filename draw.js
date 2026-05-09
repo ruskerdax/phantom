@@ -328,7 +328,7 @@ function drShip(x,y,a,ship,thr,energy,inv,fr){
     cx.stroke();
   }
   cx.strokeStyle='#fff';cx.shadowColor='#fff';cx.shadowBlur=sb(8);cx.lineWidth=1.5;
-  cx.beginPath();cx.moveTo(0,-10);cx.lineTo(-7,8);cx.lineTo(0,4);cx.lineTo(7,8);cx.closePath();cx.stroke();
+  const _p=chassisPolygon(ship?.chassisId||'kestrel');cx.beginPath();cx.moveTo(_p[0][0],_p[0][1]);for(let _i=1;_i<_p.length;_i++)cx.lineTo(_p[_i][0],_p[_i][1]);cx.closePath();cx.stroke();
   const lit=energy>0,col=lit?'#fb0':'#f22',glow=lit?12:6,main=lit?6:2,side=lit?4:1.5;
   function flame(x1,y1,x2,y2,x3,y3,blur=glow){
     cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=sb(blur);cx.beginPath();cx.moveTo(x1,y1);cx.lineTo(x2,y2);cx.lineTo(x3,y3);cx.stroke();

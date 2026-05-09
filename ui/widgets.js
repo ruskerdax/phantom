@@ -578,6 +578,60 @@ class TabBar extends Widget {
   }
 }
 
+// ----- ShipDiagram (SVG silhouette + slot pins, single source via chassisPolygon) --
+class ShipDiagram extends Widget {
+  constructor(opts) {
+    super(opts);
+    this.focusable = false;
+    this.chassisId = opts.chassisId || 'kestrel';
+    this.loadout = opts.loadout || null;
+    this.focusedSlotId = opts.focusedSlotId ?? null;
+  }
+  setFocusedSlotId(id) { this.focusedSlotId = id; this.refresh(); }
+  setLoadout(loadout) { this.loadout = loadout; this.refresh(); }
+  build() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('class', 'ship-diagram');
+    svg.setAttribute('viewBox', '-15 -13 30 23');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+    const hull = document.createElementNS(ns, 'polygon');
+    hull.setAttribute('class', 'hull');
+    svg.appendChild(hull);
+    this._hull = hull;
+    this._slotEls = [];
+    return svg;
+  }
+  _syncSlots() {
+    const ns = 'http://www.w3.org/2000/svg';
+    const positions = chassisSlotPositions(this.chassisId);
+    while (this._slotEls.length > positions.length) this._slotEls.pop().remove();
+    while (this._slotEls.length < positions.length) {
+      const c = document.createElementNS(ns, 'circle');
+      c.setAttribute('r', '2.5');
+      this._el.appendChild(c);
+      this._slotEls.push(c);
+    }
+  }
+  refresh() {
+    if (!this._el) return;
+    const pts = chassisPolygon(this.chassisId);
+    this._hull.setAttribute('points', pts.map(p => p.join(',')).join(' '));
+    this._syncSlots();
+    const positions = chassisSlotPositions(this.chassisId);
+    const weapons = this.loadout?.weapons || [];
+    for (let i = 0; i < this._slotEls.length; i++) {
+      const el = this._slotEls[i];
+      const pos = positions[i];
+      el.setAttribute('cx', pos[0]);
+      el.setAttribute('cy', pos[1]);
+      const equipped = !!weapons[i];
+      const focused = this.focusedSlotId === i || this.focusedSlotId === String(i);
+      el.setAttribute('class', 'slot' + (focused ? ' is-focused' : equipped ? ' is-equipped' : ''));
+    }
+  }
+}
+
 // ----- NewsTicker (pulsing dot + scrolling event ribbon) --------------------
 class NewsTicker extends Widget {
   constructor(opts) {

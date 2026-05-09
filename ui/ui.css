@@ -492,6 +492,14 @@
 @keyframes ticker-pulse { 0%,100% { opacity:1 } 50% { opacity:.35 } }
 @keyframes ticker-scroll { from { transform:translateX(0) } to { transform:translateX(-50%) } }
 
+/* --- ShipDiagram ------------------------------------------------------------ */
+.ship-diagram { width:100%; aspect-ratio:16/10; }
+.ship-diagram .hull { fill:none; stroke:var(--accent); stroke-width:1.5; vector-effect:non-scaling-stroke; }
+.ship-diagram .slot { fill:none; stroke:var(--accent-dim); stroke-width:1.2; }
+.ship-diagram .slot.is-equipped { fill:rgba(0,255,136,.12); stroke:var(--accent); }
+.ship-diagram .slot.is-focused { stroke:var(--accent); stroke-width:2; filter:drop-shadow(0 0 6px var(--accent)); animation: ship-slot-pulse 1.2s ease-in-out infinite; }
+@keyframes ship-slot-pulse { 0%,100% { opacity:1 } 50% { opacity:.55 } }
+
 /* GP indicator */
 .gp-indicator {
   position: absolute;

@@ -110,3 +110,21 @@ const CHASSIS = [
 ];
 
 const AUX_ITEMS = [];
+
+// Single hull polygon shared by all chassis.
+// Coordinates are chassis-local: nose at top (negative Y), tail at positive Y.
+function chassisPolygon(chassisId) {
+  return [[0,-10],[-7,8],[0,4],[7,8]];
+}
+
+// Slot pin positions in chassis-local coordinates, centered on the longitudinal axis.
+// Two slots: stacked vertically. Three or more: evenly spaced along the centerline.
+function chassisSlotPositions(chassisId) {
+  const ch = CHASSIS.find(c => c.id === chassisId) || CHASSIS[0];
+  const n = ch ? ch.slots.length : 2;
+  if (n <= 0) return [];
+  if (n === 1) return [[0, 0]];
+  const spacing = 4;
+  const total = (n - 1) * spacing;
+  return Array.from({length: n}, (_, i) => [0, -total / 2 + i * spacing]);
+}
