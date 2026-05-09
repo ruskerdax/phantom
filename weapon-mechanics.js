@@ -1,6 +1,7 @@
 'use strict';
 
 const TAP_FRAMES = 8;
+const BOMB_GRAVITY = 0.3;
 
 // Build a missile object from a weapon config + ship pose. Fires from the ship's nose,
 // inheriting a fraction of ship velocity. The owner ship's heading sets the missile's
@@ -21,6 +22,11 @@ function spawnMissile(wp, s, mis, opts = {}) {
     dmg:wp.dmg, expDmg:wp.expDmg, expR:wp.expR,
     type:wp.missileType||'standard', col:md.col,
     seek:!!wp.seek, seekTurnRate:wp.seekTurnRate, seekTargetKinds:wp.seekTargetKinds, trailTimer:0,
+    stickyMissile:wp.fireMode === 'sticky-missile-detonate',
+    gravityScale:wp.gravityScale,
+    detonateDelayFrames:wp.detonateDelayFrames,
+    owner:s,
+    ownerSlot:opts.ownerSlot ?? null,
     wpId:wp.id,
   });
   tone(360,.10,'square',.06);
@@ -114,6 +120,8 @@ function targetIdForSticky(target, kind) {
 function stickProjectile(m, target, kind) {
   if(!m || !target) return null;
   const id = targetIdForSticky(target, kind);
+  m.stuckTarget = target;
+  m.hasStuck = true;
   m.stuckTo = {
     kind, id,
     offsetX:(m.x ?? 0) - (target.x ?? 0),
@@ -126,7 +134,8 @@ function stickProjectile(m, target, kind) {
 function updateStickyProjectile(m, ctx={}) {
   const st = m?.stuckTo;
   if(!st || st.kind === 'terrain') return st?.kind || null;
-  const target = typeof ctx.stickyTarget === 'function' ? ctx.stickyTarget(st) : null;
+  const ref = m.stuckTarget && m.stuckTarget.alive !== false ? m.stuckTarget : null;
+  const target = ref || (typeof ctx.stickyTarget === 'function' ? ctx.stickyTarget(st) : null);
   if(target && target.alive !== false) {
     m.x = (target.x ?? 0) + st.offsetX;
     m.y = (target.y ?? 0) + st.offsetY;
@@ -137,6 +146,73 @@ function updateStickyProjectile(m, ctx={}) {
     return 'free-fall';
   }
   return st.kind;
+}
+
+function findStickyMissile(sw, mis) {
+  if(!sw?.stickyMissileId || !Array.isArray(mis)) return null;
+  return mis.find(m => m && m.stickyMissile && m.id === sw.stickyMissileId) || null;
+}
+
+function finishStickyMissile(m, cooldown = true) {
+  if(!m?.stickyMissile) return;
+  const sw = m.owner?.weapons?.[m.ownerSlot];
+  if(sw && sw.stickyMissileId === m.id) {
+    sw.stickyMissileId = null;
+    const wp = WEAPON_MAP[m.wpId];
+    if(cooldown && wp?.fireMode === 'sticky-missile-detonate') sw.cd = Math.round(wp.cd * 60);
+  }
+}
+
+function stickMissileToTerrain(m, x = m.x, y = m.y) {
+  if(!m) return;
+  m.x = x; m.y = y;
+  m.vx = 0; m.vy = 0; m.spd = 0;
+  m.hasStuck = true;
+  m.stuckTarget = null;
+  m.stuckTo = {kind:'terrain', id:'terrain', offsetX:0, offsetY:0};
+}
+
+function triggerStickyMissileDetonation(m, delayFrames = 6) {
+  if(!m || m.detonating) return false;
+  m.detonating = true;
+  m.detonateTimer = Math.max(1, Math.floor(delayFrames || 1));
+  return true;
+}
+
+function stickyMissileStaticStuck(m) {
+  const kind = m?.stuckTo?.kind;
+  return kind === 'terrain' || kind === 'enemy' || kind === 'building' || kind === 'turret';
+}
+
+function tickStickyMissileState(m, ctx = {}) {
+  if(!m?.stickyMissile) return {detonate:false, stuck:false, expired:false};
+  updateStickyProjectile(m, ctx);
+  const stuck = stickyMissileStaticStuck(m);
+  if(m.detonating) {
+    if(typeof ctx.flash === 'function') ctx.flash(m);
+    if(--m.detonateTimer <= 0) return {detonate:true, stuck, expired:false};
+  }
+  if(!m.hasStuck && m.l <= 0) return {detonate:false, stuck, expired:true};
+  return {detonate:false, stuck, expired:false};
+}
+
+function accelerateMissileVector(m, gravity = 0) {
+  const accel = m.accel || 0;
+  if(accel) {
+    const sp = Math.hypot(m.vx || 0, m.vy || 0);
+    if(!Number.isFinite(m.maxSpd) || sp < m.maxSpd) {
+      m.vx = (m.vx || 0) + Math.sin(m.a || 0) * accel;
+      m.vy = (m.vy || 0) - Math.cos(m.a || 0) * accel;
+    }
+  }
+  if(gravity) m.vy = (m.vy || 0) + gravity;
+  const sp = Math.hypot(m.vx || 0, m.vy || 0);
+  if(Number.isFinite(m.maxSpd) && m.maxSpd > 0 && sp > m.maxSpd) {
+    m.vx = m.vx / sp * m.maxSpd;
+    m.vy = m.vy / sp * m.maxSpd;
+  }
+  m.spd = Math.hypot(m.vx || 0, m.vy || 0);
+  if(m.spd > 0) m.a = Math.atan2(m.vx || 0, -(m.vy || 0));
 }
 
 function mineTargetDistance(m, target, ctx) {
@@ -544,6 +620,26 @@ const WEAPON_TYPES = {
       tone(420,.05,'square',.05);
     }
   },
+  'sticky-missile-detonate': {
+    fire(wp, s, slot, _bul, ctx = {}) {
+      const sw = weaponSlot(s, slot);
+      const active = findStickyMissile(sw, ctx.mis);
+      if(active) {
+        triggerStickyMissileDetonation(active, wp.detonateDelayFrames);
+        tone(180,.04,'square',.05);
+        return;
+      }
+      sw.stickyMissileId = null;
+      const id = projectileId('sticky-missile');
+      spawnMissile(wp, s, ctx.mis, {angle:ctx.angle ?? s.a, offset:ctx.offset ?? 13, inherit:ctx.inherit ?? .3, ownerSlot:slot});
+      const m = ctx.mis?.[ctx.mis.length - 1];
+      if(m) {
+        m.id = id;
+        m.ownerSlot = slot;
+        sw.stickyMissileId = id;
+      }
+    }
+  },
   'persistent-projectile': {
     fire(wp, s, slot, bul, ctx = {}) {
       const sw = weaponSlot(s, slot);
@@ -711,7 +807,7 @@ const WEAPON_TYPES = {
       if(--sw.misTimer>0)return;
       const idx = (sw.salvoAngles?.length || sw.misLeft) - sw.misLeft;
       const angle = sw.salvoAngles?.[idx] ?? ctx.angle ?? s.a;
-      spawnMissile(wp,s,mis,{angle, offset:sw.salvoOffset ?? ctx.offset ?? 13, inherit:sw.salvoInherit ?? ctx.inherit ?? .3});
+      spawnMissile(wp,s,mis,{angle, offset:sw.salvoOffset ?? ctx.offset ?? 13, inherit:sw.salvoInherit ?? ctx.inherit ?? .3, ownerSlot:slot});
       sw.misLeft--;
       if(sw.misLeft>0)sw.misTimer=wp.salvoCd;else {
         sw.cd=ctx.cooldownFrames ?? Math.round(wp.cd*60);
@@ -975,7 +1071,8 @@ function runAiWeaponSlot(s, slot, wp, ctx) {
   policy.update(s, slot, wp, ctx);
   if(sw.input.pressed && !sw.cd && !sw.pulsesLeft && !sw.misLeft) {
     const hasSlug = wp.fireMode === 'detonate-projectile' && !!findActiveSlug(sw, ctx.bul);
-    const fired = tryFire(wp, wt, s, slot, ctx.bul, hasSlug ? {...ctx, ammoCost:0} : ctx);
+    const hasSticky = wp.fireMode === 'sticky-missile-detonate' && !!findStickyMissile(sw, ctx.mis);
+    const fired = tryFire(wp, wt, s, slot, ctx.bul, (hasSlug || hasSticky) ? {...ctx, ammoCost:0} : ctx);
     if(!fired && ctx.retryCooldown) sw.cd = ctx.retryCooldown();
     return beamHitResult;
   }
@@ -1181,6 +1278,14 @@ function runPlayerWeaponSlot(s, slot, ctx) {
     if(!hasSlug) sw.activeSlugId = null;
     if(sw.input.justReleased && sw.input.releasedAfterFrames <= TAP_FRAMES && !sw.cd) {
       tryFire(wp, wt, s, slot, ctx.bul, {...ctx, ammoCost:hasSlug ? 0 : 1});
+    }
+    return;
+  }
+  if (wp.fireMode === 'sticky-missile-detonate') {
+    const active = findStickyMissile(sw, ctx.mis);
+    if(!active) sw.stickyMissileId = null;
+    if(sw.input.justReleased && sw.input.releasedAfterFrames <= TAP_FRAMES && (active || !sw.cd)) {
+      tryFire(wp, wt, s, slot, ctx.bul, {...ctx, ammoCost:active ? 0 : 1});
     }
     return;
   }

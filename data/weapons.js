@@ -5,6 +5,7 @@
 const MISSILE_TYPES = {
   'standard': { col:'#ff8800', fin:'#888', length:8, width:3 },
   'heat-seeker': { col:'#ff3322', fin:'#aa3300', length:9, width:3.5 },
+  'hull-buster': { col:'#ffff44', fin:'#ccaa22', length:10, width:4.5, finThickness:2.2 },
 };
 
 function mkWeaponSlot(overrides = {}) {
@@ -64,6 +65,7 @@ const WEAPONS = [
   {id:'particle accelerator', name:'PARTICLE ACCELERATOR', wpnType:'energy', fireMode:'beam',    dmg:80, cd:4.0, range:400, pulses:1, pulseCd:20, persist:4, energyCost:2, chargeDelay:60, beamWidth:6, beamColor:'#8f0', beamSound:[120,.35,'sawtooth',.09], chargeTone:[1200,1800,'sine',.05], aiPolicy:'beam-pulse', buyable:true},
   {id:'rocket pod', name:'ROCKET POD', wpnType:'missile', fireMode:'missile', missileType:'standard', dmg:60, expDmg:80, expR:55, cd:3.0, spd:1.8, maxSpd:9, accel:0.18, life:140, hp:20, salvo:1, salvoCd:6, ammoMax:12, aiPolicy:'missile-salvo', buyable:true},
   {id:'heat seeker', name:'HEAT SEEKER', wpnType:'missile', fireMode:'missile', missileType:'heat-seeker', dmg:50, expDmg:60, expR:45, cd:3.0, spd:2, maxSpd:8, accel:0.18, life:160, hp:20, salvo:1, salvoCd:6, ammoMax:8, seek:true, seekTurnRate:0.06, seekTargetKinds:['enemy'], aiPolicy:'missile-salvo', buyable:true, licensePrice:2800, buildPrice:380},
+  {id:'hull buster', name:'HULL BUSTER', wpnType:'missile', fireMode:'sticky-missile-detonate', missileType:'hull-buster', dmg:0, expDmg:100, expR:75, cd:4.0, spd:3, maxSpd:5, accel:0.05, life:240, hp:25, ammoMax:8, gravityScale:'bomb', detonateDelayFrames:6, aiPolicy:null, buyable:true, licensePrice:3500, buildPrice:460},
 ];
 
 const WEAPON_MAP = Object.fromEntries(WEAPONS.map(w => [w.id, w]));

@@ -584,7 +584,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
-### P4-02. Hull Buster
+### P4-02. Hull Buster ✅
 
 **Goal:** Add HULL BUSTER. Sticky missile, no direct-hit damage, alt-tap detonates for area damage. Heavy gravity ("bomb") on planet/cave/tunnel.
 

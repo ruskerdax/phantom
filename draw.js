@@ -506,6 +506,6 @@ function drMissile(x,y,a,type='standard'){
   cx.closePath();cx.fill();
   // fin
   cx.shadowBlur=0;cx.fillStyle=md.fin||'#888';
-  cx.fillRect(-md.width*0.9,md.length*0.3,md.width*1.8,1.2);
+  cx.fillRect(-md.width*0.9,md.length*0.3,md.width*1.8,md.finThickness||1.2);
   cx.restore();
 }

@@ -48,12 +48,29 @@ function weaponAiDetonateProjectile() {
   };
 }
 
+function weaponAiStickyDetonate() {
+  return {
+    update(e, slot, wp, ctx) {
+      const sw = weaponSlot(e, slot);
+      const active = findStickyMissile(sw, ctx.mis);
+      if(active) {
+        if(sw.stickyDetonateFrame == null) sw.stickyDetonateFrame = G.fr + 30;
+        updateWeaponInputState(e, slot, G.fr >= sw.stickyDetonateFrame);
+        return;
+      }
+      sw.stickyDetonateFrame = null;
+      updateWeaponInputState(e, slot, weaponAiTriggerReady(e, slot, wp, ctx, 'sticky-detonate'));
+    }
+  };
+}
+
 const WEAPON_AI_POLICIES = {
   'tap': weaponAiTap('tap'),
   'tap-cooldown': weaponAiTap('tap-cooldown'),
   'beam-pulse': weaponAiTap('beam-pulse'),
   'missile-salvo': weaponAiTap('missile-salvo'),
   'detonate-projectile': weaponAiDetonateProjectile(),
+  'sticky-detonate': weaponAiStickyDetonate(),
 };
 
 assertWeaponRegistry();

@@ -125,7 +125,7 @@ function cavePlayerBulletStep(site,b,{terrain=true}={}) {
   } else if(b.y<0||b.y>(d.worldH||H)+20) return true;
   for(const e of site.en){if(!e.alive)continue;if(Math.hypot(b.x-e.x,b.y-e.y)<defenseRadius(e)){damageDefense(site,e,b.dmg,b.x,b.y);return true;}}
   for(const bd of siteBuildings(site)){if(bd.alive&&pointInBuildingHitBox(bd,b.x,b.y)){damageBuilding(site,bd,b.dmg,b.x,b.y);return true;}}
-  for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){siteExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
+  for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);siteExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
   const rx=site.rx;if(rx?.alive&&Math.hypot(b.x-rx.x,b.y-rx.y)<18){rx.hp-=10;addStake(100);tone(350,.1,'square',.08);if(rx.hp<=0){rx.alive=false;site.rdone=true;site.esc=1200;G.st='esc';addStake(2000);boomAt(site.pts,rx.x,rx.y,d.col,40);boomAt(site.pts,rx.x,rx.y,'#fff',20);tone(150,.8,'sawtooth',.18);}return true;}
   return false;
 }
@@ -135,7 +135,7 @@ function caveEnemyBulletStep(site,b,s,{terrain=true}={}) {
   if(terrain) {
     if(b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,G.lv))return true;
   } else if(b.y<0||b.y>(d.worldH||H)+20) return true;
-  for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){siteExplodeMissile(site,m,false);site.mis.splice(mi,1);}return true;}}
+  for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(Math.hypot(b.x-m.x,b.y-m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);siteExplodeMissile(site,m,false);site.mis.splice(mi,1);}return true;}}
   const bHitOpts={source:{x:b.x,y:b.y},kind:'projectile',weapon:b};
   if(Math.hypot(b.x-s.x,b.y-s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,bHitOpts)){
     const shieldHit=applyShipShieldDamage(s,b.dmg,bHitOpts);
@@ -183,35 +183,59 @@ function updSiteMissiles(site, mis, isEnemy){
   const s=site.s,d=site.d,worldH=d.worldH||H;
   for(let i=mis.length-1;i>=0;i--){
     const m=mis[i];
-    if(m.spd<m.maxSpd) m.spd=Math.min(m.maxSpd, m.spd+m.accel);
-    if(m.seek) heatSeekTurn(m, {
-      seekTargets:()=>siteLockTargets(site),
-      seekDelta:(_m,t)=>({dx:t.x-_m.x,dy:t.y-_m.y})
-    }, {kinds:m.seekTargetKinds||['enemy']});
-    m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
-    m.x+=m.vx;m.y+=m.vy;
-    m.l--;
+    let det=false;
+    const sticky=!!m.stickyMissile;
+    if(sticky){
+      const state=tickStickyMissileState(m,{stickyTarget:st=>siteStickyTarget(site,st),flash:mm=>siteStickyFlash(site,mm)});
+      if(state.expired||m.x<0||m.x>W||m.y<0||m.y>worldH){finishStickyMissile(m);mis.splice(i,1);continue;}
+      det=state.detonate;
+      if(!det&&!state.stuck){
+        accelerateMissileVector(m,m.gravityScale==='bomb'?BOMB_GRAVITY:0);
+        m.x+=m.vx||0;m.y+=m.vy||0;
+        if(!m.hasStuck)m.l--;
+      }
+    }else{
+      if(m.spd<m.maxSpd) m.spd=Math.min(m.maxSpd, m.spd+m.accel);
+      if(m.seek) heatSeekTurn(m, {
+        seekTargets:()=>siteLockTargets(site),
+        seekDelta:(_m,t)=>({dx:t.x-_m.x,dy:t.y-_m.y})
+      }, {kinds:m.seekTargetKinds||['enemy']});
+      m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
+      m.x+=m.vx;m.y+=m.vy;
+      m.l--;
+      if(m.l<=0||m.x<0||m.x>W||m.y<0||m.y>worldH||wHit(m.x,m.y,4,G.lv)) det=true;
+    }
     if(--m.trailTimer<=0){
       m.trailTimer=2;
       const tx=m.x-Math.sin(m.a)*5, ty=m.y+Math.cos(m.a)*5;
       site.pts.push({x:tx,y:ty,vx:-Math.sin(m.a)*0.4+(Math.random()-.5)*.4,vy:Math.cos(m.a)*0.4+(Math.random()-.5)*.4,l:10+Math.random()*8,ml:18,c:'#fa0'});
     }
-    let det=false;
-    if(m.l<=0||m.x<0||m.x>W||m.y<0||m.y>worldH||wHit(m.x,m.y,4,G.lv)) det=true;
+    if(sticky&&!det&&!stickyMissileStaticStuck(m)&&wHit(m.x,m.y,4,G.lv))stickMissileToTerrain(m,m.x,m.y);
     if(!det){
       if(!isEnemy){
         for(const e of site.en){if(!e.alive)continue;
-          if(Math.hypot(m.x-e.x,m.y-e.y)<defenseRadius(e)){damageDefense(site,e,m.dmg,m.x,m.y);det=true;break;}
+          if(Math.hypot(m.x-e.x,m.y-e.y)<defenseRadius(e)){
+            if(sticky){stickProjectile(m,e,'turret');tone(220,.06,'square',.05);}
+            else{damageDefense(site,e,m.dmg,m.x,m.y);det=true;}
+            break;
+          }
         }
         if(!det){
-          for(const b of siteBuildings(site)){if(b.alive&&pointInBuildingHitBox(b,m.x,m.y)){damageBuilding(site,b,m.dmg,m.x,m.y);det=true;break;}}
+          for(const b of siteBuildings(site)){if(b.alive&&pointInBuildingHitBox(b,m.x,m.y)){
+            if(sticky){stickProjectile(m,b,'building');tone(220,.06,'square',.05);}
+            else{damageBuilding(site,b,m.dmg,m.x,m.y);det=true;}
+            break;
+          }}
         }
         if(!det){
           const rx=site.rx;
           if(rx?.alive&&Math.hypot(m.x-rx.x,m.y-rx.y)<18){
-            rx.hp-=m.dmg;addStake(100);tone(350,.1,'square',.08);
-            if(rx.hp<=0){rx.alive=false;site.rdone=true;site.esc=1200;G.st='esc';addStake(2000);boomAt(site.pts,rx.x,rx.y,d.col,40);boomAt(site.pts,rx.x,rx.y,'#fff',20);tone(150,.8,'sawtooth',.18);}
-            det=true;
+            if(sticky)stickMissileToTerrain(m,m.x,m.y);
+            else{
+              rx.hp-=m.dmg;addStake(100);tone(350,.1,'square',.08);
+              if(rx.hp<=0){rx.alive=false;site.rdone=true;site.esc=1200;G.st='esc';addStake(2000);boomAt(site.pts,rx.x,rx.y,d.col,40);boomAt(site.pts,rx.x,rx.y,'#fff',20);tone(150,.8,'sawtooth',.18);}
+              det=true;
+            }
           }
         }
       } else if(s.alive){
@@ -230,6 +254,7 @@ function updSiteMissiles(site, mis, isEnemy){
       }
     }
     if(det){
+      finishStickyMissile(m);
       siteExplodeMissile(site,m,isEnemy);
       mis.splice(i,1);
       if(s.hp<=0){siteKillShip();return true;}
@@ -597,13 +622,23 @@ function siteLockTargets(site){
   }
   return tgts;
 }
+function siteStickyTarget(site, st){
+  if(st.kind==='enemy')return site.en.find(e=>e.alive&&targetIdForSticky(e,'enemy')===st.id)||null;
+  if(st.kind==='turret'||st.kind==='defense'){
+    const turrets=site.mode==='surface'?site.defenses:site.en;
+    return turrets.find(t=>t.alive&&targetIdForSticky(t,st.kind)===st.id)||null;
+  }
+  if(st.kind==='building')return siteBuildings(site).find(b=>b.alive&&targetIdForSticky(b,'building')===st.id)||null;
+  return null;
+}
+function siteStickyFlash(site,m){boomAt(site.pts,m.x,m.y,'#f22',2);}
 function surfaceHandleBeamHit(site,tg,wp,res){
   if(tg.kind==='building')damageBuilding(site,siteBuildings(site)[tg.idx],wp.dmg,res.x2,res.y2);
   else if(tg.kind==='enemy')damageSurfaceEnemy(site,site.en[tg.idx],wp.dmg,res.x2,res.y2);
   else if(tg.kind==='defense')damageDefense(site,site.defenses[tg.idx],wp.dmg,res.x2,res.y2);
   else if(tg.kind==='missile'){
     const m=site.emi[tg.idx];m.hp-=wp.dmg;boomAt(site.pts,res.x2,res.y2,m.col,3);
-    if(m.hp<=0){surfaceExplodeMissile(site,m,true);site.emi.splice(tg.idx,1);}
+    if(m.hp<=0){finishStickyMissile(m);surfaceExplodeMissile(site,m,true);site.emi.splice(tg.idx,1);}
   }
 }
 function surfaceExplodeMissile(site,m,isEnemy){
@@ -622,24 +657,50 @@ function updSurfaceMissiles(site,mis,isEnemy){
   const d=site.d,s=site.s;
   for(let i=mis.length-1;i>=0;i--){
     const m=mis[i];
-    if(m.spd<m.maxSpd)m.spd=Math.min(m.maxSpd,m.spd+m.accel);
-    if(m.seek) heatSeekTurn(m, {
-      seekTargets:()=>siteLockTargets(site),
-      seekDelta:(_m,t)=>surfaceDelta(d,t.x,t.y,_m.x,_m.y)
-    }, {kinds:m.seekTargetKinds||['enemy']});
-    m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
-    m.x=wrap(m.x+m.vx,d.worldW);m.y+=m.vy;m.l--;
+    let det=false;
+    const sticky=!!m.stickyMissile;
+    if(sticky){
+      const state=tickStickyMissileState(m,{stickyTarget:st=>siteStickyTarget(site,st),flash:mm=>siteStickyFlash(site,mm)});
+      if(state.expired||m.y<d.exitY-160){finishStickyMissile(m);mis.splice(i,1);continue;}
+      det=state.detonate;
+      if(!det&&!state.stuck){
+        accelerateMissileVector(m,m.gravityScale==='bomb'?BOMB_GRAVITY:0);
+        m.x=wrap(m.x+(m.vx||0),d.worldW);m.y+=m.vy||0;
+        if(!m.hasStuck)m.l--;
+      }
+    }else{
+      if(m.spd<m.maxSpd)m.spd=Math.min(m.maxSpd,m.spd+m.accel);
+      if(m.seek) heatSeekTurn(m, {
+        seekTargets:()=>siteLockTargets(site),
+        seekDelta:(_m,t)=>surfaceDelta(d,t.x,t.y,_m.x,_m.y)
+      }, {kinds:m.seekTargetKinds||['enemy']});
+      m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
+      m.x=wrap(m.x+m.vx,d.worldW);m.y+=m.vy;m.l--;
+      det=m.l<=0||m.y<d.exitY-160||m.y>surfaceYAt(d,m.x)+18;
+    }
     if(--m.trailTimer<=0){m.trailTimer=2;site.pts.push({x:m.x-Math.sin(m.a)*5,y:m.y+Math.cos(m.a)*5,vx:-Math.sin(m.a)*.4,vy:Math.cos(m.a)*.4,l:12,ml:18,c:'#fa0'});}
-    let det=m.l<=0||m.y<d.exitY-160||m.y>surfaceYAt(d,m.x)+18;
+    if(sticky&&!det&&!stickyMissileStaticStuck(m)&&m.y>surfaceYAt(d,m.x)+18)stickMissileToTerrain(m,m.x,surfaceYAt(d,m.x));
     if(!det&&!isEnemy){
-      for(const b of siteBuildings(site)){if(b.alive&&surfaceBuildingHit(site,b,m.x,m.y)){damageBuilding(site,b,m.dmg,m.x,m.y);det=true;break;}}
-      if(!det)for(const e of site.en){if(e.alive&&surfaceDist(d,m.x,m.y,e.x,e.y)<surfaceEnemyRadius(e)){damageSurfaceEnemy(site,e,m.dmg,m.x,m.y);det=true;break;}}
-      if(!det)for(const df of site.defenses){if(df.alive&&surfaceDist(d,m.x,m.y,df.x,df.y)<defenseRadius(df)){damageDefense(site,df,m.dmg,m.x,m.y);det=true;break;}}
+      for(const b of siteBuildings(site)){if(b.alive&&surfaceBuildingHit(site,b,m.x,m.y)){
+        if(sticky){stickProjectile(m,b,'building');tone(220,.06,'square',.05);}
+        else{damageBuilding(site,b,m.dmg,m.x,m.y);det=true;}
+        break;
+      }}
+      if(!det)for(const e of site.en){if(e.alive&&surfaceDist(d,m.x,m.y,e.x,e.y)<surfaceEnemyRadius(e)){
+        if(sticky){stickProjectile(m,e,'enemy');tone(220,.06,'square',.05);}
+        else{damageSurfaceEnemy(site,e,m.dmg,m.x,m.y);det=true;}
+        break;
+      }}
+      if(!det)for(const df of site.defenses){if(df.alive&&surfaceDist(d,m.x,m.y,df.x,df.y)<defenseRadius(df)){
+        if(sticky){stickProjectile(m,df,'turret');tone(220,.06,'square',.05);}
+        else{damageDefense(site,df,m.dmg,m.x,m.y);det=true;}
+        break;
+      }}
     }else if(!det&&s.alive&&surfaceDist(d,m.x,m.y,s.x,s.y)<shipHitRadius(s)){
       const src={x:surfaceNearX(d,m.x,s.x),y:m.y},hit=applyShipDamage(s,m.dmg,{source:src,kind:'missile',weapon:m});
       shipDamageTone(hit);det=true;
     }
-    if(det){surfaceExplodeMissile(site,m,isEnemy);mis.splice(i,1);if(s.hp<=0){siteKillShip();return true;}}
+    if(det){finishStickyMissile(m);surfaceExplodeMissile(site,m,isEnemy);mis.splice(i,1);if(s.hp<=0){siteKillShip();return true;}}
   }
   return false;
 }
@@ -650,14 +711,14 @@ function surfacePlayerBulletStep(site,b,{terrain=true}={}) {
   for(const bd of siteBuildings(site)){if(bd.alive&&surfaceBuildingHit(site,bd,b.x,b.y)){damageBuilding(site,bd,b.dmg,b.x,b.y);return true;}}
   for(const e of site.en){if(e.alive&&surfaceDist(d,b.x,b.y,e.x,e.y)<surfaceEnemyRadius(e)){damageSurfaceEnemy(site,e,b.dmg,b.x,b.y);return true;}}
   for(const df of site.defenses){if(df.alive&&surfaceDist(d,b.x,b.y,df.x,df.y)<defenseRadius(df)){damageDefense(site,df,b.dmg,b.x,b.y);return true;}}
-  for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(surfaceDist(d,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){surfaceExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
+  for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(surfaceDist(d,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);surfaceExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
   return false;
 }
 function surfaceEnemyBulletStep(site,b,s,{terrain=true}={}) {
   const d=site.d;
   if(b.y<d.exitY-160)return true;
   if(terrain&&b.y>surfaceYAt(d,b.x))return true;
-  for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(surfaceDist(d,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){surfaceExplodeMissile(site,m,false);site.mis.splice(mi,1);}return true;}}
+  for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(surfaceDist(d,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);surfaceExplodeMissile(site,m,false);site.mis.splice(mi,1);}return true;}}
   const src={x:surfaceNearX(d,b.x,s.x),y:b.y},opts={source:src,kind:'projectile',weapon:b};
   if(surfaceDist(d,b.x,b.y,s.x,s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,opts)){
     const sh=applyShipShieldDamage(s,b.dmg,opts);b.dmg=sh.passthroughDamage;shipDamageTone({shieldDamage:sh.shieldDamage,hullDamage:0});
