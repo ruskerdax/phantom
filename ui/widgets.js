@@ -767,6 +767,88 @@ class SiteMap extends Widget {
   }
 }
 
+// ----- RunSummaryPanel (2-column KV grid of run stats) ----------------------
+class RunSummaryPanel extends Widget {
+  constructor(opts) {
+    super(opts);
+    this.focusable = false;
+    this.mode = opts.mode; // 'current' | 'last'
+    this._rows = {};
+  }
+
+  _data() {
+    if (this.mode === 'current') return (typeof G !== 'undefined' && G.run) ? G.run : null;
+    return (typeof G !== 'undefined' && G.lastRun) ? G.lastRun.summary : null;
+  }
+
+  _seed() {
+    if (this.mode === 'current') return (typeof G !== 'undefined') ? G.seed : null;
+    return (typeof G !== 'undefined' && G.lastRun) ? G.lastRun.seed : null;
+  }
+
+  _fmt(v) { return (v != null) ? String(v) : '—'; }
+
+  _fmtHex(seed) {
+    if (seed == null) return '—';
+    return (seed >>> 0).toString(16).toUpperCase().padStart(8, '0');
+  }
+
+  _fmtTime(ms) {
+    if (ms == null) return '—';
+    const totalMin = Math.floor(ms / 60000);
+    return `${Math.floor(totalMin / 60)}h ${totalMin % 60}m`;
+  }
+
+  _addKVRow(el, key, label, color, spanFull) {
+    const row = document.createElement('div');
+    row.className = 'kv-row';
+    if (spanFull) row.style.gridColumn = '1 / -1';
+    const lbl = document.createElement('span'); lbl.className = 'kv-label'; lbl.textContent = label;
+    const val = document.createElement('span'); val.className = 'kv-value';
+    if (color) val.style.color = color;
+    row.appendChild(lbl); row.appendChild(val);
+    el.appendChild(row);
+    this._rows[key] = val;
+  }
+
+  build() {
+    const el = document.createElement('div');
+    el.className = 'run-summary-panel';
+    el.style.display = 'grid';
+    el.style.gridTemplateColumns = '1fr 1fr';
+    el.style.gap = '0 var(--gap-loose, 16px)';
+    this._rows = {};
+    this._addKVRow(el, 'seed',           'seed');
+    this._addKVRow(el, 'creditsEarned',  'credits earned');
+    this._addKVRow(el, 'systemsVisited', 'systems visited');
+    this._addKVRow(el, 'sectorsCleared', 'sectors cleared');
+    this._addKVRow(el, 'kills',          'kills');
+    this._addKVRow(el, 'deaths',         'deaths');
+    this._addKVRow(el, 'time',           'time');
+    this._addKVRow(el, 'stakeBonus',     'stake bonus', 'var(--stat-up)');
+    if (this.mode === 'last') this._addKVRow(el, 'fate', 'fate', 'var(--accent-danger)', true);
+    return el;
+  }
+
+  refresh() {
+    if (!this._el) return;
+    const d = this._data();
+    this._rows.seed.textContent          = this._fmtHex(this._seed());
+    this._rows.creditsEarned.textContent = this._fmt(d?.creditsEarned);
+    const sv = this.mode === 'current'
+      ? ((typeof G !== 'undefined' && G.totals) ? G.totals.systemsVisited : null)
+      : d?.systemsVisited;
+    this._rows.systemsVisited.textContent = this._fmt(sv);
+    this._rows.sectorsCleared.textContent = this._fmt(d?.sectorsCleared);
+    this._rows.kills.textContent          = this._fmt(d?.kills);
+    this._rows.deaths.textContent         = this._fmt(d?.deaths);
+    this._rows.time.textContent           = this._fmtTime(d?.activeMs);
+    const bonus = d?.stakeBonusPct;
+    this._rows.stakeBonus.textContent     = (bonus != null) ? `+${bonus}%` : '—';
+    if (this.mode === 'last') this._rows.fate.textContent = 'destroyed';
+  }
+}
+
 // ----- NewsTicker (pulsing dot + scrolling event ribbon) --------------------
 class NewsTicker extends Widget {
   constructor(opts) {

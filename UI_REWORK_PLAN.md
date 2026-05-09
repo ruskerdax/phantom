@@ -228,7 +228,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-10. RunSummaryPanel widget
+### F-10. RunSummaryPanel widget ✅
 
 **Goal:** 2-column KV grid of run stats, used by title (current/last) and game-over banner.
 
