@@ -513,7 +513,7 @@ function updCaveSite(){
   for(let i=site.bul.length-1;i>=0;i--){
     const b=site.bul[i];
     const consumed=stepSiteProjectile(b,0,siteBeamWalls(site),()=>cavePlayerBulletStep(site,b,{terrain:!b.ricochetProjectile}));
-    if(consumed){finishSlugProjectile(b);site.bul.splice(i,1);}
+    if(consumed&&!finishConsumedProjectile(b,site.bul))site.bul.splice(i,1);
     if(s.hp<=0){siteKillShip();return;}
   }
   for(const b of siteBuildings(site))updateBuilding(site,b);
@@ -521,7 +521,7 @@ function updCaveSite(){
   for(let i=site.ebu.length-1;i>=0;i--){
     const b=site.ebu[i];
     const consumed=stepSiteProjectile(b,0,siteBeamWalls(site),()=>caveEnemyBulletStep(site,b,s,{terrain:!b.ricochetProjectile}));
-    if(consumed){finishSlugProjectile(b);site.ebu.splice(i,1);}
+    if(consumed&&!finishConsumedProjectile(b,site.ebu))site.ebu.splice(i,1);
     if(s.hp<=0){siteKillShip();return;}
   }
   if(updSiteMissiles(site,site.mis,false)) return;
@@ -673,12 +673,12 @@ function updSurfaceProjectiles(site){
   for(let i=site.bul.length-1;i>=0;i--){
     const b=site.bul[i];
     const consumed=stepSiteProjectile(b,d.worldW,siteBeamWalls(site),()=>surfacePlayerBulletStep(site,b,{terrain:!b.ricochetProjectile}));
-    if(consumed){finishSlugProjectile(b);site.bul.splice(i,1);}
+    if(consumed&&!finishConsumedProjectile(b,site.bul))site.bul.splice(i,1);
   }
   for(let i=site.ebu.length-1;i>=0;i--){
     const b=site.ebu[i];
     const consumed=stepSiteProjectile(b,d.worldW,siteBeamWalls(site),()=>surfaceEnemyBulletStep(site,b,s,{terrain:!b.ricochetProjectile}));
-    if(consumed){finishSlugProjectile(b);site.ebu.splice(i,1);}
+    if(consumed&&!finishConsumedProjectile(b,site.ebu))site.ebu.splice(i,1);
     if(s.hp<=0){siteKillShip();return;}
   }
 }

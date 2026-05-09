@@ -308,7 +308,7 @@ function updEnc(){
   for(let i=enc.bul.length-1;i>=0;i--){
     const b=enc.bul[i];
     const consumed=stepEncounterProjectile(enc,b,ew,eh,()=>encPlayerBulletStep(enc,b,{rocks:!b.ricochetProjectile}));
-    if(consumed){finishSlugProjectile(b);enc.bul.splice(i,1);}
+    if(consumed&&!finishConsumedProjectile(b,enc.bul))enc.bul.splice(i,1);
     if(s.hp<=0){encKillShip();return;}
   }
   const alive=enc.en.filter(e=>e.alive);
@@ -325,7 +325,7 @@ function updEnc(){
   for(let i=enc.ebu.length-1;i>=0;i--){
     const b=enc.ebu[i];
     const consumed=stepEncounterProjectile(enc,b,ew,eh,()=>encEnemyBulletStep(enc,b,s,{rocks:!b.ricochetProjectile}));
-    if(consumed){finishSlugProjectile(b);enc.ebu.splice(i,1);}
+    if(consumed&&!finishConsumedProjectile(b,enc.ebu))enc.ebu.splice(i,1);
     if(s.hp<=0){encKillShip();return;}
   }
   if(updEncMissiles(enc,enc.mis,false,ew,eh)) return;

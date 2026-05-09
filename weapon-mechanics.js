@@ -386,6 +386,17 @@ function finishSlugProjectile(b) {
   }
 }
 
+function finishConsumedProjectile(b, bul) {
+  if(b?.slug && b.l <= 0) {
+    const wp = WEAPON_MAP[b.wpId];
+    if(wp?.fireMode === 'detonate-projectile' && b.owner && b.ownerSlot !== undefined) {
+      return detonateSlug(wp, b.owner, b.ownerSlot, bul, {ammoCost:0});
+    }
+  }
+  finishSlugProjectile(b);
+  return false;
+}
+
 function detonateSlug(wp, s, slot, bul, ctx = {}) {
   const sw = weaponSlot(s, slot);
   const slug = findActiveSlug(sw, bul);
