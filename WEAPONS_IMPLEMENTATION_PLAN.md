@@ -560,7 +560,7 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ## Phase 4 — Stateful projectile weapons (parallelizable, after Phase 0)
 
-### P4-01. Shredder Shot
+### P4-01. Shredder Shot ✅
 
 **Goal:** Add SHREDDER SHOT. Slow slug; tap-fire while in flight = detonate into shotgun spread.
 

@@ -361,6 +361,59 @@ function weaponMechanicsInlineTest() {
   };
 }
 
+function projectileId(prefix='p') {
+  return `${prefix}:${G?.fr ?? 0}:${Math.random().toString(36).slice(2)}`;
+}
+
+function shotgunPatternAngles(center, count, arcRad) {
+  const n = Math.max(1, Math.floor(count || 1));
+  const spread = arcRad ?? 0;
+  return Array.from({length:n}, () => center + (Math.random() - .5) * spread);
+}
+
+function findActiveSlug(sw, bul) {
+  if(!sw?.activeSlugId || !Array.isArray(bul)) return null;
+  return bul.find(b => b && b.slug && b.id === sw.activeSlugId) || null;
+}
+
+function finishSlugProjectile(b) {
+  if(!b?.slug) return;
+  const sw = b?.owner?.weapons?.[b.ownerSlot];
+  if(sw && sw.activeSlugId === b.id) {
+    sw.activeSlugId = null;
+    const wp = WEAPON_MAP[b.wpId];
+    if(wp?.fireMode === 'detonate-projectile') sw.cd = Math.round(wp.cd * 60);
+  }
+}
+
+function detonateSlug(wp, s, slot, bul, ctx = {}) {
+  const sw = weaponSlot(s, slot);
+  const slug = findActiveSlug(sw, bul);
+  if(!slug) {
+    sw.activeSlugId = null;
+    return false;
+  }
+  const sp = Math.hypot(slug.vx || 0, slug.vy || 0) || 1;
+  const center = Math.atan2(slug.vx || 0, -(slug.vy || -sp));
+  const count = Math.max(1, Math.floor(wp.pelletCount || 1));
+  for(const a of shotgunPatternAngles(center, count, wp.pelletArcRad)) {
+    bul.push({
+      x:slug.x, y:slug.y,
+      vx:Math.sin(a) * wp.pelletSpd + (s.vx || 0) * .15,
+      vy:-Math.cos(a) * wp.pelletSpd + (s.vy || 0) * .15,
+      l:wp.pelletLife * wp.pelletSpd,
+      dmg:wp.pelletDmg,
+      wpId:wp.id,
+    });
+  }
+  const idx = bul.indexOf(slug);
+  if(idx >= 0) bul.splice(idx, 1);
+  sw.activeSlugId = null;
+  sw.cd = ctx.cooldownFrames ?? Math.round(wp.cd * 60);
+  tone(620,.06,'square',.06);
+  return true;
+}
+
 // Weapon firing mechanic behavior - keyed by wp.fireMode.
 const WEAPON_TYPES = {
   'projectile': {
@@ -390,12 +443,10 @@ const WEAPON_TYPES = {
     fire(wp, s, slot, bul, ctx = {}) {
       const sw = weaponSlot(s, slot);
       const count = Math.max(1, Math.floor(wp.burstCount ?? 1));
-      const spread = wp.burstSpread ?? 0;
       const center = ctx.angle ?? s.a;
       const offset = ctx.offset ?? 13;
       const inherit = ctx.inherit ?? .3;
-      for(let i=0;i<count;i++) {
-        const a = center + (Math.random() - .5) * spread;
+      for(const a of shotgunPatternAngles(center, count, wp.burstSpread)) {
         bul.push({
           x:s.x + Math.sin(a) * offset,
           y:s.y - Math.cos(a) * offset,
@@ -451,6 +502,35 @@ const WEAPON_TYPES = {
       }
       if(!held || sw.spool < 1 || sw.cd > 0) return false;
       return tryFire(wp, this, s, slot, bul, ctx);
+    }
+  },
+  'detonate-projectile': {
+    fire(wp, s, slot, bul, ctx = {}) {
+      const sw = weaponSlot(s, slot);
+      const active = findActiveSlug(sw, bul);
+      if(active) {
+        detonateSlug(wp, s, slot, bul, ctx);
+        return;
+      }
+      sw.activeSlugId = null;
+      const a = ctx.angle ?? s.a;
+      const offset = ctx.offset ?? 13;
+      const id = projectileId('slug');
+      bul.push({
+        id,
+        x:s.x + Math.sin(a) * offset,
+        y:s.y - Math.cos(a) * offset,
+        vx:Math.sin(a) * wp.slugSpd + (s.vx || 0) * .3,
+        vy:-Math.cos(a) * wp.slugSpd + (s.vy || 0) * .3,
+        l:wp.slugLife * wp.slugSpd,
+        dmg:wp.slugDmg,
+        slug:true,
+        owner:s,
+        ownerSlot:slot,
+        wpId:wp.id,
+      });
+      sw.activeSlugId = id;
+      tone(420,.05,'square',.05);
     }
   },
   'persistent-projectile': {
@@ -828,7 +908,7 @@ function tickReload(s, slot) {
 // Fire a weapon, deducting energyCost/ammo if defined and the actor tracks them.
 // Returns false if the actor lacks energy/ammo, true otherwise.
 function tryFire(wp, wt, s, slot, bul, ctx = {}) {
-  const ammoCost = Math.max(1, Math.floor(ctx.ammoCost ?? 1));
+  const ammoCost = Math.max(0, Math.floor(ctx.ammoCost ?? 1));
   if (weaponHasMagazine(wp)) {
     const mag = currentMagForSlot(s, slot);
     if (mag === null || mag <= 0) {
@@ -883,7 +963,8 @@ function runAiWeaponSlot(s, slot, wp, ctx) {
   if(!policy) throw new Error(`Weapon ${wp.id} has unknown AI policy ${wp.aiPolicy}`);
   policy.update(s, slot, wp, ctx);
   if(sw.input.pressed && !sw.cd && !sw.pulsesLeft && !sw.misLeft) {
-    const fired = tryFire(wp, wt, s, slot, ctx.bul, ctx);
+    const hasSlug = wp.fireMode === 'detonate-projectile' && !!findActiveSlug(sw, ctx.bul);
+    const fired = tryFire(wp, wt, s, slot, ctx.bul, hasSlug ? {...ctx, ammoCost:0} : ctx);
     if(!fired && ctx.retryCooldown) sw.cd = ctx.retryCooldown();
     return beamHitResult;
   }
@@ -1082,6 +1163,14 @@ function runPlayerWeaponSlot(s, slot, ctx) {
   }
   if (wp.fireMode === 'spooled-projectile') {
     if(wt.tick) wt.tick(wp, s, slot, ctx.bul, ctx);
+    return;
+  }
+  if (wp.fireMode === 'detonate-projectile') {
+    const hasSlug = !!findActiveSlug(sw, ctx.bul);
+    if(!hasSlug) sw.activeSlugId = null;
+    if(sw.input.justReleased && sw.input.releasedAfterFrames <= TAP_FRAMES && !sw.cd) {
+      tryFire(wp, wt, s, slot, ctx.bul, {...ctx, ammoCost:hasSlug ? 0 : 1});
+    }
     return;
   }
   if (sw.misLeft > 0 && wt.tick && wp.fireMode === 'missile') wt.tick(wp, s, slot, ctx.mis, ctx);
