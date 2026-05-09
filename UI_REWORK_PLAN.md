@@ -70,7 +70,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ## Phase 0 — UI Foundations (sequential)
 
-### F-01. Theme tokens
+### F-01. Theme tokens ✅
 
 **Goal:** Add tokens for new typography sizes, status colors, and the bar primitive used by HUD + DOM.
 

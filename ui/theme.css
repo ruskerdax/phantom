@@ -39,8 +39,10 @@
   --row-h-tight:      26px;
   --gap:              10px;
   --gap-tight:        6px;
+  --gap-loose:        16px;
   --pad:              18px;
   --pad-tight:        12px;
+  --pad-section:      14px;
   --panel-radius:     0px;       /* sharp corners for retro/terminal feel */
   --border-w:         1.5px;
 
@@ -49,11 +51,34 @@
   --fs-title:         22px;
   --fs-subtitle:      13px;
   --fs-row:           14px;
+  --fs-row-strong:    16px;
+  --fs-stat-large:    18px;
   --fs-row-detail:    11px;
+  --fs-tab:           12px;
+  --fs-ticker:        11px;
+  --fs-section:       11px;
   --fs-footer:        11px;
   --fs-banner:        46px;
   --fs-banner-sub:    20px;
   --letter-spacing:   .04em;
+
+  /* ---- Status colors ---- */
+  --stat-up:          var(--accent);
+  --stat-down:        var(--accent-warn);
+  --stat-neutral:     var(--text-dim);
+  --badge-locked:     var(--text-disabled);
+  --ticker-bg:        rgba(0,20,12,0.85);
+  --compare-bar-bg:   rgba(0,80,50,0.25);
+
+  /* ---- Bar primitive (HUD + DOM shared source of truth) ---- */
+  --bar-empty:        #1a2a22;
+  --bar-fill:         var(--accent-dim);
+  --bar-fill-active:  var(--accent);
+  --bar-fill-warn:    var(--accent-warn);
+  --bar-fill-danger:  var(--accent-danger);
+  --bar-h:            10px;
+  --bar-slot-w:       18px;
+  --bar-gap:          2px;
 
   /* ---- Effects ---- */
   --glow:             0 0 8px var(--accent);
