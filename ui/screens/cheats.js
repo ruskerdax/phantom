@@ -47,8 +47,8 @@ function makeCheatsScreen() {
     },
   }));
   screen.add(new Button({
-    label: 'add 10k credits',
-    onConfirm: () => { G.credits += 10000; tone(880, .15, 'sine', .07); exit(); },
+    label: 'add 100k credits',
+    onConfirm: () => { G.credits += 100000; tone(880, .15, 'sine', .07); exit(); },
   }));
   screen.add(new Button({
     label: 'zero credits',

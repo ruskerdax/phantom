@@ -137,7 +137,7 @@ const ENEMY_CLASSES = [
     enc:{cnt:1, hp:20, spd:3.5, turn:.09, r:9, col:'#ff66cc', col2:'#aa3399',
       ai:{orbit:118, approach:150, tangential:.078, radial:.056,
         pursuit:{lead:.45, offset:105, weave:.9, flipFrames:80, thrust:.056, turnMult:1.05, tangent:.03}},
-      fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10, minRange:35, arc:1.05}},
+      fire:{wpn:'mass driver small', mode:'aim', count:1, spread:0, offset:10, minRange:35, arc:1.05}},
     drawEnc(e){
       const ec=this.enc;
       cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
@@ -157,7 +157,7 @@ const ENEMY_CLASSES = [
     enc:{cnt:1, hp:20, spd:3.5, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
       ai:{passRange:58, commitRange:170, flybyRange:125, resetRange:430, reengageRange:330, minExtendFrames:48, lead:.45, attackSpd:5.2, extendSpd:5.7, turnSpd:3.9, attackThrust:.13, extendThrust:.15, turnThrust:.04, avoidRange:210, passClearance:70, avoidThrust:.04,
         pursuit:{lead:.65, offset:150, weave:.55, flipFrames:140, thrust:.13, turnMult:1, speed:5.2}},
-      fire:{wpn:'mass driver', mode:'aim', count:1, spread:0, offset:10, minRange:20, arc:1.15, lead:.42, passOnly:true}},
+      fire:{wpn:'mass driver small', mode:'aim', count:1, spread:0, offset:10, minRange:20, arc:1.15, lead:.42, passOnly:true}},
     drawEnc(e){
       const ec=this.enc,a=flightAngle(e);
       cx.save();cx.translate(e.x,e.y);cx.rotate(a);
