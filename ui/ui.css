@@ -434,6 +434,28 @@
 .cheat-text { color: var(--accent-cheat); }
 .center-text { text-align: center; }
 
+/* === REWORK ADDITIONS === */
+
+.section-header {
+  font-size: var(--fs-section);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 1px dashed var(--divider);
+  padding-bottom: 2px;
+  margin: var(--pad-section) 0 6px;
+}
+
+.kv-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--gap);
+  font-size: var(--fs-row-detail);
+  padding: 2px 0;
+}
+.kv-row .kv-label { color: var(--text-dim); }
+.kv-row .kv-value { color: var(--text-strong); font-weight: 700; }
+
 /* GP indicator */
 .gp-indicator {
   position: absolute;

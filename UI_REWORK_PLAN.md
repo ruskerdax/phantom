@@ -122,7 +122,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-04. SectionHeader + KeyValueRow widgets
+### F-04. SectionHeader + KeyValueRow widgets ✅
 
 **Goal:** Two non-focusable display widgets used by every grouped-content screen.
 

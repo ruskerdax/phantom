@@ -396,6 +396,52 @@ class KeyBinder extends Widget {
   }
 }
 
+// ----- SectionHeader (non-focusable label + dashed underline) ---------------
+class SectionHeader extends Widget {
+  constructor(opts) {
+    super(opts);
+    this.focusable = false;
+    this.label = opts.label || '';
+    this.color = opts.color || null;
+  }
+  build() {
+    const el = document.createElement('div');
+    el.className = 'section-header';
+    if (this.color) el.style.color = this.color;
+    return el;
+  }
+  refresh() {
+    if (!this._el) return;
+    this._el.textContent = typeof this.label === 'function' ? this.label() : this.label;
+  }
+}
+
+// ----- KeyValueRow (non-focusable flex label/value row) ----------------------
+class KeyValueRow extends Widget {
+  constructor(opts) {
+    super(opts);
+    this.focusable = false;
+    this.label = opts.label || '';
+    this.value = opts.value ?? '';
+    this.valueColor = opts.valueColor || null;
+  }
+  build() {
+    const el = document.createElement('div');
+    el.className = 'kv-row';
+    const lbl = document.createElement('span'); lbl.className = 'kv-label';
+    const val = document.createElement('span'); val.className = 'kv-value';
+    if (this.valueColor) val.style.color = this.valueColor;
+    el.appendChild(lbl); el.appendChild(val);
+    this._lbl = lbl; this._val = val;
+    return el;
+  }
+  refresh() {
+    if (!this._el) return;
+    this._lbl.textContent = typeof this.label === 'function' ? this.label() : this.label;
+    this._val.textContent = typeof this.value === 'function' ? this.value() : this.value;
+  }
+}
+
 // ----- Tabs (horizontal, used by base shop) ---------------------------------
 class Tabs extends Widget {
   constructor(opts) {
