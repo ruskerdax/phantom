@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Phantom — UI Wireframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="wireframes.css" />
+</head>
+<body>
+
+<header class="app-header">
+  <div class="app-title">
+    <span>Phantom — UI Rework</span>
+    <span class="stamp">Wireframes · v1</span>
+    <small>15 screens · 3 variations each · low-fi · keyboard / gamepad only</small>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--green)"></span>focused / active state</span>
+    <span><span class="swatch" style="background:var(--paper)"></span>paper = exploration, not final pixels</span>
+    <span><span class="swatch" style="background:var(--purple)"></span>slipgate &nbsp;·&nbsp; <span class="swatch" style="background:var(--orange)"></span>warn &nbsp;·&nbsp; <span class="swatch" style="background:var(--yellow)"></span>cheat &nbsp;·&nbsp; <span class="swatch" style="background:var(--red)"></span>danger</span>
+  </div>
+  <nav class="tabs" id="tabs">
+    <div class="tab"><span class="num">01</span>Title</div>
+    <div class="tab"><span class="num">02</span>Pause</div>
+    <div class="tab"><span class="num">03</span>Friendly Base ★</div>
+    <div class="tab"><span class="num">04</span>Shop</div>
+    <div class="tab"><span class="num">05</span>Ship Configurator ★</div>
+    <div class="tab"><span class="num">06</span>Ship Readout</div>
+    <div class="tab"><span class="num">07</span>Slipgate</div>
+    <div class="tab"><span class="num">08</span>Rebuild</div>
+    <div class="tab"><span class="num">09</span>Options</div>
+    <div class="tab"><span class="num">10</span>Controls</div>
+    <div class="tab"><span class="num">11</span>Shaders</div>
+    <div class="tab"><span class="num">12</span>Cheats</div>
+    <div class="tab"><span class="num">13</span>Banners</div>
+    <div class="tab"><span class="num">14</span>Seed Input</div>
+    <div class="tab"><span class="num">15</span>Clear Data</div>
+  </nav>
+</header>
+
+<main class="screens" id="screens">
+
+<!-- ============================================================ 01 TITLE -->
+<section class="screen" data-screen-label="01 Title">
+  <div class="screen-head">
+    <h2>title screen</h2>
+    <span class="file">screens/title.js · transparent layout · starfield behind</span>
+    <span class="blurb">first impression. the logo is great — let it breathe and add a "where am i" anchor.</span>
+  </div>
+  <div class="row">
+
+    <!-- 01a SAFE -->
+    <div class="card">
+      <div class="card-label"><span class="num">01·a</span><span class="kind safe">safe</span><span class="desc">tighten the existing layout — logo, tagline, two big buttons.</span></div>
+      <div class="frame">
+        <div class="scrim"></div>
+        <div class="corner-tag">800 × 580</div>
+        <div style="position:absolute; top:60px; left:50%; transform:translateX(-50%); text-align:center;">
+          <div style="font-family:var(--mono); font-size:42px; font-weight:700; letter-spacing:.18em; color:var(--ink);">phantom</div>
+          <div style="height:2px; width:240px; background:var(--green); margin:6px auto;"></div>
+          <div class="note green s" style="letter-spacing:.16em; text-transform:lowercase;">kill phrase activated · execute phantom protocol</div>
+        </div>
+        <div style="position:absolute; left:50%; top:300px; transform:translateX(-50%); display:flex; flex-direction:column; gap:8px; min-width:260px;">
+          <div class="menuline focus"><span class="ptr">▶</span> play game</div>
+          <div class="menuline"><span class="ptr">▶</span> options</div>
+        </div>
+        <div style="position:absolute; bottom:20px; left:0; right:0; text-align:center;" class="lbl">
+          <span class="kbd">enter</span> select &nbsp;·&nbsp; <span class="kbd">↑↓</span> move
+        </div>
+        <div class="callout green" style="left:560px; top:60px;">↘ logo bigger,<br>green underline rule</div>
+        <div class="callout" style="left:30px; top:280px;">↗ keep the menu<br>tight + centered</div>
+      </div>
+    </div>
+
+    <!-- 01b STRETCH -->
+    <div class="card">
+      <div class="card-label"><span class="num">01·b</span><span class="kind stretch">stretch</span><span class="desc">add identity — last run summary, current build version, save status.</span></div>
+      <div class="frame">
+        <div class="scrim"></div>
+        <div class="corner-tag">split layout</div>
+        <div style="position:absolute; top:50px; left:48px; right:48px; display:flex; align-items:flex-start; justify-content:space-between;">
+          <div>
+            <div style="font-family:var(--mono); font-size:54px; font-weight:700; letter-spacing:.16em;">phantom</div>
+            <div class="note green s" style="margin-top:4px;">kill phrase activated</div>
+            <div class="note s dim" style="margin-top:2px;">execute phantom protocol</div>
+          </div>
+          <div class="sketch" style="padding:8px 10px; min-width:200px;">
+            <div class="lbl">last run</div>
+            <div class="row-h between" style="margin-top:4px; font-size:11px;"><span>seed</span><span class="strong">7e3a · 82c1</span></div>
+            <div class="row-h between" style="font-size:11px;"><span>credits</span><span class="strong">12,480</span></div>
+            <div class="row-h between" style="font-size:11px;"><span>fate</span><span style="color:var(--red);">destroyed</span></div>
+            <div class="row-h between" style="font-size:11px;"><span>systems</span><span class="strong">6 visited</span></div>
+          </div>
+        </div>
+        <div style="position:absolute; left:48px; top:240px; display:flex; flex-direction:column; gap:6px; min-width:280px;">
+          <div class="menuline focus"><span class="ptr">▶</span> continue run</div>
+          <div class="menuline"><span class="ptr">▶</span> new run <span class="v">[seed?]</span></div>
+          <div class="menuline"><span class="ptr">▶</span> options</div>
+          <div class="menuline"><span class="ptr">▶</span> credits</div>
+        </div>
+        <div style="position:absolute; right:48px; bottom:60px; text-align:right;">
+          <div class="lbl">build</div>
+          <div class="note s">v0.4.1 · 2026-05</div>
+          <div class="lbl" style="margin-top:8px;">save</div>
+          <div class="note s green">✓ synced</div>
+        </div>
+        <div style="position:absolute; bottom:14px; left:0; right:0; text-align:center;" class="lbl">
+          <span class="kbd">enter</span> select &nbsp;·&nbsp; <span class="kbd">↑↓</span> move
+        </div>
+        <div class="callout" style="right:30px; top:130px; max-width:160px;">"last run" tile<br>roots returning players</div>
+        <div class="callout green" style="left:240px; top:300px; max-width:170px;">"continue" if save exists,<br>"new run" otherwise</div>
+      </div>
+    </div>
+
+    <!-- 01c WILDCARD -->
+    <div class="card">
+      <div class="card-label"><span class="num">01·c</span><span class="kind wild">wildcard</span><span class="desc">diegetic boot sequence — title screen IS the ship's terminal coming online.</span></div>
+      <div class="frame" style="background:#070b09;">
+        <div class="full" style="background:radial-gradient(ellipse at center, rgba(31,138,91,.08), transparent 70%);"></div>
+        <div style="position:absolute; top:36px; left:60px; right:60px;">
+          <div class="crt" style="font-size:10px; padding:0;">::: phantom protocol — terminal handshake :::</div>
+          <div class="crt blink" style="font-size:10px; padding:0; margin-top:2px;">> uplink established · authenticating pilot</div>
+        </div>
+        <div style="position:absolute; top:140px; left:50%; transform:translateX(-50%); text-align:center;">
+          <div class="crt" style="font-size:64px; padding:0; letter-spacing:.22em; font-weight:700;">phantom</div>
+          <div style="height:1.5px; width:340px; background:var(--green); margin:10px auto; opacity:.7;"></div>
+          <div class="crt" style="font-size:10px; padding:0;">kill phrase activated. execute phantom protocol.</div>
+        </div>
+        <div style="position:absolute; left:50%; top:340px; transform:translateX(-50%); display:flex; gap:24px;">
+          <div class="crt" style="font-size:14px; padding:6px 16px; border:1px solid var(--green); background:rgba(31,138,91,.15);">▶ engage</div>
+          <div style="font-size:14px; padding:6px 16px; color:#3a5a48; border:1px solid #3a5a48; font-family:var(--mono); text-transform:lowercase;">  options</div>
+          <div style="font-size:14px; padding:6px 16px; color:#3a5a48; border:1px solid #3a5a48; font-family:var(--mono); text-transform:lowercase;">  archive</div>
+        </div>
+        <div style="position:absolute; bottom:40px; left:60px; right:60px; display:flex; justify-content:space-between; align-items:flex-end;">
+          <div>
+            <div class="crt" style="font-size:9px; padding:0;">pilot id ▮ ph-9421</div>
+            <div class="crt" style="font-size:9px; padding:0;">last contact ▮ 03:14:22 ago</div>
+          </div>
+          <div>
+            <div class="crt" style="font-size:9px; padding:0;">sectors known ▮ 06</div>
+            <div class="crt" style="font-size:9px; padding:0;">stake ▮ 4,820 cr</div>
+          </div>
+        </div>
+        <div class="callout green" style="left:30px; top:90px; max-width:180px;">terminal type-on<br>animation as it<br>"boots"</div>
+        <div class="callout" style="right:14px; top:300px; max-width:160px; color:#aaa;">menu rendered as<br>terminal commands</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============================================================ 02 PAUSE -->
+<section class="screen" data-screen-label="02 Pause">
+  <div class="screen-head">
+    <h2>pause</h2>
+    <span class="file">screens/pause.js · modal layout</span>
+    <span class="blurb">stop hiding the run state — pause is a great moment to surface "what's my ship doing right now."</span>
+  </div>
+  <div class="row">
+
+    <!-- 02a SAFE -->
+    <div class="card">
+      <div class="card-label"><span class="num">02·a</span><span class="kind safe">safe</span><span class="desc">cleaner panel, grouped sections, soft scrim over the live game.</span></div>
+      <div class="frame">
+        <div class="scrim"></div>
+        <div class="full" style="background:rgba(10,15,12,.55);"></div>
+        <div class="ph" style="position:absolute; left:30px; top:30px; right:30px; bottom:30px; border:none; background:repeating-linear-gradient(45deg, rgba(31,26,20,.05) 0 8px, transparent 8px 16px); color:#aaa;">[ live game frozen behind ]</div>
+        <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:340px; background:var(--paper); border:1.5px solid var(--ink); padding:16px;">
+          <div class="title-tx" style="text-align:center; color:var(--green); font-size:18px;">paused</div>
+          <hr style="border:0; border-top:1px solid var(--ink-soft); margin:8px 0;" />
+          <div class="lbl" style="margin:4px 0 2px;">menu</div>
+          <div class="menuline focus"><span class="ptr">▶</span>resume</div>
+          <div class="menuline"><span class="ptr">▶</span>ship config</div>
+          <div class="menuline"><span class="ptr">▶</span>options</div>
+          <div class="menuline" style="color:var(--red);"><span class="ptr">▶</span>quit to title</div>
+          <hr style="border:0; border-top:1px dashed var(--ink-soft); margin:10px 0 6px;" />
+          <div class="lbl text-c"><span class="kbd">esc</span> resume</div>
+        </div>
+        <div class="callout" style="left:30px; top:120px; max-width:170px;">"resume" gets clear<br>visual primary state</div>
+      </div>
+    </div>
+
+    <!-- 02b STRETCH -->
+    <div class="card">
+      <div class="card-label"><span class="num">02·b</span><span class="kind stretch">stretch</span><span class="desc">two-pane: menu left, live ship dashboard right (hull / shield / loadout glance).</span></div>
+      <div class="frame">
+        <div class="scrim"></div>
+        <div class="full" style="background:rgba(10,15,12,.6);"></div>
+        <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:600px; background:var(--paper); border:1.5px solid var(--ink); display:flex;">
+          <div style="flex:0 0 220px; padding:16px; border-right:1px dashed var(--ink-soft);">
+            <div class="title-tx" style="color:var(--green); font-size:16px;">paused</div>
+            <hr style="border:0; border-top:1px solid var(--ink-soft); margin:8px 0;" />
+            <div class="menuline focus"><span class="ptr">▶</span>resume</div>
+            <div class="menuline"><span class="ptr">▶</span>ship config</div>
+            <div class="menuline"><span class="ptr">▶</span>objectives</div>
+            <div class="menuline"><span class="ptr">▶</span>options</div>
+            <div class="menuline" style="color:var(--red);"><span class="ptr">▶</span>quit</div>
+          </div>
+          <div style="flex:1; padding:16px;">
+            <div class="lbl">ship · ph-9421</div>
+            <svg viewBox="0 0 220 90" class="ship-svg" style="width:100%; margin:6px 0;">
+              <polygon points="110,8 175,55 145,72 110,60 75,72 45,55" />
+              <line x1="65" y1="58" x2="65" y2="78" />
+              <line x1="155" y1="58" x2="155" y2="78" />
+              <circle cx="110" cy="40" r="6" />
+            </svg>
+            <div style="display:grid; grid-template-columns:1fr auto; gap:2px 12px; font-size:11px;">
+              <span class="dim">hull</span><span style="color:var(--green);">██████░░ 76 %</span>
+              <span class="dim">shield</span><span style="color:var(--green);">█████░░░ 60 %</span>
+              <span class="dim">energy</span><span style="color:var(--orange);">██░░░░░░ 24 %</span>
+              <span class="dim">slot 1</span><span>plasma · mk ii</span>
+              <span class="dim">slot 2</span><span>(empty)</span>
+              <span class="dim">credits</span><span class="strong">8,420 cr</span>
+            </div>
+            <hr style="border:0; border-top:1px dashed var(--ink-soft); margin:8px 0;" />
+            <div class="lbl">objective</div>
+            <div class="note s" style="margin-top:2px;">clear hostile base in this sector</div>
+          </div>
+        </div>
+        <div class="callout green" style="left:80px; bottom:50px; max-width:180px;">no extra menu trip<br>to "see my ship"</div>
+        <div class="callout" style="right:60px; top:90px; max-width:170px;">objective shown<br>without leaving pause</div>
+      </div>
+    </div>
+
+    <!-- 02c WILDCARD -->
+    <div class="card">
+      <div class="card-label"><span class="num">02·c</span><span class="kind wild">wildcard</span><span class="desc">diegetic — game freezes & desaturates, controls float in HUD positions, no panel.</span></div>
+      <div class="frame">
+        <div class="scrim"></div>
+        <div class="ph full" style="border:none; background:repeating-linear-gradient(45deg, rgba(31,26,20,.05) 0 8px, transparent 8px 16px); color:#888;">[ frozen game · grayscale + scanline ]</div>
+        <div class="full" style="background:rgba(0,0,0,.35); pointer-events:none;"></div>
+        <div style="position:absolute; top:24px; left:50%; transform:translateX(-50%); text-align:center;">
+          <div class="crt" style="font-size:30px; letter-spacing:.4em; padding:2px 18px;">— paused —</div>
+        </div>
+        <!-- corner overlays -->
+        <div style="position:absolute; left:24px; top:90px; border-left:2px solid var(--green); padding-left:10px;">
+          <div class="lbl" style="color:var(--green);">▶ menu</div>
+          <div class="menuline focus" style="padding-left:0;">resume</div>
+          <div class="menuline" style="padding-left:0;">ship config</div>
+          <div class="menuline" style="padding-left:0;">options</div>
+          <div class="menuline" style="padding-left:0; color:var(--red);">quit to title</div>
+        </div>
+        <div style="position:absolute; right:24px; top:90px; text-align:right; border-right:2px solid var(--green); padding-right:10px;">
+          <div class="lbl" style="color:var(--green);">live state ◀</div>
+          <div class="note s" style="margin-top:2px;">hull · 76%</div>
+          <div class="note s">shield · 60%</div>
+          <div class="note s">credits · 8,420</div>
+          <div class="note s">stake · 1,200</div>
+          <div class="note s">seed · 7e3a82c1</div>
+        </div>
+        <div style="position:absolute; left:24px; bottom:50px; border-left:2px solid var(--ink-2); padding-left:10px;">
+          <div class="lbl">objective</div>
+          <div class="note s">clear hostile base</div>
+          <div class="note s dim">2 / 5 enemies down</div>
+        </div>
+        <div style="position:absolute; right:24px; bottom:24px; text-align:right;">
+          <span class="kbd">esc</span> <span class="lbl">resume</span>
+        </div>
+        <div class="callout green" style="left:300px; top:80px; max-width:170px;">no panel — just<br>HUD-style overlays<br>at four anchors</div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script src="screens.js"></script>
+
+</main>
+
+<script>
+(function() {
+  const tabs = document.querySelectorAll('#tabs .tab');
+  const screens = document.querySelectorAll('#screens .screen');
+
+  function activate(i) {
+    tabs.forEach((t, idx) => t.classList.toggle('is-active', idx === i));
+    screens.forEach((s, idx) => s.classList.toggle('is-active', idx === i));
+    history.replaceState(null, '', '#' + (i + 1));
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+
+  tabs.forEach((t, i) => t.addEventListener('click', () => activate(i)));
+
+  // keyboard nav: ←/→ between tabs
+  document.addEventListener('keydown', (e) => {
+    if (e.target.matches('input,textarea')) return;
+    const cur = [...tabs].findIndex(t => t.classList.contains('is-active'));
+    if (e.key === 'ArrowRight') { activate((cur + 1) % tabs.length); e.preventDefault(); }
+    if (e.key === 'ArrowLeft')  { activate((cur - 1 + tabs.length) % tabs.length); e.preventDefault(); }
+  });
+
+  // hash-based deep link
+  const initial = Math.max(0, Math.min(tabs.length - 1, parseInt(location.hash.slice(1), 10) - 1)) || 0;
+  activate(initial);
+})();
+</script>
+
+</body>
+</html>
