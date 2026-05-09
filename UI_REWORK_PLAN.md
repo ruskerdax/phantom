@@ -245,7 +245,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
-### F-11. HUD bar token bridge
+### F-11. HUD bar token bridge ✅
 
 **Goal:** Canvas HUD bars read the same `--bar-*` tokens as DOM widgets.
 

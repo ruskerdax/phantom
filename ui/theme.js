@@ -52,4 +52,32 @@ function syncThemeFromCSS() {
     const v = cs.getPropertyValue(css).trim();
     if (v) THEME[key] = v;
   }
+  _barTokensCache = null;
+}
+
+let _barTokensCache = null;
+function themeBarTokens() {
+  if (_barTokensCache) return _barTokensCache;
+  const cs = (typeof document !== 'undefined') ? getComputedStyle(document.documentElement) : null;
+  const readStr = (name, fallback) => {
+    if (!cs) return fallback;
+    const v = cs.getPropertyValue(name).trim();
+    return v || fallback;
+  };
+  const readPx = (name, fallback) => {
+    const v = readStr(name, '');
+    const n = parseFloat(v);
+    return Number.isFinite(n) ? n : fallback;
+  };
+  _barTokensCache = {
+    empty:      readStr('--bar-empty',       '#1a2a22'),
+    fill:       readStr('--bar-fill',        '#2a6a4a'),
+    fillActive: readStr('--bar-fill-active', '#00ff88'),
+    warn:       readStr('--bar-fill-warn',   '#ff8844'),
+    danger:     readStr('--bar-fill-danger', '#ff4040'),
+    h:          readPx ('--bar-h',           10),
+    slotW:      readPx ('--bar-slot-w',      18),
+    gap:        readPx ('--bar-gap',         2),
+  };
+  return _barTokensCache;
 }
