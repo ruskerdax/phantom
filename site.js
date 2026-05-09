@@ -200,7 +200,9 @@ function updSiteMissiles(site, mis, isEnemy){
         seekTargets:()=>siteLockTargets(site),
         seekDelta:(_m,t)=>({dx:t.x-_m.x,dy:t.y-_m.y})
       }, {kinds:m.seekTargetKinds||['enemy']});
-      m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
+      m.propVx = Math.sin(m.a) * m.spd;
+      m.propVy = -Math.cos(m.a) * m.spd;
+      setMissileWorldVelocity(m);
       m.x+=m.vx;m.y+=m.vy;
       m.l--;
       if(m.l<=0||m.x<0||m.x>W||m.y<0||m.y>worldH||wHit(m.x,m.y,4,G.lv)) det=true;
@@ -674,7 +676,9 @@ function updSurfaceMissiles(site,mis,isEnemy){
         seekTargets:()=>siteLockTargets(site),
         seekDelta:(_m,t)=>surfaceDelta(d,t.x,t.y,_m.x,_m.y)
       }, {kinds:m.seekTargetKinds||['enemy']});
-      m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
+      m.propVx = Math.sin(m.a) * m.spd;
+      m.propVy = -Math.cos(m.a) * m.spd;
+      setMissileWorldVelocity(m);
       m.x=wrap(m.x+m.vx,d.worldW);m.y+=m.vy;m.l--;
       det=m.l<=0||m.y<d.exitY-160||m.y>surfaceYAt(d,m.x)+18;
     }

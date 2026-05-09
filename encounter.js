@@ -217,7 +217,9 @@ function updEncMissiles(enc, mis, isEnemy, ew, eh){
         seekTargets:()=>encLockTargets(enc),
         seekDelta:(_m,t)=>encDelta(enc,t.x,t.y,_m.x,_m.y)
       }, {kinds:m.seekTargetKinds||['enemy']});
-      m.vx=Math.sin(m.a)*m.spd;m.vy=-Math.cos(m.a)*m.spd;
+      m.propVx = Math.sin(m.a) * m.spd;
+      m.propVy = -Math.cos(m.a) * m.spd;
+      setMissileWorldVelocity(m);
       m.x=wrap(m.x+m.vx,ew);m.y=wrap(m.y+m.vy,eh);
       m.l--;
       if(m.l<=0) det=true;

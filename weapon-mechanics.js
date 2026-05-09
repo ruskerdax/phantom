@@ -3,20 +3,73 @@
 const TAP_FRAMES = 8;
 const BOMB_GRAVITY = 0.3;
 
+function weaponInheritScale(wp, ctx = {}) {
+  if(wp?.inheritShooterVelocity === false) return 0;
+  const inherit = ctx?.inherit;
+  if(Number.isFinite(inherit)) return inherit;
+  return 1;
+}
+
+function composeLaunchVelocity(angle, launchSpeed, sourceVx = 0, sourceVy = 0, scale = 1) {
+  const a = Number.isFinite(angle) ? angle : 0;
+  const spd = Number.isFinite(launchSpeed) ? launchSpeed : 0;
+  const inheritScale = Number.isFinite(scale) ? scale : 1;
+  const svx = Number.isFinite(sourceVx) ? sourceVx : 0;
+  const svy = Number.isFinite(sourceVy) ? sourceVy : 0;
+  return {
+    vx:Math.sin(a) * spd + svx * inheritScale,
+    vy:-Math.cos(a) * spd + svy * inheritScale,
+  };
+}
+
+function weaponBaseProjectileSpeed(wp) {
+  if(!wp) return 0;
+  if(wp.fireMode === 'detonate-projectile' && Number.isFinite(wp.slugSpd)) return wp.slugSpd;
+  if(Number.isFinite(wp.spd)) return wp.spd;
+  if(Number.isFinite(wp.slugSpd)) return wp.slugSpd;
+  if(Number.isFinite(wp.pelletSpd)) return wp.pelletSpd;
+  return 0;
+}
+
+function effectiveLeadSpeed(wp, shooter, angle, ctx = {}) {
+  const base = weaponBaseProjectileSpeed(wp);
+  const a = Number.isFinite(angle) ? angle : 0;
+  const scale = weaponInheritScale(wp, ctx);
+  const fwdX = Math.sin(a), fwdY = -Math.cos(a);
+  const sourceVx = Number.isFinite(shooter?.vx) ? shooter.vx : 0;
+  const sourceVy = Number.isFinite(shooter?.vy) ? shooter.vy : 0;
+  return Math.max(0.25, base + (sourceVx * fwdX + sourceVy * fwdY) * scale);
+}
+
+function setMissileWorldVelocity(m) {
+  const propVx = Number.isFinite(m?.propVx) ? m.propVx : 0;
+  const propVy = Number.isFinite(m?.propVy) ? m.propVy : 0;
+  const inheritVx = Number.isFinite(m?.inheritVx) ? m.inheritVx : 0;
+  const inheritVy = Number.isFinite(m?.inheritVy) ? m.inheritVy : 0;
+  m.vx = propVx + inheritVx;
+  m.vy = propVy + inheritVy;
+  return m;
+}
+
 // Build a missile object from a weapon config + ship pose. Fires from the ship's nose,
-// inheriting a fraction of ship velocity. The owner ship's heading sets the missile's
+// inheriting optional shooter velocity. The owner ship's heading sets the missile's
 // initial heading; speed starts at wp.spd and ramps to wp.maxSpd via wp.accel each frame.
 function spawnMissile(wp, s, mis, opts = {}) {
   const md = MISSILE_TYPES[wp.missileType] || MISSILE_TYPES['standard'];
   const a = opts.angle ?? s.a;
   const offset = opts.offset ?? 13;
-  const inherit = opts.inherit ?? .3;
+  const inheritScale = weaponInheritScale(wp, opts);
+  const inheritVx = (s.vx || 0) * inheritScale;
+  const inheritVy = (s.vy || 0) * inheritScale;
+  const prop = composeLaunchVelocity(a, wp.spd, 0, 0, 0);
   const ox = s.x + Math.sin(a)*offset, oy = s.y - Math.cos(a)*offset;
   mis.push({
     x:ox, y:oy, a,
-    vx: Math.sin(a)*wp.spd + (s.vx || 0)*inherit,
-    vy:-Math.cos(a)*wp.spd + (s.vy || 0)*inherit,
-    spd:wp.spd, maxSpd:wp.maxSpd, accel:wp.accel,
+    vx: prop.vx + inheritVx,
+    vy: prop.vy + inheritVy,
+    propVx:prop.vx, propVy:prop.vy,
+    inheritVx, inheritVy,
+    spd:Math.hypot(prop.vx, prop.vy), maxSpd:wp.maxSpd, accel:wp.accel,
     hp:wp.hp, maxHp:wp.hp,
     l:wp.life,
     dmg:wp.dmg, expDmg:wp.expDmg, expR:wp.expR,
@@ -76,7 +129,7 @@ function stepRicochetBullet(b, ctx={}, walls=ctx.walls || []) {
   const maxStep = ctx.maxStep ?? 4;
   const sx = b.vx || 0, sy = b.vy || 0, sp = Math.hypot(sx, sy);
   const n = Math.max(1, Math.ceil(sp / maxStep));
-  const dx = sx / n, dy = sy / n, dl = sp / n;
+  const dx = sx / n, dy = sy / n, dl = 1 / n;
   const wrapX = ctx.wrapX ?? ctx.worldW ?? 0, wrapY = ctx.wrapY ?? ctx.worldH ?? 0;
   for(let k=0;k<n;k++) {
     const px = b.x, py = b.y;
@@ -127,6 +180,7 @@ function stickProjectile(m, target, kind) {
     offsetX:(m.x ?? 0) - (target.x ?? 0),
     offsetY:(m.y ?? 0) - (target.y ?? 0),
   };
+  m.propVx = 0; m.propVy = 0;
   m.vx = 0; m.vy = 0; m.spd = 0;
   return m.stuckTo;
 }
@@ -166,6 +220,7 @@ function finishStickyMissile(m, cooldown = true) {
 function stickMissileToTerrain(m, x = m.x, y = m.y) {
   if(!m) return;
   m.x = x; m.y = y;
+  m.propVx = 0; m.propVy = 0;
   m.vx = 0; m.vy = 0; m.spd = 0;
   m.hasStuck = true;
   m.stuckTarget = null;
@@ -197,22 +252,29 @@ function tickStickyMissileState(m, ctx = {}) {
 }
 
 function accelerateMissileVector(m, gravity = 0) {
+  const inheritVx = Number.isFinite(m?.inheritVx) ? m.inheritVx : 0;
+  const inheritVy = Number.isFinite(m?.inheritVy) ? m.inheritVy : 0;
+  let propVx = Number.isFinite(m?.propVx) ? m.propVx : ((m?.vx || 0) - inheritVx);
+  let propVy = Number.isFinite(m?.propVy) ? m.propVy : ((m?.vy || 0) - inheritVy);
   const accel = m.accel || 0;
   if(accel) {
-    const sp = Math.hypot(m.vx || 0, m.vy || 0);
+    const sp = Math.hypot(propVx, propVy);
     if(!Number.isFinite(m.maxSpd) || sp < m.maxSpd) {
-      m.vx = (m.vx || 0) + Math.sin(m.a || 0) * accel;
-      m.vy = (m.vy || 0) - Math.cos(m.a || 0) * accel;
+      propVx += Math.sin(m.a || 0) * accel;
+      propVy -= Math.cos(m.a || 0) * accel;
     }
   }
-  if(gravity) m.vy = (m.vy || 0) + gravity;
-  const sp = Math.hypot(m.vx || 0, m.vy || 0);
+  if(gravity) propVy += gravity;
+  const sp = Math.hypot(propVx, propVy);
   if(Number.isFinite(m.maxSpd) && m.maxSpd > 0 && sp > m.maxSpd) {
-    m.vx = m.vx / sp * m.maxSpd;
-    m.vy = m.vy / sp * m.maxSpd;
+    propVx = propVx / sp * m.maxSpd;
+    propVy = propVy / sp * m.maxSpd;
   }
-  m.spd = Math.hypot(m.vx || 0, m.vy || 0);
-  if(m.spd > 0) m.a = Math.atan2(m.vx || 0, -(m.vy || 0));
+  m.propVx = propVx;
+  m.propVy = propVy;
+  m.spd = Math.hypot(propVx, propVy);
+  if(m.spd > 0) m.a = Math.atan2(propVx, -propVy);
+  setMissileWorldVelocity(m);
 }
 
 function mineTargetDistance(m, target, ctx) {
@@ -483,12 +545,14 @@ function detonateSlug(wp, s, slot, bul, ctx = {}) {
   const sp = Math.hypot(slug.vx || 0, slug.vy || 0) || 1;
   const center = Math.atan2(slug.vx || 0, -(slug.vy || -sp));
   const count = Math.max(1, Math.floor(wp.pelletCount || 1));
+  const inheritScale = weaponInheritScale(wp, ctx);
   for(const a of shotgunPatternAngles(center, count, wp.pelletArcRad)) {
+    const v = composeLaunchVelocity(a, wp.pelletSpd, slug.vx || 0, slug.vy || 0, inheritScale);
     bul.push({
       x:slug.x, y:slug.y,
-      vx:Math.sin(a) * wp.pelletSpd + (s.vx || 0) * .15,
-      vy:-Math.cos(a) * wp.pelletSpd + (s.vy || 0) * .15,
-      l:wp.pelletLife * wp.pelletSpd,
+      vx:v.vx,
+      vy:v.vy,
+      l:wp.pelletLife,
       dmg:wp.pelletDmg,
       wpId:wp.id,
     });
@@ -511,12 +575,13 @@ const WEAPON_TYPES = {
       const center = ctx.angle ?? s.a;
       const angles = Array.isArray(ctx.angles) ? ctx.angles.slice(0, count) : Array.from({length:count}, (_, k) => center + (k - (count - 1) / 2) * spread);
       const offset = ctx.offset ?? 13;
-      const inherit = ctx.inherit ?? .3;
+      const inheritScale = weaponInheritScale(wp, ctx);
       for(const a of angles) {
+        const v = composeLaunchVelocity(a, wp.spd, s.vx || 0, s.vy || 0, inheritScale);
         bul.push({
           x:s.x+Math.sin(a)*offset, y:s.y-Math.cos(a)*offset,
-          vx:Math.sin(a)*wp.spd+(s.vx || 0)*inherit, vy:-Math.cos(a)*wp.spd+(s.vy || 0)*inherit,
-          l:wp.life*wp.spd, dmg:wp.dmg, col:ctx.projectileColor, wpId:wp.id,
+          vx:v.vx, vy:v.vy,
+          l:wp.life, dmg:wp.dmg, col:ctx.projectileColor, wpId:wp.id,
           ricochetProjectile:wp.ricochetsMax !== undefined,
           ricochetsLeft:wp.ricochetsMax ?? 0,
         });
@@ -532,14 +597,15 @@ const WEAPON_TYPES = {
       const count = Math.max(1, Math.floor(wp.burstCount ?? 1));
       const center = ctx.angle ?? s.a;
       const offset = ctx.offset ?? 13;
-      const inherit = ctx.inherit ?? .3;
+      const inheritScale = weaponInheritScale(wp, ctx);
       for(const a of shotgunPatternAngles(center, count, wp.burstSpread)) {
+        const v = composeLaunchVelocity(a, wp.spd, s.vx || 0, s.vy || 0, inheritScale);
         bul.push({
           x:s.x + Math.sin(a) * offset,
           y:s.y - Math.cos(a) * offset,
-          vx:Math.sin(a) * wp.spd + (s.vx || 0) * inherit,
-          vy:-Math.cos(a) * wp.spd + (s.vy || 0) * inherit,
-          l:wp.life * wp.spd,
+          vx:v.vx,
+          vy:v.vy,
+          l:wp.life,
           dmg:wp.dmg,
           wpId:wp.id,
         });
@@ -553,15 +619,16 @@ const WEAPON_TYPES = {
       const sw = weaponSlot(s, slot);
       const a = (ctx.angle ?? s.a) + (Math.random() * 2 - 1) * (wp.fireSpread ?? 0);
       const offset = ctx.offset ?? 13;
-      const inherit = ctx.inherit ?? .3;
+      const inheritScale = weaponInheritScale(wp, ctx);
       const ox = s.x + Math.sin(a) * offset;
       const oy = s.y - Math.cos(a) * offset;
+      const v = composeLaunchVelocity(a, wp.spd, s.vx || 0, s.vy || 0, inheritScale);
       bul.push({
         x:ox,
         y:oy,
-        vx:Math.sin(a) * wp.spd + (s.vx || 0) * inherit,
-        vy:-Math.cos(a) * wp.spd + (s.vy || 0) * inherit,
-        l:wp.life * wp.spd,
+        vx:v.vx,
+        vy:v.vy,
+        l:wp.life,
         dmg:wp.dmg,
         wpId:wp.id,
       });
@@ -602,14 +669,16 @@ const WEAPON_TYPES = {
       sw.activeSlugId = null;
       const a = ctx.angle ?? s.a;
       const offset = ctx.offset ?? 13;
+      const inheritScale = weaponInheritScale(wp, ctx);
+      const v = composeLaunchVelocity(a, wp.slugSpd, s.vx || 0, s.vy || 0, inheritScale);
       const id = projectileId('slug');
       bul.push({
         id,
         x:s.x + Math.sin(a) * offset,
         y:s.y - Math.cos(a) * offset,
-        vx:Math.sin(a) * wp.slugSpd + (s.vx || 0) * .3,
-        vy:-Math.cos(a) * wp.slugSpd + (s.vy || 0) * .3,
-        l:wp.slugLife * wp.slugSpd,
+        vx:v.vx,
+        vy:v.vy,
+        l:wp.slugLife,
         dmg:wp.slugDmg,
         slug:true,
         owner:s,
@@ -631,7 +700,7 @@ const WEAPON_TYPES = {
       }
       sw.stickyMissileId = null;
       const id = projectileId('sticky-missile');
-      spawnMissile(wp, s, ctx.mis, {angle:ctx.angle ?? s.a, offset:ctx.offset ?? 13, inherit:ctx.inherit ?? .3, ownerSlot:slot});
+      spawnMissile(wp, s, ctx.mis, {angle:ctx.angle ?? s.a, offset:ctx.offset ?? 13, inherit:ctx.inherit, ownerSlot:slot});
       const m = ctx.mis?.[ctx.mis.length - 1];
       if(m) {
         m.id = id;
@@ -645,12 +714,13 @@ const WEAPON_TYPES = {
       const sw = weaponSlot(s, slot);
       const a = ctx.angle ?? s.a;
       const offset = ctx.offset ?? 13;
-      const inherit = ctx.inherit ?? .3;
+      const inheritScale = weaponInheritScale(wp, ctx);
+      const v = composeLaunchVelocity(a, wp.spd, s.vx || 0, s.vy || 0, inheritScale);
       bul.push({
         x:s.x + Math.sin(a) * offset,
         y:s.y - Math.cos(a) * offset,
-        vx:Math.sin(a) * wp.spd + (s.vx || 0) * inherit,
-        vy:-Math.cos(a) * wp.spd + (s.vy || 0) * inherit,
+        vx:v.vx,
+        vy:v.vy,
         l:wp.life,
         r:Math.max(2, Math.min(8, wp.innerR || 4)),
         innerR:wp.innerR,
@@ -675,17 +745,18 @@ const WEAPON_TYPES = {
       const sw = weaponSlot(s, slot);
       const a = ctx.angle ?? s.a;
       const offset = ctx.offset ?? 13;
-      const inherit = ctx.inherit ?? .3;
+      const inheritScale = weaponInheritScale(wp, ctx);
       const held = Math.max(wp.chargeMin, Math.min(wp.chargeMax, chargeFramesForSlot(s, slot)));
       const span = Math.max(1, wp.chargeMax - wp.chargeMin);
       const level = Math.max(0, Math.min(1, (held - wp.chargeMin) / span));
       const innerR = wp.innerRMin + (wp.innerRMax - wp.innerRMin) * level;
       const outerR = wp.outerRMin + (wp.outerRMax - wp.outerRMin) * level;
+      const v = composeLaunchVelocity(a, wp.spd, s.vx || 0, s.vy || 0, inheritScale);
       bul.push({
         x:s.x + Math.sin(a) * offset,
         y:s.y - Math.cos(a) * offset,
-        vx:Math.sin(a) * wp.spd + (s.vx || 0) * inherit,
-        vy:-Math.cos(a) * wp.spd + (s.vy || 0) * inherit,
+        vx:v.vx,
+        vy:v.vy,
         l:wp.life,
         r:Math.max(2, Math.min(10, innerR * .35)),
         innerR,
@@ -798,7 +869,7 @@ const WEAPON_TYPES = {
       const center = ctx.angle ?? s.a;
       sw.salvoAngles = Array.isArray(ctx.angles) ? ctx.angles.slice(0, count) : Array.from({length:count}, (_, k) => center + (k - (count - 1) / 2) * spread);
       sw.salvoOffset = ctx.offset ?? 13;
-      sw.salvoInherit = ctx.inherit ?? .3;
+      sw.salvoInherit = Number.isFinite(ctx.inherit) ? ctx.inherit : undefined;
       sw.misTimer = 1;
       sw.misLeft = sw.salvoAngles.length;
     },
@@ -807,7 +878,7 @@ const WEAPON_TYPES = {
       if(--sw.misTimer>0)return;
       const idx = (sw.salvoAngles?.length || sw.misLeft) - sw.misLeft;
       const angle = sw.salvoAngles?.[idx] ?? ctx.angle ?? s.a;
-      spawnMissile(wp,s,mis,{angle, offset:sw.salvoOffset ?? ctx.offset ?? 13, inherit:sw.salvoInherit ?? ctx.inherit ?? .3, ownerSlot:slot});
+      spawnMissile(wp,s,mis,{angle, offset:sw.salvoOffset ?? ctx.offset ?? 13, inherit:sw.salvoInherit, ownerSlot:slot});
       sw.misLeft--;
       if(sw.misLeft>0)sw.misTimer=wp.salvoCd;else {
         sw.cd=ctx.cooldownFrames ?? Math.round(wp.cd*60);

@@ -289,7 +289,6 @@ function surfaceEnemyWeaponContext(site, e, def, dist, aimAngle) {
     ammoCost:shots,
     spread:fw.spread || 0,
     offset:fw.offset,
-    inherit:0,
     cooldownFrames:surfaceEnemyCooldown(def),
     retryCooldown:enemyRetryCooldown,
     projectileColor:def.col,

@@ -9,7 +9,7 @@ function enemyVecToPlayer(e, s, ew, eh) {
 
 function enemyLeadAngle(e, s, ew, eh, scale, projectileSpeed) {
   const d=enemyVecToPlayer(e,s,ew,eh);
-  const spd=projectileSpeed||6;
+  const spd=Math.max(.25, projectileSpeed||6);
   const frames=Math.min(42, d.dist/spd);
   const tx=s.x+(s.vx||0)*frames*scale;
   const ty=s.y+(s.vy||0)*frames*scale;
@@ -19,18 +19,19 @@ function enemyLeadAngle(e, s, ew, eh, scale, projectileSpeed) {
 
 function enemyLeadPoint(e, s, ew, eh, scale, projectileSpeed) {
   const d=enemyVecToPlayer(e,s,ew,eh);
-  const spd=projectileSpeed||6;
+  const spd=Math.max(.25, projectileSpeed||6);
   const frames=Math.min(42, d.dist/spd);
   return {x:s.x+(s.vx||0)*frames*scale, y:s.y+(s.vy||0)*frames*scale};
 }
 
 function enemyAIContext(e, ec, s, ew, eh) {
   const ai=ec.ai||{},fire=ec.fire||{},weapon=WEAPON_MAP[fire.wpn]||null;
+  const d=enemyVecToPlayer(e,s,ew,eh);
   return {
     e, ec, s, ew, eh, ai, fire, weapon,
-    projectileSpeed:weapon?.spd||7,
+    projectileSpeed:weapon?effectiveLeadSpeed(weapon,e,d.ta):7,
     baseTurn:ec.turn??.06,
-    d:enemyVecToPlayer(e,s,ew,eh)
+    d
   };
 }
 

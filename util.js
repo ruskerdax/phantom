@@ -37,10 +37,11 @@ function wrap(v,m){return((v%m)+m)%m;}
 // tunnel through targets. wrapX/wrapY are world dimensions for toroidal axes; pass
 // 0 (or null) for a non-wrapping axis. onStep() runs each substep with the bullet
 // at its new position and returns true if the bullet was consumed (hit/OOB).
-// Returns true when consumed (life expired or onStep returned true).
+// Bullet life is consumed in simulation ticks (1 per call), independent of travel
+// distance. Returns true when consumed (life expired or onStep returned true).
 function stepBullet(b,wrapX,wrapY,maxStep,onStep){
   const sx=b.vx,sy=b.vy,sp=Math.hypot(sx,sy),n=Math.max(1,Math.ceil(sp/maxStep));
-  const dx=sx/n,dy=sy/n,dl=sp/n;
+  const dx=sx/n,dy=sy/n,dl=1/n;
   for(let k=0;k<n;k++){
     b.x=wrapX?wrap(b.x+dx,wrapX):b.x+dx;
     b.y=wrapY?wrap(b.y+dy,wrapY):b.y+dy;

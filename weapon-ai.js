@@ -39,7 +39,7 @@ function weaponAiDetonateProjectile() {
       const sw = weaponSlot(e, slot);
       const slug = findActiveSlug(sw, ctx.bul);
       if(slug) {
-        const halfLife = wp.slugLife * wp.slugSpd * .5;
+        const halfLife = wp.slugLife * .5;
         updateWeaponInputState(e, slot, slug.l <= halfLife);
         return;
       }

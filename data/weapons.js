@@ -106,6 +106,9 @@ function assertWeaponRegistry() {
       if(!(Number.isFinite(wp.chargeMin) && wp.chargeMin > 0)) throw new Error(`Weapon ${wp.id} has invalid chargeMin ${wp.chargeMin}`);
       if(!(Number.isFinite(wp.chargeMax) && wp.chargeMax >= wp.chargeMin)) throw new Error(`Weapon ${wp.id} has invalid chargeMax ${wp.chargeMax}`);
     }
+    if(wp.inheritShooterVelocity !== undefined && typeof wp.inheritShooterVelocity !== 'boolean') {
+      throw new Error(`Weapon ${wp.id} has invalid inheritShooterVelocity ${wp.inheritShooterVelocity}`);
+    }
   }
   for(const id of enemyUsed) {
     if(!WEAPON_MAP[id]) throw new Error(`Enemy registry references unknown weapon ${id}`);

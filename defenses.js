@@ -137,7 +137,6 @@ function defenseWeaponContext(site, d, def, dist, aimAngle) {
     ammoCost:shots,
     spread:fw.spread || 0,
     offset:fw.offset,
-    inherit:0,
     cooldownFrames:defenseCooldown(def),
     retryCooldown:enemyRetryCooldown,
     projectileColor:def.col,

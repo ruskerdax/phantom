@@ -20,16 +20,21 @@ function enemyInitialCooldown(typeOrClass, stagger=0) {
 }
 
 function enemyAimAngle(e, s, ew, eh, fw, ewp) {
-  const lead=fw.lead??0;
-  if(lead>0&&ewp.spd){
-    const d=wrapDelta(s.x,s.y,e.x,e.y,ew,eh),dist=Math.hypot(d.dx,d.dy)||1;
-    const frames=Math.min(42,dist/ewp.spd);
-    const tx=s.x+(s.vx||0)*frames*lead,ty=s.y+(s.vy||0)*frames*lead;
-    const ld=wrapDelta(tx,ty,e.x,e.y,ew,eh);
-    return Math.atan2(ld.dx,-ld.dy);
-  }
   const d=wrapDelta(s.x,s.y,e.x,e.y,ew,eh);
-  return Math.atan2(d.dx,-d.dy);
+  const direct=Math.atan2(d.dx,-d.dy);
+  const lead=fw.lead??0;
+  if(!(lead>0)) return direct;
+  const dist=Math.hypot(d.dx,d.dy)||1;
+  const leadSpeedA=effectiveLeadSpeed(ewp,e,direct);
+  const framesA=Math.min(42,dist/leadSpeedA);
+  const txA=s.x+(s.vx||0)*framesA*lead,tyA=s.y+(s.vy||0)*framesA*lead;
+  const la=wrapDelta(txA,tyA,e.x,e.y,ew,eh);
+  const aimA=Math.atan2(la.dx,-la.dy);
+  const leadSpeedB=effectiveLeadSpeed(ewp,e,aimA);
+  const framesB=Math.min(42,dist/leadSpeedB);
+  const txB=s.x+(s.vx||0)*framesB*lead,tyB=s.y+(s.vy||0)*framesB*lead;
+  const lb=wrapDelta(txB,tyB,e.x,e.y,ew,eh);
+  return Math.atan2(lb.dx,-lb.dy);
 }
 
 function enemyCanStartFire(e, dist, aimAngle, fw, ewp) {
@@ -105,7 +110,6 @@ function encEnemyWeaponContext(e, s, enc, ew, eh, ecDef, fw, wp, dist, aimAngle,
     ammoCost:shots,
     spread:fw.spread || 0,
     offset:fw.offset,
-    inherit:0,
     cooldownFrames:weaponCooldownFrames(wp),
     retryCooldown:enemyRetryCooldown,
     projectileColor:ecDef.col,
