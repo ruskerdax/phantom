@@ -68,6 +68,18 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ---
 
+## Cross-plan notes (Overworld & Star System Overhaul)
+
+The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) changes the shape of `G.system.sites` and adds two new DOM screens. When implementing UI rework tasks that touch system data or planet listings, defer to these rules:
+
+- **SiteMap widget (F-09)** — only **planets** (parent bodies) and the non-body sites (BASE, HBASE, SLIPGATE, asteroid fields) are nodes. Moons are **not** nodes on the map; they appear as a sub-list in the right-side info card when a planet is focused. This keeps the map navigable as system body counts grow.
+- **System Map submenu (P4-02)** — the right-side info card has two sections: `selected · <planet>` (kind/subtype, atmosphere, gravity, objectives) and a moon sub-list (navigable up/down) where the first row is the parent planet itself. Confirming a row inspects that body (does not jump to it).
+- **`G.system.sites` shape change** — was a flat list of `{id, name, kind, objectives, visited}`. Now `kind ∈ {'planet','gas_giant','asteroid','base','hbase','slipgate'}` (no `'moon'` at top level); each planet entry includes a `moons: [{id, kind, subtype, size, atmoKind, populationClass, objectives}]` array.
+- **New registered DOM screen `body-info`** — added by the overworld rework. Entry popup shown before player enters a site (size, gravity, type/subtype, population density, atmosphere, objectives + an `enter` button). Pauses the world. This screen does not conflict with the rework's screen-stack pattern; it registers via `registerScreen('body-info', …)` like the others.
+- **New registered DOM screen `body-select`** — selection popup shown when ≥2 interactable sites are within the player's interaction radius. Lists each as a focusable row; confirming a row either opens `body-info` (for enterable bodies + HBASE + asteroid fields) or fires the direct-interact action (for BASE / SLIPGATE).
+
+---
+
 ## Phase 0 — UI Foundations (sequential)
 
 ### F-01. Theme tokens ✅
