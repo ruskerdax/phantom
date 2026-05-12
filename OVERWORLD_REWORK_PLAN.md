@@ -206,7 +206,7 @@ SUBTYPE_WEIGHTS = {
 
 ## Phase 0 — Optimization & Foundations (sequential)
 
-### F-01. Spatial hash + viewport culling
+### F-01. Spatial hash + viewport culling ✅
 
 **Goal:** Stop drawing and updating off-screen overworld objects. Add a spatial hash for proximity queries. This unblocks the world-size expansion in F-03.
 
