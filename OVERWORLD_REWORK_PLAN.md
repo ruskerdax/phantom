@@ -125,11 +125,12 @@ SUBTYPE_PALETTES = {
   liquid:      {terrain:['#383038','#504048','#685058'],                                                  sea:['#8050a8','#604078','#4ca878','#3a8060','#d8c860','#b0a040','#d88040','#b06020']},
   machine:     {terrain:['#d0d4d8','#b8c0c4','#a0a8ac','#888c90'],                                        sea:['#404848','#283030','#d8e840','#c0d030','#50e068','#38b050']},
   gas_giant:   {bands:['#80a8d0','#607890','#b0b4b8','#909498','#88b478','#688858','#b89880','#907058','#d8c878','#b0a058','#d8a878','#b08058','#d08868','#a86848']},
-  star:        {core:['#ffffff'], inner:['#fffbe8'], mid:['#ffe87a'], outer:['#ffcc40']},
+  star:        {core:['#ffffff'], warm:{inner:['#fffbe8'], mid:['#ffe87a'], outer:['#ffcc40']}, cool:{inner:['#f7fcff'], mid:['#dff1ff'], outer:['#bcdfff']}},
 }
 ```
 
 The body picks `primary` and `secondary` as two distinct entries from `terrain`, and (when subtype has sea) `sea` as one entry from `sea`. Two adjacent picks via deterministic seed.
+For stars, pick exactly one family (`warm` or `cool`) per star and take `inner`/`mid`/`outer` only from that family (never mix yellow mids with blue outers, or blue mids with yellow outers).
 
 ### Save format (binding)
 
