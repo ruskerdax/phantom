@@ -5,9 +5,13 @@ let DPR=window.devicePixelRatio||1;
 let GAME_CSS_SCALE=1;
 let CANVAS_PIXEL_RATIO=1;
 const EW=Math.round(W*3.9),EH=Math.round(W*3.9);
-const OW_W=6000,OW_H=6000;
+let OW_W=16000,OW_H=16000;
 const RENDER_QUALITY_VALUES=['full','reduced','minimal'];
 const RENDER_QUALITY_LABELS={full:'FULL',reduced:'REDUCED',minimal:'MINIMAL'};
+function setOWBounds(w,h){
+  OW_W=w;OW_H=h;
+  if(typeof G!=='undefined'&&G?.OW?.spatial)G.OW.spatial=null;
+}
 
 // TODO: Temporary UI font workaround. Remove this once the uppercase glyphs are fixed.
 function uiLowerText(text){return typeof text==='string'?text.toLowerCase():text;}

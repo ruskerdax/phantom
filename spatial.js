@@ -5,12 +5,16 @@ const SPATIAL_BUCKET=800;
 function mkSpatial(worldW,worldH){
   return{worldW,worldH,bucket:SPATIAL_BUCKET,buckets:new Map()};
 }
+// Payload must carry .x and .y; they are read directly during queries so no
+// wrapper object is allocated per insert. Keeping the x,y parameters in the
+// signature for clarity at call sites (and for cases where callers compute the
+// position once and want to reuse it).
 function spatialAdd(g,x,y,payload){
   if(!g)return payload;
   const b=g.bucket||SPATIAL_BUCKET,bx=Math.floor(x/b),by=Math.floor(y/b),key=bx+'|'+by;
   let list=g.buckets.get(key);
   if(!list){list=[];g.buckets.set(key,list);}
-  list.push({x,y,payload});
+  list.push(payload);
   return payload;
 }
 function spatialClear(g){
@@ -28,8 +32,8 @@ function spatialQueryRect(g,x0,y0,x1,y1,out){
       const list=g.buckets.get(bx+'|'+by);
       if(!list)continue;
       for(let i=0;i<list.length;i++){
-        const it=list[i],p=it.payload,pr=Math.max(0,p?.r||0);
-        if(it.x+pr<minX||it.x-pr>maxX||it.y+pr<minY||it.y-pr>maxY)continue;
+        const p=list[i],pr=Math.max(0,p?.r||0);
+        if(p.x+pr<minX||p.x-pr>maxX||p.y+pr<minY||p.y-pr>maxY)continue;
         res.push(p);
       }
     }
@@ -47,7 +51,7 @@ function spatialQueryRadius(g,x,y,r,out){
       const list=g.buckets.get(bx+'|'+by);
       if(!list)continue;
       for(let i=0;i<list.length;i++){
-        const it=list[i],p=it.payload,reach=rr+Math.max(0,p?.r||0),dx=it.x-x,dy=it.y-y;
+        const p=list[i],reach=rr+Math.max(0,p?.r||0),dx=p.x-x,dy=p.y-y;
         if(dx*dx+dy*dy<=reach*reach)res.push(p);
       }
     }

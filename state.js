@@ -40,6 +40,8 @@ var G={
   menuSuppressUntil:0,systemStates:{},
   needsRebuild:false,lastLocation:null,
 };
+const ORBIT_MIN_R=1000;
+function orbitMaxR(){return OW_W*0.45;}
 function cancelChargesForActiveShips(){
   cancelActiveCharges(G.OW?.s);
   cancelActiveCharges(G.ENC?.s);
@@ -507,7 +509,15 @@ function castLaserForSpace(ox,oy,a,range,targets,walls=[],space=null,hitPad=0){
   return{x2:ox+rdx*bestT,y2:oy+rdy*bestT,hitIdx};
 }
 
-function owPos(b){const a=b.orbitA+G.owFr*b.orbitSpd;return{x:OW_W/2+Math.cos(a)*b.orbitR,y:OW_H/2+Math.sin(a)*b.orbitR};}
+function owPos(b){
+  if(b._owPosFr===G.owFr&&b._owPos)return b._owPos;
+  const a=b.orbitA+G.owFr*b.orbitSpd;
+  const p=b._owPos||(b._owPos={x:0,y:0});
+  p.x=OW_W/2+Math.cos(a)*b.orbitR;
+  p.y=OW_H/2+Math.sin(a)*b.orbitR;
+  b._owPosFr=G.owFr;
+  return p;
+}
 function powerStationClassId(){
   return (typeof BUILDING_CLASS_IDS!=='undefined'&&BUILDING_CLASS_IDS.POWER_STATION)||'POWER_STATION';
 }

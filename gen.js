@@ -14,8 +14,6 @@ let HBASE=null;
 let SLIPGATE=null;
 
 const MIN_SITE_SEP=440;
-const ORBIT_MIN_R=400;
-const ORBIT_MAX_R=1600;
 
 // Seeded PRNG — mulberry32
 function mkRNG(seed){
@@ -54,7 +52,8 @@ function bodyXY(b){
   return{x:OW_W/2+Math.cos(b.orbitA)*b.orbitR,y:OW_H/2+Math.sin(b.orbitA)*b.orbitR};
 }
 function orbitSpdFor(orbitR){
-  return 0.00060-(orbitR-ORBIT_MIN_R)/(ORBIT_MAX_R-ORBIT_MIN_R)*0.00045;
+  const maxR=Math.max(ORBIT_MIN_R+1,orbitMaxR());
+  return 0.00060-(orbitR-ORBIT_MIN_R)/(maxR-ORBIT_MIN_R)*0.00045;
 }
 function isTooCloseToPlaced(body,placed){
   const p=bodyXY(body);
@@ -64,7 +63,7 @@ function isTooCloseToPlaced(body,placed){
   });
 }
 function placeSite(rng,placed,label,opts={}){
-  const minR=opts.minR??ORBIT_MIN_R,maxR=opts.maxR??ORBIT_MAX_R;
+  const minR=opts.minR??ORBIT_MIN_R,maxR=opts.maxR??orbitMaxR();
   let body=null;
   for(let att=0;att<60;att++){
     const orbitR=opts.orbitR??(minR+rng.fl(0,maxR-minR));
@@ -108,11 +107,14 @@ function genHBaseBody(rng,placed){
 }
 // ---- Slipgate orbital parameters — always at maximum orbit radius ----
 function genSlipgateBody(rng,placed){
-  return{...placeSite(rng,placed,'SLIPGATE',{orbitR:ORBIT_MAX_R}),r:26};
+  const maxOtherOrbit=placed.reduce((m,b)=>Math.max(m,b.orbitR||0),ORBIT_MIN_R);
+  const slipOrbit=maxOtherOrbit+400+rng.fl(0,200);
+  return{...placeSite(rng,placed,'SLIPGATE',{orbitR:slipOrbit}),r:26};
 }
 // ---- Master world-generation entry point ----
 function genWorld(seed){
   if(typeof genBackground==='function')genBackground(seed);
+  setOWBounds(16000,16000);
   const worldRng=mkRNG(seedChild(seed,0x3100));
   const planetCount=worldRng.int(1,5)+worldRng.int(1,5);
   const tmplRng=mkRNG(seedChild(seed,0x3200)),prevColors=[];

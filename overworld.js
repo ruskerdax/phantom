@@ -85,25 +85,34 @@ function owEnsureSpatial(ow){
   if(!ow.spatial||ow.spatial.worldW!==OW_W||ow.spatial.worldH!==OW_H)ow.spatial=mkSpatial(OW_W,OW_H);
   return ow.spatial;
 }
+function owSpatialPayload(host,kind,ref,r){
+  const pl=host._sp||(host._sp={x:0,y:0,r:0,kind,ref});
+  pl.kind=kind;pl.ref=ref;pl.r=r;
+  return pl;
+}
 function owPopulateSpatial(ow){
   const g=owEnsureSpatial(ow);
   spatialClear(g);
   for(let i=0;i<LV.length;i++){
-    const p=owPos(PP[i]);
-    spatialAdd(g,p.x,p.y,{x:p.x,y:p.y,r:LV[i].pr,kind:'planet',ref:i});
+    const p=owPos(PP[i]),pl=owSpatialPayload(PP[i],'planet',i,LV[i].pr);
+    pl.x=p.x;pl.y=p.y;
+    spatialAdd(g,p.x,p.y,pl);
   }
   for(let ai=0;ai<AB.length;ai++){
-    const ap=owPos(AB[ai]);
-    spatialAdd(g,ap.x,ap.y,{x:ap.x,y:ap.y,r:AB[ai].r,kind:'asteroid',ref:ai});
+    const ap=owPos(AB[ai]),pl=owSpatialPayload(AB[ai],'asteroid',ai,AB[ai].r);
+    pl.x=ap.x;pl.y=ap.y;
+    spatialAdd(g,ap.x,ap.y,pl);
   }
   for(let fi=0;fi<ow.fleets.length;fi++){
     const f=ow.fleets[fi];
     if(!f.alive)continue;
-    spatialAdd(g,f.x,f.y,{x:f.x,y:f.y,r:fleetDef(f.id).trigR||18,kind:'fleet',ref:fi});
+    const pl=owSpatialPayload(f,'fleet',fi,fleetDef(f.id).trigR||18);
+    pl.x=f.x;pl.y=f.y;
+    spatialAdd(g,f.x,f.y,pl);
   }
-  {const bp=owPos(BASE);spatialAdd(g,bp.x,bp.y,{x:bp.x,y:bp.y,r:BASE.r,kind:'base',ref:BASE});}
-  {const hbp=owPos(HBASE);spatialAdd(g,hbp.x,hbp.y,{x:hbp.x,y:hbp.y,r:HBASE.r,kind:'hbase',ref:HBASE});}
-  {const sgp=owPos(SLIPGATE);spatialAdd(g,sgp.x,sgp.y,{x:sgp.x,y:sgp.y,r:SLIPGATE.r,kind:'slipgate',ref:SLIPGATE});}
+  {const bp=owPos(BASE),pl=owSpatialPayload(BASE,'base',BASE,BASE.r);pl.x=bp.x;pl.y=bp.y;spatialAdd(g,bp.x,bp.y,pl);}
+  {const hbp=owPos(HBASE),pl=owSpatialPayload(HBASE,'hbase',HBASE,HBASE.r);pl.x=hbp.x;pl.y=hbp.y;spatialAdd(g,hbp.x,hbp.y,pl);}
+  {const sgp=owPos(SLIPGATE),pl=owSpatialPayload(SLIPGATE,'slipgate',SLIPGATE,SLIPGATE.r);pl.x=sgp.x;pl.y=sgp.y;spatialAdd(g,sgp.x,sgp.y,pl);}
 }
 function owMaxInteractR(){
   let r=Math.max(BASE.r,HBASE.r,SLIPGATE.r);
@@ -330,7 +339,6 @@ function updOW(){
       }
     }
   }
-  owPopulateSpatial(ow);
   tickShipReactor(s,'overworld');
 }
 function updFleet(f,fi,s){
@@ -438,6 +446,7 @@ function drSlipgate(near){
   cx.restore();
 }
 const OW_CULL_PAD=60;
+let owStarGrad=null;
 const FLEET_COLS={HUNTER:'#ff6655',SWARM:'#00ddff',PATROL:'#ffaa44',CONVOY:'#ddccaa',ARMADA:'#ff3322'};
 function fleetColor(id){return FLEET_COLS[id]||'#fff';}
 function owIndicatorRange(){return Math.max(900,Math.min(OW_W,OW_H)*0.15);}
@@ -509,6 +518,35 @@ function drawOrbitChevron(x,y,a,dir,col,size,width){
   cx.lineTo(backX-px*size*.55,backY-py*size*.55);
   cx.stroke();
 }
+// Compute the angular sub-range of a circle (centered at cx2,cy2, radius r) that lies
+// inside the camera rect. Returns {full:true} when the ring center is inside the rect
+// (caller should draw a full 2pi arc), or {a0,a1} for a single arc span, or null when
+// the ring is outside the rect (caller skips). The arc span has a small angular pad so
+// dashed strokes don't pop in/out at the camera edges.
+function owRingArcRange(cx2,cy2,r,rect){
+  if(cx2>=rect.x0&&cx2<=rect.x1&&cy2>=rect.y0&&cy2<=rect.y1)return{full:true};
+  const a00=Math.atan2(rect.y0-cy2,rect.x0-cx2);
+  const a10=Math.atan2(rect.y0-cy2,rect.x1-cx2);
+  const a01=Math.atan2(rect.y1-cy2,rect.x0-cx2);
+  const a11=Math.atan2(rect.y1-cy2,rect.x1-cx2);
+  // Normalize relative to a00, then take min/max delta. With ring center outside the rect
+  // the rect subtends < pi, so [a00+minD, a00+maxD] is a single continuous arc range.
+  let d1=a10-a00,d2=a01-a00,d3=a11-a00;
+  if(d1>Math.PI)d1-=Math.PI*2;else if(d1<-Math.PI)d1+=Math.PI*2;
+  if(d2>Math.PI)d2-=Math.PI*2;else if(d2<-Math.PI)d2+=Math.PI*2;
+  if(d3>Math.PI)d3-=Math.PI*2;else if(d3<-Math.PI)d3+=Math.PI*2;
+  const minD=Math.min(0,d1,d2,d3),maxD=Math.max(0,d1,d2,d3);
+  const pad=0.03;
+  return{a0:a00+minD-pad,a1:a00+maxD+pad};
+}
+function owDrawCulledRing(cx2,cy2,r,rect){
+  const range=owRingArcRange(cx2,cy2,r,rect);
+  if(!range)return;
+  cx.beginPath();
+  if(range.full)cx.arc(cx2,cy2,r,0,Math.PI*2);
+  else cx.arc(cx2,cy2,r,range.a0,range.a1);
+  cx.stroke();
+}
 function drawOWOrbitGuides(camRect,s){
   const prof=owOrbitProfile(),arrowBodies=owOrbitBodies();
   const cx2=OW_W/2,cy2=OW_H/2;
@@ -518,18 +556,19 @@ function drawOWOrbitGuides(camRect,s){
     const playerInBox=s.x>=cx2-r&&s.x<=cx2+r&&s.y>=cy2-r&&s.y<=cy2+r;
     if(!bodyVisible&&!playerInBox&&!owRectIntersectsAnnulus(camRect,cx2,cy2,r,12))continue;
     cx.strokeStyle=col;cx.shadowColor=col;cx.shadowBlur=sb(prof.orbitBlur);
-    cx.beginPath();cx.arc(cx2,cy2,r,0,Math.PI*2);cx.stroke();
+    owDrawCulledRing(cx2,cy2,r,camRect);
   }
   if(AB.length>0){
     const abR=AB[0].orbitR;
     if(owRectIntersectsAnnulus(camRect,cx2,cy2,abR,24)){
       cx.strokeStyle='#998877';cx.shadowColor='#998877';cx.shadowBlur=sb(prof.orbitBlur);
-      cx.beginPath();cx.arc(cx2,cy2,abR,0,Math.PI*2);cx.stroke();
+      owDrawCulledRing(cx2,cy2,abR,camRect);
     }
   }
   cx.setLineDash([]);
   if(prof.arrows>0){
     const arrowSpd=0.00173,N=prof.arrows,arrowGap=renderQuality()==='full'?0.2:0.35;
+    const chevR=prof.arrowSize+4;
     for(const[col,r,b]of arrowBodies){
       const bp=owPos(b),bodyVisible=owPointInRect(bp.x,bp.y,camRect);
       const playerInBox=s.x>=cx2-r&&s.x<=cx2+r&&s.y>=cy2-r&&s.y<=cy2+r;
@@ -541,9 +580,12 @@ function drawOWOrbitGuides(camRect,s){
         if(phase<arrowGap)continue;
         const fade=phase>Math.PI*.8?1-(phase-Math.PI*.8)/(Math.PI*.2):1;
         cx.globalAlpha=prof.arrowAlpha*fade;
-        for(const dir of[1,-1]){
+        for(let di=0;di<2;di++){
+          const dir=di?-1:1;
           const a=bodyA+Math.PI+dir*phase;
-          drawOrbitChevron(cx2+Math.cos(a)*r,cy2+Math.sin(a)*r,a,dir,col,prof.arrowSize,prof.arrowWidth);
+          const ax=cx2+Math.cos(a)*r,ay=cy2+Math.sin(a)*r;
+          if(ax+chevR<camRect.x0||ax-chevR>camRect.x1||ay+chevR<camRect.y0||ay-chevR>camRect.y1)continue;
+          drawOrbitChevron(ax,ay,a,dir,col,prof.arrowSize,prof.arrowWidth);
         }
       }
     }
@@ -552,14 +594,20 @@ function drawOWOrbitGuides(camRect,s){
 }
 function drawOWAsteroidBelt(camRect){
   if(AB.length===0)return;
-  const maxAbR=AB[0].orbitR+AB_BELT.reduce((m,p)=>Math.max(m,Math.abs(p.dr)+p.rv),0);
+  let maxAbR=AB[0]._maxAbR;
+  if(maxAbR==null){
+    let m=0;for(let i=0;i<AB_BELT.length;i++){const p=AB_BELT[i],v=Math.abs(p.dr)+p.rv;if(v>m)m=v;}
+    maxAbR=AB[0]._maxAbR=AB[0].orbitR+m;
+  }
   if(!owRectIntersectsRect(camRect.x0,camRect.y0,camRect.x1,camRect.y1,OW_W/2-maxAbR,OW_H/2-maxAbR,OW_W/2+maxAbR,OW_H/2+maxAbR))return;
   const prof=owOrbitProfile();
   cx.save();cx.globalAlpha=prof.asteroidAlpha;cx.strokeStyle='#776655';cx.lineWidth=0.8;cx.shadowColor='#554433';cx.shadowBlur=sb(prof.asteroidBlur);
-  const abOrbitR=AB[0].orbitR,abSpd=AB[0].orbitSpd,step=prof.asteroidStep;
+  const abOrbitR=AB[0].orbitR,abSpd=AB[0].orbitSpd,step=prof.asteroidStep,cxw=OW_W/2,cyw=OW_H/2;
   for(let pi=0;pi<AB_BELT.length;pi+=step){
     const p=AB_BELT[pi],a=p.a+G.owFr*abSpd;
-    const bx=OW_W/2+Math.cos(a)*(abOrbitR+p.dr),by=OW_H/2+Math.sin(a)*(abOrbitR+p.dr);
+    const bx=cxw+Math.cos(a)*(abOrbitR+p.dr),by=cyw+Math.sin(a)*(abOrbitR+p.dr);
+    const pr=p.rv;
+    if(bx+pr<camRect.x0||bx-pr>camRect.x1||by+pr<camRect.y0||by-pr>camRect.y1)continue;
     cx.beginPath();
     for(let i=0;i<p.sides;i++){const pa=(i/p.sides)*Math.PI*2+p.rot;i?cx.lineTo(bx+Math.cos(pa)*p.rv,by+Math.sin(pa)*p.rv):cx.moveTo(bx+Math.cos(pa)*p.rv,by+Math.sin(pa)*p.rv);}
     cx.closePath();cx.stroke();
@@ -600,13 +648,13 @@ function drawOW(){
   drawOWAsteroidBelt(camRect);
   {const sx2=OW_W/2,sy2=OW_H/2,SR=40,pu=.5+.5*Math.sin(G.fr*.04);
   cx.save();cx.translate(sx2,sy2);
-  // outer glow
   cx.shadowColor='#ffe070';cx.shadowBlur=sb(80+pu*60);
-  // limb darkening gradient
-  const grad=cx.createRadialGradient(0,0,0,0,0,SR);
-  grad.addColorStop(0,'#ffffff');grad.addColorStop(0.5,'#fffbe8');
-  grad.addColorStop(0.82,'#ffe87a');grad.addColorStop(1,'#ffcc40');
-  cx.fillStyle=grad;cx.beginPath();cx.arc(0,0,SR,0,Math.PI*2);cx.fill();
+  if(!owStarGrad){
+    owStarGrad=cx.createRadialGradient(0,0,0,0,0,SR);
+    owStarGrad.addColorStop(0,'#ffffff');owStarGrad.addColorStop(0.5,'#fffbe8');
+    owStarGrad.addColorStop(0.82,'#ffe87a');owStarGrad.addColorStop(1,'#ffcc40');
+  }
+  cx.fillStyle=owStarGrad;cx.beginPath();cx.arc(0,0,SR,0,Math.PI*2);cx.fill();
   cx.shadowBlur=0;
   cx.restore();}
   for(let pi=0;pi<visPlanets.length;pi++){
