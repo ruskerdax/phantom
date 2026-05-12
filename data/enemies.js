@@ -160,7 +160,7 @@ const ENEMY_CLASSES = [
     name:'ARROW-CLASS FIGHTER',
     col:'#ffdd33', col2:'#ff8800',
     sc:160, energy:true, energyMax:20, energyRegenPerSec:4, spinRate:0, scale:.7,
-    hull:{angle:'flight', boundsR:16, parts:[{kind:'poly', pts:[[0,-12],[-4,-2],[-14,4],[-10,8],[-4,6],[0,10],[4,6],[10,8],[14,4],[4,-2]]}]},
+    hull:{angle:'flight', boundsR:16, parts:[{kind:'poly', pts:[[7.13,0.38],[4.88,-1.12],[1.13,-12.37],[-1.12,-12.37],[-4.87,-1.12],[-7.12,0.38],[-10.12,8.63],[-7.12,10.88],[-5.62,6.38],[-1.87,4.88],[-1.87,7.13],[-3.37,8.63],[-3.37,12.38],[-0.37,9.38],[0.38,9.38],[3.38,12.38],[3.38,8.63],[1.88,7.13],[1.88,4.88],[5.63,6.38],[7.13,10.88],[10.13,8.63],[7.13,0.38]]}]},
     enc:{cnt:1, hp:20, spd:3.5, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
       ai:{passRange:58, commitRange:170, flybyRange:125, resetRange:430, reengageRange:330, minExtendFrames:48, lead:.45, attackSpd:5.2, extendSpd:5.7, turnSpd:3.9, attackThrust:.13, extendThrust:.15, turnThrust:.04, avoidRange:210, passClearance:70, avoidThrust:.04,
         pursuit:{lead:.65, offset:150, weave:.55, flipFrames:140, thrust:.13, turnMult:1, speed:5.2}},
