@@ -277,7 +277,7 @@ SUBTYPE_WEIGHTS = {
 
 ---
 
-### F-03. World size scaling
+### F-03. World size scaling ✅
 
 **Goal:** Increase `OW_W`/`OW_H` to scale with body count. Tune orbit radii to fit. Verify culling from F-01 keeps perf in check.
 
@@ -297,7 +297,7 @@ SUBTYPE_WEIGHTS = {
 
 ---
 
-### F-04. Save format pivot to bodyId
+### F-04. Save format pivot to bodyId ✅
 
 **Goal:** Replace numeric-index keying in `lvState` / `cleared` / `lastLocation` with stable body ids.
 

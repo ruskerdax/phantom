@@ -57,7 +57,7 @@ function seedSystemFleets(px,py){
   {const p=owSpawnPos(px,py);ow.fleets.push(mkFleet('PATROL',p.x,p.y));}
   // 1 Swarm per uncleared cave level
   for(let i=0;i<PP.length;i++){
-    if(G.cleared[i])continue;
+    if(G.cleared[bodyIdForPlanetIndex(i)])continue;
     const bp=owPos(PP[i]),a=Math.random()*Math.PI*2,r=40+Math.random()*30;
     ow.fleets.push(mkFleet('SWARM',bp.x+Math.cos(a)*r,bp.y+Math.sin(a)*r,{postBody:PP[i],orbitR:r,aSpd:.008}));
   }
@@ -75,7 +75,7 @@ function seedSystemFleets(px,py){
 function initOW(energy,sx,sy){
   const bp=owPos(BASE);
   const px=sx??bp.x,py=sy??bp.y;
-  G.OW={s:mkShip(px,py),fleets:[],fu:[],pts:[],nearP:-1,nearBase:false,nearAst:-1,nearHBase:false,nearSlipgate:false,spatial:null,
+  G.OW={s:mkShip(px,py),fleets:[],fu:[],pts:[],nearBodyId:null,nearBase:false,nearAst:-1,nearHBase:false,nearSlipgate:false,spatial:null,
     slipgateSpawnTimer:1800,convoySpawnTimer:5400,cam:{x:Math.max(0,Math.min(OW_W-W,px-W/2)),y:Math.max(0,Math.min(OW_H-H,py-H/2)),z:1}};
   setShipEnergy(G.OW.s,energy);G.OW.s.inv=120;
   seedSystemFleets(px,py);
@@ -94,7 +94,7 @@ function owPopulateSpatial(ow){
   const g=owEnsureSpatial(ow);
   spatialClear(g);
   for(let i=0;i<LV.length;i++){
-    const p=owPos(PP[i]),pl=owSpatialPayload(PP[i],'planet',i,LV[i].pr);
+    const p=owPos(PP[i]),pl=owSpatialPayload(PP[i],'planet',bodyIdForPlanetIndex(i),LV[i].pr);
     pl.x=p.x;pl.y=p.y;
     spatialAdd(g,p.x,p.y,pl);
   }
@@ -187,7 +187,7 @@ function startAstEnc(){
     s:encShip,en:ens,rocks,bul:[],ebu:[],mis:[],emi:[],fu:[],pts:[],lsb:[],introTimer:ens.length?70:0,cleared:!ens.length,
     ew:EW,eh:EH,cam:{x:0,y:Math.max(0,EH/2-H/2),z:1}};
   G.absAimTarget=null;G.st=ens.length?'enc_in':'encounter';
-  recordLastLocation('asteroid',ow.nearAst);
+  recordLastLocation('asteroid',bodyIdForAsteroidIndex(ow.nearAst));
   saveGame();
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
@@ -291,7 +291,7 @@ function updOW(){
   owPopulateSpatial(ow);
   const near=spatialQueryRadius(ow.spatial,s.x,s.y,owMaxInteractR(),ow._nearSpatial||(ow._nearSpatial=[]));
   ow.nearBase=false;
-  ow.nearP=-1;
+  ow.nearBodyId=null;
   ow.nearAst=-1;
   ow.nearHBase=false;
   ow.nearSlipgate=false;
@@ -301,7 +301,8 @@ function updOW(){
     if(q.kind==='base'){ow.nearBase=true;continue;}
     if(q.kind==='planet'){
       if(G.cleared[q.ref])continue;
-      if(ow.nearP<0||q.ref<ow.nearP)ow.nearP=q.ref;
+      const nextIdx=bodyIndexFromId(q.ref),curIdx=bodyIndexFromId(ow.nearBodyId);
+      if(ow.nearBodyId==null||(Number.isInteger(nextIdx)&&(!Number.isInteger(curIdx)||nextIdx<curIdx)))ow.nearBodyId=q.ref;
       continue;
     }
     if(q.kind==='asteroid'){
@@ -316,7 +317,7 @@ function updOW(){
   }
   const owFired=iFir();
   if(owFired&&ow.nearBase){G.credits+=G.stake;G.stake=0;suppressMenuInput();recordLastLocation('base');openBaseMenu();saveGame();return;}
-  if(owFired&&ow.nearP>=0){G.lv=ow.nearP;enterPlanet();return;}
+  if(owFired&&ow.nearBodyId){enterPlanetByBodyId(ow.nearBodyId);return;}
   if(owFired&&ow.nearAst>=0){startAstEnc();return;}
   if(owFired&&ow.nearHBase){startHBaseEnc();return;}
   if(owFired&&ow.nearSlipgate){suppressMenuInput();recordLastLocation('slipgate');openSlipgateMenu();saveGame();return;}
@@ -660,14 +661,14 @@ function drawOW(){
   for(let pi=0;pi<visPlanets.length;pi++){
     const i=visPlanets[pi];
     const p=owPos(PP[i]),d=LV[i];
-    if(G.cleared[i]){cx.save();cx.strokeStyle='#334';cx.lineWidth=1;cx.setLineDash([3,5]);cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.stroke();cx.fillStyle='#223';cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.fill();cx.fillStyle='#446';cx.font='bold 10px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('cleared',p.x,p.y+3);cx.setLineDash([]);cx.restore();continue;}
+    if(G.cleared[bodyIdForPlanetIndex(i)]){cx.save();cx.strokeStyle='#334';cx.lineWidth=1;cx.setLineDash([3,5]);cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.stroke();cx.fillStyle='#223';cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.fill();cx.fillStyle='#446';cx.font='bold 10px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('cleared',p.x,p.y+3);cx.setLineDash([]);cx.restore();continue;}
     const pu=.5+.5*Math.sin(G.fr*.05+i);cx.save();cx.shadowColor=d.pcol;cx.shadowBlur=sb(8+pu*14);
     cx.strokeStyle=d.pcol;cx.lineWidth=1.5;cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.stroke();
     cx.fillStyle=d.bg;cx.beginPath();cx.arc(p.x,p.y,d.pr,0,Math.PI*2);cx.fill();
     cx.strokeStyle=d.col;cx.lineWidth=.8;cx.globalAlpha=.4;
     [[-8,-6,5],[7,4,7],[-4,9,4],[10,-8,3]].forEach(([cx2,cy,r])=>{cx.beginPath();cx.arc(p.x+cx2,p.y+cy,r,0,Math.PI*2);cx.stroke();});
     cx.globalAlpha=1;cx.restore();
-    if(ow.nearP===i){cx.save();cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=sb(10);cx.font='bold 12px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('[ fire to enter ]',p.x,p.y+d.pr+16);cx.restore();}
+    if(ow.nearBodyId===bodyIdForPlanetIndex(i)){cx.save();cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=sb(10);cx.font='bold 12px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('[ fire to enter ]',p.x,p.y+d.pr+16);cx.restore();}
   }
   for(let aii=0;aii<visAst.length;aii++){const ai=visAst[aii],ap=owPos(AB[ai]);
     cx.save();cx.strokeStyle='#998877';cx.shadowColor='#776655';cx.shadowBlur=sb(5);cx.lineWidth=1.2;
@@ -696,7 +697,7 @@ function drawOW(){
     }));
   }
   drHUD(s.energy,s.maxEnergy,s.hp,s.maxHp,s);
-  drawObjectivesPanel({layout:'planet',planetIdx:ow.nearP});
+  drawObjectivesPanel({layout:'planet',bodyId:ow.nearBodyId});
   if(G.slipMsg>0){
     const alpha=Math.min(1,G.slipMsg/40);
     const msgY=46;

@@ -594,11 +594,11 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 **Files:** `ui/screens/system-map.js` (NEW), `ui/input-bridge.js` (register), `state.js`
 
 **Outline:**
-- Source `G.system.sites` from existing world data: every planet (from `LV[]`), `BASE`, `HBASE`, `SLIPGATE`, plus any asteroid fields once they exist. Fields: `{id, name, kind, objectives:[], visited}`. No `hostile`. Populate during `genWorld` and update on entry/exit.
+- Source `G.system.sites` from existing world data. Per cross-plan notes: shape is `{id, name, kind, objectives:[], visited, moons:[...]}` where `kind ∈ {'planet','gas_giant','asteroid','base','hbase','slipgate'}` (no `'moon'` at top level). Each planet entry includes a `moons` array of {id, kind, subtype, size, atmoKind, populationClass, objectives}. Populate during `genWorld` and update on entry/exit.
 - New screen `makeSystemMapScreen()`:
   - Top: lbl `system view · {seedHex}`, sub `docked at {currentSite.name}`.
-  - Center: `SiteMap({mode:'system', nodes: () => G.system.sites.map(s => ({id:s.id, x, y, kind:s.kind, label:s.name})), get/set: focused site id, onConfirm: noop+log warning})`. Current docked site is the center node.
-  - Bottom card (above ticker): `SectionHeader('selected · {site.name}')`, kind, brief description, objectives list (one line per objective; `chip green` for ready, `chip` for side), services list (compact `KeyValueRow`s).
+  - Center: `SiteMap({mode:'system', nodes: () => G.system.sites.filter(s => s.kind !== 'moon').map(s => ({id:s.id, x, y, kind:s.kind, label:s.name})), get/set: focused site id, onConfirm: noop+log warning})`. Current docked site is the center node. Moons are excluded from top-level nodes per cross-plan notes.
+  - Bottom card (above ticker): if focused site is a planet, show `SectionHeader('selected · {planet.name}')`, kind, atmosphere, gravity, objectives list (one line per objective; `chip green` for ready, `chip` for side), then `SectionHeader('moons')` with a focusable sub-list of the planet's moons. If focused site is a non-planet site (gas giant, asteroid, BASE, HBASE, SLIPGATE), show its info directly. Confirming a moon row inspects that moon (does not jump).
   - Footer: `NewsTicker` reading `G.system.events`.
 - Theme: default green.
 - Footer prompts: `bindHint('directions', 'select')` + `bindHint('confirm', 'inspect')` + `bindHint('cancel', 'back')`.

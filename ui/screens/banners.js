@@ -67,7 +67,7 @@ registerScreen('banner-sector-cleared', () => makeBannerScreen({
   theme: 'cheat',
   onContinue: () => {
     ia();
-    G.stake = 0; G.credits = 0; G.cleared = clearedForPlanets(); G.lvState = {};
+    G.stake = 0; G.credits = 0; G.cleared = clearedForBodies(); G.lvState = {};
     openTitleMenu();
   },
 }));

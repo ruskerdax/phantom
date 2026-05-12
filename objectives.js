@@ -2,18 +2,29 @@
 
 const OBJECTIVE_TYPE_ORDER = Object.values(OBJECTIVE_TYPE_IDS);
 
-function objectiveId(type, planetIdx=null) {
-  return planetIdx == null ? type : `${planetIdx}:${type}`;
+function objectiveId(type, bodyId=null) {
+  return bodyId == null ? type : `${bodyId}:${type}`;
 }
 
-function objectiveLabel(type, planetIdx=null) {
+function objectiveLabel(type, bodyId=null) {
   const def = OBJECTIVE_TYPE_MAP[type];
   if(!def) return type;
-  return def.scope === 'planet' ? `P${(planetIdx ?? 0) + 1} ${def.name}` : def.name;
+  const body = typeof bodyById === 'function' ? bodyById(bodyId) : null;
+  const labelId = (body?.id || bodyId || '').toString().toUpperCase();
+  return def.scope === 'planet' ? `${labelId} ${def.name}` : def.name;
+}
+
+function objectiveBodySortIndex(bodyId) {
+  if(bodyId == null) return Number.MAX_SAFE_INTEGER;
+  if(typeof bodyIndexFromId === 'function') {
+    const idx = bodyIndexFromId(bodyId);
+    if(Number.isInteger(idx) && idx >= 0) return idx;
+  }
+  return Number.MAX_SAFE_INTEGER - 1;
 }
 
 function objectiveSortKey(o) {
-  const pi = o.planetIdx == null ? Number.MAX_SAFE_INTEGER : o.planetIdx;
+  const pi = objectiveBodySortIndex(o.bodyId);
   const ti = OBJECTIVE_TYPE_ORDER.indexOf(o.type);
   return [pi, ti < 0 ? Number.MAX_SAFE_INTEGER : ti, o.id];
 }
@@ -37,17 +48,18 @@ function genObjectives(rng) {
   const out = [];
   for(let pi = 0; pi < LV.length; pi++) {
     const p = LV[pi];
+    const bodyId = typeof bodyIdForPlanetIndex === 'function' ? bodyIdForPlanetIndex(pi) : `p${pi}`;
     if((p.sites || []).some(s => s.id === 'cave' || s.type === 'cave_connector')) {
-      out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.CAVE_REACTOR, pi), type:OBJECTIVE_TYPE_IDS.CAVE_REACTOR, planetIdx:pi, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.CAVE_REACTOR, pi)});
+      out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.CAVE_REACTOR, bodyId), type:OBJECTIVE_TYPE_IDS.CAVE_REACTOR, bodyId, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.CAVE_REACTOR, bodyId)});
     }
     if((p.sites || []).some(s => s.id === 'targets' || s.type === 'surface_targets') && siteDataHasBuilding(p.surface, BUILDING_CLASS_IDS.DISH)) {
-      out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, pi), type:OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, planetIdx:pi, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, pi)});
+      out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, bodyId), type:OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, bodyId, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.SURFACE_TARGETS, bodyId)});
     }
     if(siteDataHasBuildingCategory(p.surface, 'residence')) {
-      out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.CIV_RESIDENCES, pi), type:OBJECTIVE_TYPE_IDS.CIV_RESIDENCES, planetIdx:pi, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.CIV_RESIDENCES, pi)});
+      out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.CIV_RESIDENCES, bodyId), type:OBJECTIVE_TYPE_IDS.CIV_RESIDENCES, bodyId, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.CIV_RESIDENCES, bodyId)});
     }
     if(siteDataHasBuildingCategory(p.surface, 'infrastructure')) {
-      out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE, pi), type:OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE, planetIdx:pi, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE, pi)});
+      out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE, bodyId), type:OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE, bodyId, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE, bodyId)});
     }
   }
   if(HBASE) out.push({id:objectiveId(OBJECTIVE_TYPE_IDS.HBASE), type:OBJECTIVE_TYPE_IDS.HBASE, complete:false, label:objectiveLabel(OBJECTIVE_TYPE_IDS.HBASE)});
@@ -62,12 +74,13 @@ function normalizeObjectives(src, generated=G.objectives) {
   const base = Array.isArray(generated) ? generated : [];
   return sortObjectives(base.map(o => {
     const saved = savedById.get(o.id);
+    const legacyBodyId = (saved?.planetIdx != null && typeof bodyIdForPlanetIndex === 'function') ? bodyIdForPlanetIndex(saved.planetIdx) : null;
     return {
       id:o.id,
       type:o.type,
-      planetIdx:o.planetIdx,
+      bodyId:o.bodyId,
       complete:!!saved?.complete,
-      label:o.label || objectiveLabel(o.type, o.planetIdx),
+      label:o.label || objectiveLabel(o.type, o.bodyId || legacyBodyId),
     };
   }));
 }
@@ -76,13 +89,13 @@ function completedObjectiveCount() {
   return (G.objectives || []).filter(o => o.complete).length;
 }
 
-function objectiveForPlanetType(planetIdx, type) {
-  return (G.objectives || []).find(o => o.planetIdx === planetIdx && o.type === type) || null;
+function objectiveForPlanetType(bodyId, type) {
+  return (G.objectives || []).find(o => o.bodyId === bodyId && o.type === type) || null;
 }
 
-function objectiveForSite(siteId, planetIdx=G.lv) {
-  if(siteId === 'cave') return objectiveForPlanetType(planetIdx, OBJECTIVE_TYPE_IDS.CAVE_REACTOR);
-  if(siteId === 'targets') return objectiveForPlanetType(planetIdx, OBJECTIVE_TYPE_IDS.SURFACE_TARGETS);
+function objectiveForSite(siteId, bodyId=activeBodyId()) {
+  if(siteId === 'cave') return objectiveForPlanetType(bodyId, OBJECTIVE_TYPE_IDS.CAVE_REACTOR);
+  if(siteId === 'targets') return objectiveForPlanetType(bodyId, OBJECTIVE_TYPE_IDS.SURFACE_TARGETS);
   return null;
 }
 
@@ -92,15 +105,18 @@ function syncSlipgateFromObjectives() {
   if(G.slipgateActive && !wasActive) G.slipMsg = Math.max(G.slipMsg || 0, 360);
 }
 
-function syncPlanetCleared(pi=G.lv) {
-  if(G.cleared.length !== PP.length) G.cleared = clearedForPlanets(G.cleared);
-  const planetObjectives = (G.objectives || []).filter(o => o.planetIdx === pi);
-  G.cleared[pi] = planetObjectives.every(o => o.complete);
+function syncPlanetCleared(bodyId=activeBodyId()) {
+  G.cleared = clearedForBodies(G.cleared);
+  const planetObjectives = (G.objectives || []).filter(o => o.bodyId === bodyId);
+  G.cleared[bodyId] = planetObjectives.every(o => o.complete);
 }
 
 function syncAllPlanetCleared() {
-  G.cleared = clearedForPlanets(G.cleared);
-  for(let pi = 0; pi < PP.length; pi++) syncPlanetCleared(pi);
+  G.cleared = clearedForBodies(G.cleared);
+  const bodies = typeof enterableBodies === 'function' && enterableBodies().length
+    ? enterableBodies()
+    : Array.from({length:LV.length},(_,i)=>({id:bodyIdForPlanetIndex(i)}));
+  for(const b of bodies) syncPlanetCleared(b.id);
 }
 
 function syncDerivedObjectives() {
@@ -120,14 +136,14 @@ function completeObjective(id) {
   return true;
 }
 
-function completePlanetSite(siteId, pi=G.lv) {
-  const ps = planetState(pi);
+function completePlanetSite(siteId, bodyId=activeBodyId()) {
+  const ps = bodyLevelState(bodyId);
   if(!ps.completedSites[siteId]) ps.completedSites[siteId] = true;
-  const obj = objectiveForSite(siteId, pi);
+  const obj = objectiveForSite(siteId, bodyId);
   if(obj) {
     if(completeObjective(obj.id)) tone(880,.25,'sine',.08);
   } else {
-    syncPlanetCleared(pi);
+    syncPlanetCleared(bodyId);
     syncSlipgateFromObjectives();
   }
   saveGame();
@@ -135,7 +151,7 @@ function completePlanetSite(siteId, pi=G.lv) {
 
 function currentSystemState() {
   return {
-    objectives: (G.objectives || []).map(o => ({id:o.id, type:o.type, planetIdx:o.planetIdx, complete:!!o.complete, label:o.label})),
+    objectives: (G.objectives || []).map(o => ({id:o.id, type:o.type, bodyId:o.bodyId, complete:!!o.complete, label:o.label})),
     objectivesRequired: G.objectivesRequired,
     cheatSlipgateUnlocked: !!G.cheatSlipgateUnlocked,
     hbCleared: G.hbCleared,
@@ -156,10 +172,11 @@ function applySystemObjectiveState(src={}) {
 
 function objectivePanelRows(opts={}) {
   const layout = opts.layout || 'planet';
-  if(layout === 'base-list-stub') return (G.objectives || []).map(o => ({label:o.label, complete:!!o.complete, type:o.type, planetIdx:o.planetIdx}));
+  if(layout === 'base-list-stub') return (G.objectives || []).map(o => ({label:o.label, complete:!!o.complete, type:o.type, bodyId:o.bodyId}));
   if(layout !== 'planet') return [];
-  if(opts.planetIdx == null || !LV[opts.planetIdx]) return [];
-  return (G.objectives || []).filter(o => o.planetIdx === opts.planetIdx).map(o => ({label:o.label, complete:!!o.complete, type:o.type, planetIdx:o.planetIdx}));
+  const bodyId = opts.bodyId || (opts.planetIdx != null && typeof bodyIdForPlanetIndex === 'function' ? bodyIdForPlanetIndex(opts.planetIdx) : null);
+  if(!bodyId) return [];
+  return (G.objectives || []).filter(o => o.bodyId === bodyId).map(o => ({label:o.label, complete:!!o.complete, type:o.type, bodyId:o.bodyId}));
 }
 
 function drawObjectivesPanel(opts={}) {

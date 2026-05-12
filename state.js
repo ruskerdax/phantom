@@ -15,8 +15,8 @@ var BODIES=[];
 // G.optCol, G.optListen, G.ctrlSel) — the input.js rebinding pipeline still
 // needs G.ctrlSel/optCol/optListen to know which action it's writing to.
 var G={
-  st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,
-  cleared:[],hbCleared:false,hbState:null,lvState:{},
+  st:'title',stake:0,credits:0,fr:0,owFr:0,lv:0,lvBodyId:null,
+  cleared:{},hbCleared:false,hbState:null,lvState:{},
   slipgateActive:false,slipMsg:0,
   objectives:[],objectivesRequired:0,cheatSlipgateUnlocked:false,
   OW:null,ENC:null,site:null,
@@ -518,6 +518,44 @@ function owPos(b){
   b._owPosFr=G.owFr;
   return p;
 }
+function bodyIdForPlanetIndex(pi){
+  if(!Number.isInteger(pi)||pi<0)return null;
+  if(Array.isArray(BODIES)&&BODIES[pi]?.id)return BODIES[pi].id;
+  if(Array.isArray(LV)&&LV[pi]?.bodyId)return LV[pi].bodyId;
+  return `p${pi}`;
+}
+function bodyIndexFromId(bodyId){
+  if(typeof bodyId!=='string'||!bodyId.length)return null;
+  if(Array.isArray(BODIES)&&BODIES.length){
+    const bi=BODIES.findIndex(b=>b?.id===bodyId);
+    if(bi>=0)return bi;
+  }
+  if(Array.isArray(LV)&&LV.length){
+    const li=LV.findIndex(p=>p?.bodyId===bodyId);
+    if(li>=0)return li;
+  }
+  const m=/^p(\d+)$/.exec(bodyId);
+  if(m)return Number(m[1]);
+  return null;
+}
+function bodyIdForAsteroidIndex(ai){
+  return Number.isInteger(ai)&&ai>=0?`a${ai}`:null;
+}
+function asteroidIndexFromBodyId(bodyId){
+  if(typeof bodyId!=='string')return null;
+  const m=/^a(\d+)$/.exec(bodyId);
+  return m?Number(m[1]):null;
+}
+function activeBodyId(){
+  if(typeof G.lvBodyId==='string'&&G.lvBodyId.length)return G.lvBodyId;
+  if(Number.isInteger(G.lv)&&G.lv>=0)return bodyIdForPlanetIndex(G.lv);
+  return null;
+}
+function planetIndexFromSite(site){
+  if(site?.bodyId)return bodyIndexFromId(site.bodyId);
+  const idx=site?.planet?.index;
+  return Number.isInteger(idx)&&idx>=0?idx:null;
+}
 function powerStationClassId(){
   return (typeof BUILDING_CLASS_IDS!=='undefined'&&BUILDING_CLASS_IDS.POWER_STATION)||'POWER_STATION';
 }
@@ -539,20 +577,21 @@ function powerStationRefsForPlanet(pi){
   add('tunnel',p.tunnel);
   return refs;
 }
-function activeSiteBuildingAlive(pi,ref){
-  if(G.lv!==pi||!G.site||G.site.mode!==ref.mode)return null;
+function activeSiteBuildingAlive(bodyId,ref){
+  if(activeBodyId()!==bodyId||!G.site||G.site.mode!==ref.mode)return null;
   const list=G.site.buildings||[];
   const b=list.find(x=>x.classId===ref.classId&&x.bitIndex===ref.bitIndex);
   return b?!!b.alive:null;
 }
-function planetIsPowered(pi=G.lv){
+function planetIsPowered(bodyId=activeBodyId()){
+  const pi=bodyIndexFromId(bodyId);
   const refs=powerStationRefsForPlanet(pi),stationId=powerStationClassId();
-  const ps=(typeof planetState==='function'&&LV?.[pi])?planetState(pi):(G.lvState?.[pi]||null);
+  const ps=(typeof bodyLevelState==='function'&&LV?.[pi]&&bodyId)?bodyLevelState(bodyId):(G.lvState?.[bodyId]||null);
   const bits=ps?.buildings||{};
   const hasSyntheticStation=Object.prototype.hasOwnProperty.call(bits,stationId);
   if(!refs.length)return !hasSyntheticStation||!!bits[stationId];
   for(const ref of refs){
-    const live=activeSiteBuildingAlive(pi,ref);
+    const live=activeSiteBuildingAlive(bodyId,ref);
     if(live===true)return true;
     if(live===false)continue;
     if(bits[ref.classId]&(1<<ref.bitIndex))return true;
@@ -565,27 +604,27 @@ function entityRequiresPower(entity,def=null){
   if(def?.requiresPower===false||def?.defense?.requiresPower===false)return false;
   return def?.requiresPower===true||def?.defense?.requiresPower===true;
 }
-function sitePlanetIndex(site){
-  const idx=site?.planet?.index??G.lv;
-  return Number.isInteger(idx)&&idx>=0?idx:null;
+function siteBodyId(site){
+  return site?.bodyId||activeBodyId();
 }
 function defenseRequiresPower(d,def=null){
   return entityRequiresPower(d,def||defenseDef(d));
 }
 function defenseIsPowered(site,d){
   if(!defenseRequiresPower(d))return true;
-  const pi=sitePlanetIndex(site);
-  return pi==null||planetIsPowered(pi);
+  const bodyId=siteBodyId(site);
+  return bodyId==null||planetIsPowered(bodyId);
 }
 function buildingRequiresPower(b,def=null){
   return entityRequiresPower(b,def||buildingDef(b));
 }
 function buildingIsPowered(site,b){
   if(!buildingRequiresPower(b))return true;
-  const pi=sitePlanetIndex(site);
-  return pi==null||planetIsPowered(pi);
+  const bodyId=siteBodyId(site);
+  return bodyId==null||planetIsPowered(bodyId);
 }
-function planetHasPoweredEntities(pi=G.lv){
+function planetHasPoweredEntities(bodyId=activeBodyId()){
+  const pi=bodyIndexFromId(bodyId);
   const poweredDefense=d=>{
     try{return defenseRequiresPower(d);}
     catch(_){return !!d?.requiresPower;}
@@ -594,7 +633,7 @@ function planetHasPoweredEntities(pi=G.lv){
     try{return buildingRequiresPower(b);}
     catch(_){return !!b?.requiresPower;}
   };
-  if(G.lv===pi&&G.site){
+  if(activeBodyId()===bodyId&&G.site){
     if((G.site.defenses||[]).some(poweredDefense))return true;
     if((G.site.en||[]).some(poweredDefense))return true;
     if((G.site.buildings||[]).some(poweredBuilding))return true;
@@ -608,13 +647,24 @@ function planetHasPoweredEntities(pi=G.lv){
   if((p.tunnel?.buildings||[]).some(poweredBuilding))return true;
   return (p.cave?.buildings||[]).some(poweredBuilding);
 }
-function clearedForPlanets(src=null){
-  const out=Array.isArray(src)?src.slice(0,PP.length):[];
-  while(out.length<PP.length)out.push(false);
-  return out.map(v=>v===true);
+function clearedForBodies(src=null){
+  const out={};
+  if(Array.isArray(src)){
+    for(let i=0;i<src.length;i++)if(src[i]===true){
+      const id=bodyIdForPlanetIndex(i);
+      if(id)out[id]=true;
+    }
+  }else if(src&&typeof src==='object'){
+    for(const k of Object.keys(src))out[k]=src[k]===true;
+  }
+  const ids=(typeof enterableBodies==='function'&&enterableBodies().length)
+    ? enterableBodies().map(b=>b.id)
+    : Array.from({length:LV.length},(_,i)=>bodyIdForPlanetIndex(i));
+  for(const id of ids)if(id&&!Object.prototype.hasOwnProperty.call(out,id))out[id]=false;
+  return out;
 }
-function recordLastLocation(kind,index=null){
-  G.lastLocation=normalizeLastLocation({seed:G.seed,kind,index});
+function recordLastLocation(kind,bodyId=null){
+  G.lastLocation=normalizeLastLocation({seed:G.seed,kind,bodyId});
 }
 function spawnOutsideBody(body,radius){
   const p=owPos(body),dx=p.x-OW_W/2,dy=p.y-OW_H/2,len=Math.hypot(dx,dy)||1;
@@ -629,13 +679,15 @@ function spawnPointForLastLocation(loc){
   if(!loc||loc.seed!==(G.seed>>>0))return null;
   if(loc.kind==='base')return owPos(BASE);
   if(loc.kind==='slipgate')return owPos(SLIPGATE);
-  if(loc.kind==='planet'){
-    if(!PP[loc.index]||!LV[loc.index])return null;
-    return spawnOutsideBody(PP[loc.index],LV[loc.index].pr);
+  if(loc.kind==='body'){
+    const pi=bodyIndexFromId(loc.bodyId);
+    if(pi==null||!PP[pi]||!LV[pi])return null;
+    return spawnOutsideBody(PP[pi],LV[pi].pr);
   }
   if(loc.kind==='asteroid'){
-    if(!AB[loc.index])return null;
-    return spawnOutsideBody(AB[loc.index],AB[loc.index].r);
+    const ai=asteroidIndexFromBodyId(loc.bodyId);
+    if(ai==null||!AB[ai])return null;
+    return spawnOutsideBody(AB[ai],AB[ai].r);
   }
   if(loc.kind==='hbase'&&HBASE)return spawnOutsideBody(HBASE,HBASE.r);
   return null;
@@ -658,7 +710,7 @@ function startFromSave(){
   G.visitedSeeds=sv?[...(sv.visitedSeeds??[])]:[];
   G.credits=sv?.credits??0;
   G.stake=0;
-  G.cleared=[];
+  G.cleared={};
   G.hbCleared=false;
   G.hbState=null;
   G.lvState={};
@@ -672,6 +724,7 @@ function startFromSave(){
   G.systemStates=sv?.systemStates??{};
   G.needsRebuild=!!sv?.needsRebuild;
   G.lastLocation=null;
+  G.lvBodyId=null;
   // Treat any pre-existing non-tutorial run as having left the tutorial.
   if(sv&&sv.seed!==TUTORIAL_SEED&&!G.tutorialDone)G.tutorialDone=true;
   if(G.customSeed!==null){G.seed=G.customSeed;G.customSeed=null;}

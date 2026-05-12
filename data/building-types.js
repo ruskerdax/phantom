@@ -40,9 +40,9 @@ function _civObjectiveOnDestroyed(site, b) {
     if(xd?.category === def.category) destroyed += xd.pts || 0;
   }
   if(destroyed * 2 < total) return;
-  const pi = (typeof LV !== 'undefined' && Array.isArray(LV)) ? LV.indexOf(site.planet) : -1;
+  const bodyId = site?.bodyId || null;
   const type = def.category === 'residence' ? OBJECTIVE_TYPE_IDS.CIV_RESIDENCES : OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE;
-  const obj = pi >= 0 ? objectiveForPlanetType(pi, type) : null;
+  const obj = bodyId ? objectiveForPlanetType(bodyId, type) : null;
   if(obj && !obj.complete) completeObjective(obj.id);
 }
 

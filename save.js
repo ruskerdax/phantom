@@ -1,6 +1,6 @@
 'use strict';
 
-const SAVE_KEY = 'phantom_save_v2';
+const SAVE_KEY = 'phantom_save_v3';
 const SETTINGS_VERSION = 1;
 const DEFAULT_VOLUME = 7;
 
@@ -11,7 +11,7 @@ function defaultSave() {
     stake: 0,
     licenses: ['kestrel', 'shield_std', 'mass driver', 'pulse laser'],
     loadout: {chassis:'kestrel', battery:power.battery, reactor:power.reactor, weapons:['mass driver','pulse laser'], aux:null, shield:'shield_std'},
-    cleared: [],
+    cleared: {},
     hbCleared: false,
     hbState: null,
     lvState: {},
@@ -54,17 +54,13 @@ function defaultSave() {
 
 function normalizeLastLocation(loc) {
   if (!loc || typeof loc !== 'object') return null;
-  const kinds = ['base', 'slipgate', 'planet', 'asteroid', 'hbase'];
+  const kinds = ['base', 'slipgate', 'body', 'asteroid', 'hbase'];
   if (!kinds.includes(loc.kind)) return null;
   if (typeof loc.seed !== 'number' || !Number.isFinite(loc.seed)) return null;
   const seed = loc.seed >>> 0;
-  let index = null;
-  if (loc.kind === 'planet' || loc.kind === 'asteroid') {
-    if (typeof loc.index !== 'number' || !Number.isFinite(loc.index)) return null;
-    index = Math.floor(loc.index);
-    if (index < 0) return null;
-  }
-  return {seed, kind: loc.kind, index};
+  const bodyId = loc.bodyId == null ? null : String(loc.bodyId);
+  if ((loc.kind === 'body' || loc.kind === 'asteroid') && (!bodyId || !bodyId.length)) return null;
+  return {seed, kind: loc.kind, bodyId};
 }
 
 function isShieldId(id) {
@@ -102,7 +98,7 @@ function loadSave() {
     if (!('prevSeed' in d))                  d.prevSeed = null;
     if (!d.systemStates || typeof d.systemStates !== 'object') d.systemStates = {};
     if (typeof d.needsRebuild !== 'boolean') d.needsRebuild = false;
-    if (!Array.isArray(d.cleared))           d.cleared = def.cleared;
+    if (!d.cleared || typeof d.cleared !== 'object' || Array.isArray(d.cleared)) d.cleared = {...def.cleared};
     if (!Array.isArray(d.objectives))        d.objectives = def.objectives;
     if (!Array.isArray(d.currentAmmo))       d.currentAmmo = null;
     if (!Array.isArray(d.currentMag))        d.currentMag = null;
@@ -157,14 +153,14 @@ function buildSaveData() {
     stake: G.stake,
     licenses: [...G.licenses],
     loadout: {chassis:G.loadout.chassis, battery, reactor, weapons:[...G.loadout.weapons], aux:G.loadout.aux??null, shield:G.loadout.shield},
-    cleared: [...G.cleared],
+    cleared: {...(G.cleared || {})},
     hbCleared: G.hbCleared,
     hbState: G.hbState,
     // Per-planet buildings are stored at lvState[pi].buildings[classId] as an
     // alive bitfield: bit i is 1 while the i-th building of that class is alive.
     lvState: G.lvState ?? {},
     slipgateActive: G.slipgateActive,
-    objectives: (G.objectives || []).map(o => ({id:o.id, type:o.type, planetIdx:o.planetIdx, complete:!!o.complete, label:o.label})),
+    objectives: (G.objectives || []).map(o => ({id:o.id, type:o.type, bodyId:o.bodyId, complete:!!o.complete, label:o.label})),
     objectivesRequired: G.objectivesRequired || 0,
     cheatSlipgateUnlocked: !!G.cheatSlipgateUnlocked,
     seed: G.seed,
