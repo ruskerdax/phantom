@@ -628,7 +628,11 @@ function drawOW(){
     visBase=false;visHBase=false;visSlipgate=false;
     for(let i=0;i<vis.length;i++){
       const v=vis[i];
-      if(v.kind==='planet'){visPlanets.push(v.ref);continue;}
+      if(v.kind==='planet'){
+        const pi=bodyIndexFromId(v.ref);
+        if(Number.isInteger(pi)&&pi>=0&&pi<PP.length)visPlanets.push(pi);
+        continue;
+      }
       if(v.kind==='asteroid'){visAst.push(v.ref);continue;}
       if(v.kind==='fleet'){visFleets.push(v.ref);continue;}
       if(v.kind==='base'){visBase=true;continue;}
