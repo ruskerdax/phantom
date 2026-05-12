@@ -326,7 +326,7 @@ SUBTYPE_WEIGHTS = {
 
 ---
 
-### F-05. UI_REWORK_PLAN.md notes
+### F-05. UI_REWORK_PLAN.md notes ✅
 
 **Goal:** Update UI_REWORK_PLAN.md so that the screens it adds (SiteMap, system map screen, RunSummaryPanel-as-it-relates-to-bodies) match the new body system.
 
