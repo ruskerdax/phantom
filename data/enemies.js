@@ -139,18 +139,18 @@ const ENEMY_CLASSES = [
     className:'Lancer', type:ENEMY_TYPES.INTERCEPTOR, typeName:'Interceptor',
     name:'LANCER-CLASS INTERCEPTOR',
     col:'#ff66cc', col2:'#aa3399',
-    sc:160, energy:false, energyMax:20, energyRegenPerSec:4, spinRate:.05,
-    hull:{angle:'spin', boundsR:11, parts:[{kind:'poly', pts:[[0,-9],[-7.2,5.4],[7.2,5.4]]}]},
+    sc:160, energy:true, energyMax:20, energyRegenPerSec:4, spinRate:0, scale:.8,
+    hull:{angle:'flight', boundsR:16, parts:[{kind:'poly', pts:[[10.88,-3],[5.63,-3],[2.63,-1.5],[1.88,-1.5],[1.88,-4.5],[2.63,-6],[2.63,-7.5],[1.88,-9],[1.88,-10.5],[1.13,-12],[-1.12,-12],[-1.87,-10.5],[-1.87,-9],[-2.62,-7.5],[-2.62,-6],[-1.87,-4.5],[-1.87,-1.5],[-2.62,-1.5],[-5.62,-3],[-10.87,-3],[-13.87,-1.5],[-13.87,2.25],[-8.62,2.25],[-5.62,3.75],[-4.12,3.75],[-4.12,6],[-7.12,6],[-7.12,7.5],[-3.37,9.75],[-2.62,12],[-1.12,12],[-1.12,8.25],[-0.37,7.5],[0.38,7.5],[1.13,8.25],[1.13,12],[2.63,12],[3.38,9.75],[7.13,7.5],[7.13,6],[4.13,6],[4.13,3.75],[5.63,3.75],[8.63,2.25],[13.88,2.25],[13.88,-1.5],[10.88,-3]]}]},
     enc:{cnt:1, hp:20, spd:3.5, turn:.09, r:9, col:'#ff66cc', col2:'#aa3399',
       ai:{orbit:118, approach:150, tangential:.078, radial:.056,
         pursuit:{lead:.45, offset:105, weave:.9, flipFrames:80, thrust:.056, turnMult:1.05, tangent:.03}},
       fire:{wpn:'mass driver small', mode:'aim', count:1, spread:0, offset:10, minRange:35, arc:1.05}},
     drawEnc(e){
-      const ec=this.enc;
-      cx.save();cx.translate(e.x,e.y);cx.rotate(e.spin);
+      const ec=this.enc,a=flightAngle(e);
+      cx.save();cx.translate(e.x,e.y);cx.rotate(a);
       cx.strokeStyle=ec.col;cx.shadowColor=ec.col;cx.shadowBlur=sb(10);cx.lineWidth=1.5;
       withEnemyBodyScale(this,e,()=>drawEnemyHull(this));
-      if(e.hp<e.mhp){cx.save();cx.rotate(-e.spin);drawEnemyHealthBar(e,ec.col);cx.restore();}
+      if(e.hp<e.mhp){cx.save();cx.rotate(-a);drawEnemyHealthBar(e,ec.col);cx.restore();}
       cx.restore();
     }
   },
@@ -159,7 +159,7 @@ const ENEMY_CLASSES = [
     className:'Arrow', type:ENEMY_TYPES.FIGHTER, typeName:'Fighter',
     name:'ARROW-CLASS FIGHTER',
     col:'#ffdd33', col2:'#ff8800',
-    sc:160, energy:false, energyMax:20, energyRegenPerSec:4, spinRate:0, scale:.7,
+    sc:160, energy:true, energyMax:20, energyRegenPerSec:4, spinRate:0, scale:.7,
     hull:{angle:'flight', boundsR:16, parts:[{kind:'poly', pts:[[0,-12],[-4,-2],[-14,4],[-10,8],[-4,6],[0,10],[4,6],[10,8],[14,4],[4,-2]]}]},
     enc:{cnt:1, hp:20, spd:3.5, turn:.06, r:9, col:'#ffdd33', col2:'#ff8800',
       ai:{passRange:58, commitRange:170, flybyRange:125, resetRange:430, reengageRange:330, minExtendFrames:48, lead:.45, attackSpd:5.2, extendSpd:5.7, turnSpd:3.9, attackThrust:.13, extendThrust:.15, turnThrust:.04, avoidRange:210, passClearance:70, avoidThrust:.04,
