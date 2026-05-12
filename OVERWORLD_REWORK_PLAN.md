@@ -233,7 +233,7 @@ SUBTYPE_WEIGHTS = {
 
 ---
 
-### F-02. BODIES[] data structure & body registry
+### F-02. BODIES[] data structure & body registry ✅
 
 **Goal:** Introduce `BODIES[]` as the single source of truth for celestial-body data. Define the kind/subtype registry, palettes, atmosphere tables, and size-derived helpers. No generation logic yet — that lands in Phase 1.
 

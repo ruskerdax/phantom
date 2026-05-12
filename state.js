@@ -3,6 +3,7 @@
 // Master game state. G.st drives the state machine — update() and draw() both branch on it so only one
 // sub-system runs per frame. Active mode data lives in sub-objects: G.OW (overworld), G.ENC (encounter), G.site (site).
 const STARTING_POWER=defaultPowerForChassisId('kestrel');
+var BODIES=[];
 // Master game state.
 //
 // Selection state for menus (titleSel/pauseSel/cheatSubSel/baseSel/shopSel/
