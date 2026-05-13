@@ -572,8 +572,14 @@ function updCaveSite(){
   for(const b of siteBuildings(site)){
     if(!b.alive||b.classId!==BUILDING_CLASS_IDS.LASER_DEFENSE)continue;
     if(!buildingIsPowered(site,b)||!b.a||!b.b)continue;
-    if(dseg(s.x,s.y,b.a.x,b.a.y,b.b.x,b.b.y)<4){
-      const hit=applyShipDamage(s,2,{source:{x:s.x,y:s.y},kind:'collision',weapon:b});
+    const t=segParam(s.x,s.y,b.a.x,b.a.y,b.b.x,b.b.y);
+    const src={x:b.a.x+(b.b.x-b.a.x)*t,y:b.a.y+(b.b.y-b.a.y)*t};
+    const hitOpts={source:src,kind:'beam',weapon:b};
+    const contactR=shipShieldCanTakeHit(s,hitOpts)?shipShieldHitRadius(s):shipHitRadius(s);
+    if(dseg(s.x,s.y,b.a.x,b.a.y,b.b.x,b.b.y)<contactR+4){
+      const da=Math.hypot(src.x-b.a.x,src.y-b.a.y),db=Math.hypot(src.x-b.b.x,src.y-b.b.y);
+      const beamEnd=da>=db?b.a:b.b;
+      const hit=applyShipBeamDamage(s,2,{...hitOpts,beamEnd});
       shipDamageTone(hit,420,.04,'square',.05);
       if(s.hp<=0){siteKillShip();return;}
     }

@@ -409,6 +409,22 @@ function applyShipDamage(s,amount,opts={}){
   if(hullDamage>0)s.hp=Math.max(0,s.hp-hullDamage);
   return{shieldDamage:shieldHit.shieldDamage,hullDamage,blocked:shieldHit.blocked,shieldBroken:shieldHit.shieldBroken};
 }
+// Beam damage path used by AI lasers and environmental laser defenses.
+// Shields absorb first based on incoming source angle; hull only takes passthrough
+// when the beam segment actually intersects the ship hull.
+function applyShipBeamDamage(s,amount,opts={}){
+  const dmg=Math.max(0,amount||0);
+  if(!s||dmg<=0)return{shieldDamage:0,hullDamage:0,blocked:false,shieldBroken:false,passthroughDamage:0};
+  const shieldHit=applyShipShieldDamage(s,dmg,opts);
+  const src=opts?.source,end=opts?.beamEnd;
+  const hasBeamSegment=Number.isFinite(src?.x)&&Number.isFinite(src?.y)&&Number.isFinite(end?.x)&&Number.isFinite(end?.y);
+  let hullDamage=0;
+  if(shieldHit.passthroughDamage>0&&(!hasBeamSegment||dseg(s.x,s.y,src.x,src.y,end.x,end.y)<=shipHitRadius(s))){
+    hullDamage=shieldHit.passthroughDamage;
+    s.hp=Math.max(0,s.hp-hullDamage);
+  }
+  return{shieldDamage:shieldHit.shieldDamage,hullDamage,blocked:shieldHit.blocked,shieldBroken:shieldHit.shieldBroken,passthroughDamage:shieldHit.passthroughDamage};
+}
 function fillShipHull(s){
   if(!s)return;
   const maxHp=chassisDefForShip(s)?.maxHp;
@@ -476,10 +492,9 @@ function beamMotionPadding(o){return Math.min(4,Math.hypot(o?.vx||0,o?.vy||0));}
 function laserTargetRadius(tg,basePad=0){return tg.r+(tg.beamPad||0)+basePad;}
 function laserTargetHit(tg,ox,oy,ex,ey,hitPad=0){
   if(tg.hull)return hullSegmentHit(tg.hull,ox,oy,ex,ey,hitPad+(tg.beamPad||0));
-  if(dseg(tg.x,tg.y,ox,oy,ex,ey)<=laserTargetRadius(tg,hitPad)){
-    const rdx=ex-ox,rdy=ey-oy,len=Math.hypot(rdx,rdy)||1;
-    return{hit:true,t:((tg.x-ox)*(rdx/len)+(tg.y-oy)*(rdy/len))};
-  }
+  const r=laserTargetRadius(tg,hitPad);
+  const frac=circleSegHitFrac(tg.x,tg.y,r,ox,oy,ex,ey);
+  if(frac!=null)return{hit:true,t:Math.hypot(ex-ox,ey-oy)*frac};
   return{hit:false,t:Infinity};
 }
 // Ray-cast laser: marches a ray from (ox,oy) in direction a, finding the nearest target or wall segment.

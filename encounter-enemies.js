@@ -74,12 +74,8 @@ function encEnemyHandleBeamHit(e, s, enc, ew, eh, wp, res, tor, tg) {
   const src = tor ? toroidalPointNear(res.x1, res.y1, s.x, s.y, ew, eh) : {x:res.x1, y:res.y1};
   const beamHit = {source:src, kind:'beam', weapon:wp};
   if(tg.kind === 'shield') {
-    const hit = applyShipShieldDamage(s, wp.dmg, beamHit);
     const ex = src.x + Math.sin(res.a) * wp.range, ey = src.y - Math.cos(res.a) * wp.range;
-    if(hit.passthroughDamage > 0 && dseg(s.x, s.y, src.x, src.y, ex, ey) < shipHitRadius(s)) {
-      hit.hullDamage = hit.passthroughDamage;
-      s.hp = Math.max(0, s.hp - hit.hullDamage);
-    } else hit.hullDamage = 0;
+    const hit = applyShipBeamDamage(s, wp.dmg, {...beamHit, beamEnd:{x:ex, y:ey}});
     shipDamageTone(hit);
     if(s.hp <= 0) { encKillShip(); return true; }
   } else if(tg.kind === 'ship') {

@@ -263,9 +263,8 @@ function surfaceEnemyHandleBeamHit(site, wp, res, tg) {
   const s = site.s;
   const src = {x:surfaceNearX(site.d, res.x1, s.x), y:res.y1}, hit = {source:src, kind:'beam', weapon:wp};
   if(tg.kind === 'shield') {
-    const sh = applyShipShieldDamage(s, wp.dmg, hit);
-    if(sh.passthroughDamage > 0) applyShipDamage(s, sh.passthroughDamage, hit);
-    shipDamageTone({shieldDamage:sh.shieldDamage, hullDamage:sh.passthroughDamage});
+    const beamEnd = {x:src.x + Math.sin(res.a) * wp.range, y:src.y - Math.cos(res.a) * wp.range};
+    shipDamageTone(applyShipBeamDamage(s, wp.dmg, {...hit, beamEnd}));
   } else if(tg.kind === 'ship') {
     shipDamageTone(applyShipDamage(s, wp.dmg, hit));
   } else if(tg.kind === 'missile') {
