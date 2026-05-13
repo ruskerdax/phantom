@@ -253,17 +253,12 @@ function updOWOrbitalGunShots(ow,s){
   const shots=ow.owGunShots||(ow.owGunShots=[]);
   for(let i=shots.length-1;i>=0;i--){
     const sh=shots[i];
+    sh.px=sh.x;sh.py=sh.y;
     sh.x+=sh.vx;sh.y+=sh.vy;sh.l--;
     if(sh.l<=0||sh.x<0||sh.x>OW_W||sh.y<0||sh.y>OW_H){shots.splice(i,1);continue;}
-    if(Math.hypot(s.x-sh.x,s.y-sh.y)>=12)continue;
-    const hitSource={x:sh.x,y:sh.y};
-    const shieldHit=applyShipShieldDamage(s,sh.dmg,{source:hitSource,kind:'projectile',weapon:sh});
-    let hullDamage=0;
-    if(shieldHit.passthroughDamage>0){
-      const hullHit=applyShipDamage(s,shieldHit.passthroughDamage,{source:hitSource,kind:'projectile',weapon:sh});
-      hullDamage=hullHit.hullDamage||0;
-    }
-    shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage});
+    const shipHit=applyProjectileDamageToShip(s,sh,{targetX:s.x,targetY:s.y,kind:'projectile',weapon:sh,damage:sh.dmg});
+    if(!shipHit.consumed&&!shipHit.hullHit)continue;
+    shipDamageTone({shieldDamage:shipHit.shieldHit?.shieldDamage??0,hullDamage:shipHit.hullHit?.hullDamage??0});
     shots.splice(i,1);
     if(s.hp<=0&&s.alive){owKillShip();return true;}
   }

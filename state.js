@@ -425,6 +425,83 @@ function applyShipBeamDamage(s,amount,opts={}){
   }
   return{shieldDamage:shieldHit.shieldDamage,hullDamage,blocked:shieldHit.blocked,shieldBroken:shieldHit.shieldBroken,passthroughDamage:shieldHit.passthroughDamage};
 }
+function projectileStepSegment(p){
+  return{x1:p?.px??p?.x??0,y1:p?.py??p?.y??0,x2:p?.x??0,y2:p?.y??0};
+}
+// Canonical projectile/explosion collision API.
+// Gameplay modes should adapt only coordinate wrapping via opts.segmentNear and route
+// all projectile/missile/explosion hit checks through these helpers.
+function projectileSegmentNearTarget(p,targetX,targetY,opts={}){
+  const seg=projectileStepSegment(p);
+  if(typeof opts.segmentNear==='function')return opts.segmentNear(seg,targetX,targetY,p);
+  return seg;
+}
+function projectileSourceForTarget(p,targetX,targetY,opts={}){
+  const seg=projectileSegmentNearTarget(p,targetX,targetY,opts);
+  const near=segPointNear(targetX,targetY,seg.x1,seg.y1,seg.x2,seg.y2);
+  return{source:{x:near.x,y:near.y},seg};
+}
+function projectileHitTest(p,target,opts={}){
+  const shape=target?.shape||'circle',tx=target?.x??opts.targetX??0,ty=target?.y??opts.targetY??0;
+  const seg=projectileSegmentNearTarget(p,tx,ty,opts);
+  let hit=false,distance=Infinity;
+  if(shape==='circle'){
+    const r=Math.max(0,target?.r??0);
+    distance=dseg(tx,ty,seg.x1,seg.y1,seg.x2,seg.y2);
+    hit=distance<=r;
+  }else if(shape==='rect'){
+    hit=segRectHit(seg.x1,seg.y1,seg.x2,seg.y2,target.x0,target.y0,target.x1,target.y1);
+  }else if(shape==='hull'){
+    const hh=hullSegmentHit(target.hull,seg.x1,seg.y1,seg.x2,seg.y2,target.pad??0);
+    hit=hh.hit;
+    if(hit)distance=hh.t;
+  }
+  return{hit,seg,distance,source:segPointNear(tx,ty,seg.x1,seg.y1,seg.x2,seg.y2)};
+}
+function shipImpactRadiusForHit(s,hitOpts){
+  return shipShieldCanTakeHit(s,hitOpts)?shipShieldHitRadius(s):shipHitRadius(s);
+}
+function applyProjectileDamageToShip(s,p,opts={}){
+  const dmg=Math.max(0,opts.damage??p?.dmg??0);
+  if(!s||dmg<=0)return{consumed:false,remainingDamage:dmg,shieldHit:null,hullHit:null,distance:Infinity,hitOpts:null};
+  const tx=opts.targetX??s.x,ty=opts.targetY??s.y;
+  const src=projectileSourceForTarget(p,tx,ty,opts);
+  const hitOpts={source:src.source,kind:opts.kind??'projectile',weapon:opts.weapon??p};
+  const distance=dseg(tx,ty,src.seg.x1,src.seg.y1,src.seg.x2,src.seg.y2);
+  let remainingDamage=dmg,shieldHit=null,hullHit=null,consumed=false;
+  if(distance<=shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,hitOpts)){
+    shieldHit=applyShipShieldDamage(s,remainingDamage,hitOpts);
+    remainingDamage=shieldHit.passthroughDamage;
+    if(shieldHit.blocked||remainingDamage<=0)consumed=true;
+  }
+  if(!consumed&&distance<=shipHitRadius(s)){
+    hullHit=applyShipDamage(s,remainingDamage,hitOpts);
+    consumed=true;
+  }
+  return{consumed,remainingDamage,shieldHit,hullHit,distance,hitOpts,source:src.source,segment:src.seg};
+}
+function explosionHitTest(x,y,r,target,opts={}){
+  const shape=target?.shape||'circle';
+  if(shape==='circle'){
+    const tx=target?.x??0,ty=target?.y??0,tr=Math.max(0,target?.r??0);
+    const distance=opts.distance??Math.hypot(tx-x,ty-y);
+    return{hit:distance<=r+tr,distance};
+  }
+  if(shape==='rect'){
+    return{hit:circleRectHit(x,y,r,target.x0,target.y0,target.x1,target.y1),distance:Infinity};
+  }
+  if(shape==='hull'){
+    return{hit:hullCircleHit(target.hull,x,y,r),distance:Infinity};
+  }
+  if(shape==='ship'){
+    const ship=target?.ship;
+    const hitOpts={source:opts.source??{x,y},kind:opts.kind??'explosion',weapon:opts.weapon};
+    const impactR=shipImpactRadiusForHit(ship,hitOpts);
+    const distance=opts.distance??Math.hypot((ship?.x??0)-x,(ship?.y??0)-y);
+    return{hit:distance<=r+impactR,distance,impactR,hitOpts};
+  }
+  return{hit:false,distance:Infinity};
+}
 function fillShipHull(s){
   if(!s)return;
   const maxHp=chassisDefForShip(s)?.maxHp;
