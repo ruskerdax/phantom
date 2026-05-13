@@ -276,6 +276,285 @@ function ensureReactorGuard(rng,terrain,obs,rxPos,wH){
   return null;
 }
 
+function laserBlocksPath(f, ax, ay, bx, by){
+  return segHitParam(ax,ay,bx,by,f.a.x,f.a.y,f.b.x,f.b.y)!=null;
+}
+
+const LASER_MAX_TILT_RAD=Math.PI/18; // 10 deg
+const LASER_MAX_TILT_TAN=Math.tan(LASER_MAX_TILT_RAD);
+const LASER_ANCHOR_SEARCH_MAX=128;
+const LASER_ANCHOR_SEARCH_STEP=1;
+const LASER_ANCHOR_BINARY_STEPS=8;
+const LASER_ANCHOR_INSET=.35;
+
+function sitePointOpen(siteData,x,y){
+  return pip(x,y,siteData.terrain)&&!(siteData.obs||[]).some(o=>pip(x,y,o));
+}
+
+function laserBoundaryAnchor(siteData,start,outward){
+  const len=Math.hypot(outward.x,outward.y);
+  if(len<1e-6)return null;
+  const ux=outward.x/len,uy=outward.y/len;
+  let sx=start.x,sy=start.y;
+  if(!sitePointOpen(siteData,sx,sy)){
+    let found=false;
+    for(let t=LASER_ANCHOR_SEARCH_STEP;t<=LASER_ANCHOR_SEARCH_MAX;t+=LASER_ANCHOR_SEARCH_STEP){
+      const ix=start.x-ux*t,iy=start.y-uy*t;
+      if(sitePointOpen(siteData,ix,iy)){sx=ix;sy=iy;found=true;break;}
+    }
+    if(!found)return null;
+  }
+  let lo=0,hi=null;
+  for(let t=LASER_ANCHOR_SEARCH_STEP;t<=LASER_ANCHOR_SEARCH_MAX;t+=LASER_ANCHOR_SEARCH_STEP){
+    const x=sx+ux*t,y=sy+uy*t;
+    if(!sitePointOpen(siteData,x,y)){hi=t;break;}
+    lo=t;
+  }
+  if(hi==null)return{x:sx+ux*lo,y:sy+uy*lo};
+  for(let i=0;i<LASER_ANCHOR_BINARY_STEPS;i++){
+    const mid=(lo+hi)*.5;
+    const x=sx+ux*mid,y=sy+uy*mid;
+    if(sitePointOpen(siteData,x,y))lo=mid;
+    else hi=mid;
+  }
+  const t=Math.max(0,lo-LASER_ANCHOR_INSET);
+  return{x:sx+ux*t,y:sy+uy*t};
+}
+
+function snapFenceToBoundary(siteData,a,b,minLen){
+  const dx=b.x-a.x,dy=b.y-a.y;
+  if(Math.hypot(dx,dy)<2)return null;
+  const a2=laserBoundaryAnchor(siteData,a,{x:-dx,y:-dy});
+  const b2=laserBoundaryAnchor(siteData,b,{x:dx,y:dy});
+  if(!a2||!b2)return null;
+  if(!sitePointOpen(siteData,a2.x,a2.y)||!sitePointOpen(siteData,b2.x,b2.y))return null;
+  if(Math.hypot(b2.x-a2.x,b2.y-a2.y)<minLen)return null;
+  return{a:a2,b:b2};
+}
+
+function interiorRunsAtY(siteData,y,step=4){
+  const runs=[];
+  let x0=null,lastX=0;
+  for(let x=24;x<=W-24;x+=step){
+    const open=sitePointOpen(siteData,x,y);
+    if(open&&x0==null)x0=x;
+    if(!open&&x0!=null){runs.push({x0,x1:lastX});x0=null;}
+    lastX=x;
+  }
+  if(x0!=null)runs.push({x0,x1:lastX});
+  return runs.filter(r=>r.x1-r.x0>=24);
+}
+
+function interiorRunsAtX(siteData,x,step=4){
+  const runs=[];
+  let y0=null,lastY=0;
+  const yMax=(siteData.worldH||H)-18;
+  for(let y=18;y<=yMax;y+=step){
+    const open=sitePointOpen(siteData,x,y);
+    if(open&&y0==null)y0=y;
+    if(!open&&y0!=null){runs.push({y0,y1:lastY});y0=null;}
+    lastY=y;
+  }
+  if(y0!=null)runs.push({y0,y1:lastY});
+  return runs.filter(r=>r.y1-r.y0>=24);
+}
+
+function widestRunAtY(siteData,y){
+  const runs=interiorRunsAtY(siteData,y);
+  if(!runs.length)return null;
+  return runs.reduce((a,b)=>(b.x1-b.x0)>(a.x1-a.x0)?b:a);
+}
+
+function widestRunAtX(siteData,x){
+  const runs=interiorRunsAtX(siteData,x);
+  if(!runs.length)return null;
+  return runs.reduce((a,b)=>(b.y1-b.y0)>(a.y1-a.y0)?b:a);
+}
+
+function runAtYForX(siteData,y,preferX){
+  const runs=interiorRunsAtY(siteData,y);
+  if(!runs.length)return null;
+  if(Number.isFinite(preferX)){
+    const contains=runs.filter(r=>preferX>=r.x0&&preferX<=r.x1);
+    if(contains.length)return contains.reduce((a,b)=>(b.x1-b.x0)>(a.x1-a.x0)?b:a);
+    const nearest=runs.slice().sort((a,b)=>{
+      const ac=(a.x0+a.x1)*.5,bc=(b.x0+b.x1)*.5;
+      return Math.abs(ac-preferX)-Math.abs(bc-preferX);
+    })[0];
+    if(nearest)return nearest;
+  }
+  return runs.reduce((a,b)=>(b.x1-b.x0)>(a.x1-a.x0)?b:a);
+}
+
+function runAtXForY(siteData,x,preferY){
+  const runs=interiorRunsAtX(siteData,x);
+  if(!runs.length)return null;
+  if(Number.isFinite(preferY)){
+    const contains=runs.filter(r=>preferY>=r.y0&&preferY<=r.y1);
+    if(contains.length)return contains.reduce((a,b)=>(b.y1-b.y0)>(a.y1-a.y0)?b:a);
+    const nearest=runs.slice().sort((a,b)=>{
+      const ac=(a.y0+a.y1)*.5,bc=(b.y0+b.y1)*.5;
+      return Math.abs(ac-preferY)-Math.abs(bc-preferY);
+    })[0];
+    if(nearest)return nearest;
+  }
+  return runs.reduce((a,b)=>(b.y1-b.y0)>(a.y1-a.y0)?b:a);
+}
+
+function buildSiteMainPath(siteData,entry,step=16){
+  const xMin=24,xMax=W-24,yMin=18,yMax=(siteData.worldH||H)-18;
+  const toGrid=(v,min)=>Math.round((Math.max(min,Math.min(v,maxFor(min)))-min)/step)*step+min;
+  function maxFor(min){return min===xMin?xMax:yMax;}
+  const key=(x,y)=>`${x}|${y}`;
+  const parse=(k)=>{const s=k.split('|');return{x:Number(s[0]),y:Number(s[1])};};
+  const nearestOpen=(x,y)=>{
+    const sx=toGrid(x,xMin),sy=toGrid(y,yMin);
+    if(sitePointOpen(siteData,sx,sy))return{x:sx,y:sy};
+    for(let r=1;r<=6;r++){
+      for(let ox=-r;ox<=r;ox++){
+        for(let oy=-r;oy<=r;oy++){
+          if(Math.abs(ox)!==r&&Math.abs(oy)!==r)continue;
+          const nx=sx+ox*step,ny=sy+oy*step;
+          if(nx<xMin||nx>xMax||ny<yMin||ny>yMax)continue;
+          if(sitePointOpen(siteData,nx,ny))return{x:nx,y:ny};
+        }
+      }
+    }
+    return null;
+  };
+  const start=nearestOpen(entry?.x??W/2,entry?.y??32);
+  if(!start)return [];
+  const q=[start],seen=new Set([key(start.x,start.y)]),parent={},nodes={};
+  nodes[key(start.x,start.y)]={x:start.x,y:start.y};
+  let deepest=key(start.x,start.y),deepY=start.y;
+  while(q.length){
+    const cur=q.shift(),kCur=key(cur.x,cur.y);
+    if(cur.y>deepY){deepY=cur.y;deepest=kCur;}
+    for(const dxy of [[step,0],[-step,0],[0,step],[0,-step]]){
+      const nx=cur.x+dxy[0],ny=cur.y+dxy[1];
+      if(nx<xMin||nx>xMax||ny<yMin||ny>yMax)continue;
+      const k=key(nx,ny);
+      if(seen.has(k))continue;
+      if(!sitePointOpen(siteData,nx,ny))continue;
+      seen.add(k);
+      parent[k]=kCur;
+      nodes[k]={x:nx,y:ny};
+      q.push({x:nx,y:ny});
+    }
+  }
+  const path=[];
+  let cur=deepest;
+  while(cur){
+    path.push(nodes[cur]||parse(cur));
+    cur=parent[cur];
+  }
+  path.reverse();
+  return path;
+}
+
+function mkFenceAcrossOpening(rng,siteData,axis,coord,prefer=null){
+  if(axis==='vertical'){
+    const run=runAtXForY(siteData,coord,prefer?.y);
+    if(!run)return null;
+    const y0=Math.round(run.y0),y1=Math.round(run.y1);
+    if(y1-y0<42)return null;
+    const dxMax=Math.max(0,Math.floor((y1-y0)*LASER_MAX_TILT_TAN));
+    const dx=dxMax>0?rng.int(-dxMax,dxMax):0;
+    const a={x:Math.round(coord-dx),y:y0},b={x:Math.round(coord+dx),y:y1};
+    const snapped=snapFenceToBoundary(siteData,a,b,40);
+    if(!snapped)return null;
+    return {a:snapped.a,b:snapped.b,axis:'vertical',coord};
+  }
+  const run=runAtYForX(siteData,coord,prefer?.x);
+  if(!run)return null;
+  const x0=Math.round(run.x0),x1=Math.round(run.x1);
+  if(x1-x0<70)return null;
+  const dyMax=Math.max(0,Math.floor((x1-x0)*LASER_MAX_TILT_TAN));
+  const dy=dyMax>0?rng.int(-dyMax,dyMax):0;
+  const a={x:x0,y:Math.round(coord-dy)},b={x:x1,y:Math.round(coord+dy)};
+  const snapped=snapFenceToBoundary(siteData,a,b,64);
+  if(!snapped)return null;
+  return {a:snapped.a,b:snapped.b,axis:'horizontal',coord};
+}
+
+function caveWalkReachable(siteData, entry, stations, fences){
+  // P1-07 safety rule: laser fences must never cut off underground power stations.
+  // We flood-fill from the entrance while treating each fence segment as a solid wall;
+  // a fence candidate is accepted only if all station points remain reachable.
+  if(!stations.length) return true;
+  const step=20;
+  const xMin=20,xMax=W-20,yMin=16,yMax=(siteData.worldH||H)-16;
+  const key=(x,y)=>`${x}|${y}`;
+  const q=[],seen=new Set(),reached=new Set();
+  const sx=Math.round(Math.max(xMin,Math.min(xMax,entry.x))/step)*step;
+  const sy=Math.round(Math.max(yMin,Math.min(yMax,entry.y))/step)*step;
+  q.push({x:sx,y:sy});seen.add(key(sx,sy));
+  while(q.length){
+    const cur=q.shift();
+    for(let i=0;i<stations.length;i++)if(Math.hypot(cur.x-stations[i].x,cur.y-stations[i].y)<=28)reached.add(i);
+    if(reached.size===stations.length)return true;
+    for(const dxy of [[step,0],[-step,0],[0,step],[0,-step]]){
+      const nx=cur.x+dxy[0],ny=cur.y+dxy[1];
+      if(nx<xMin||nx>xMax||ny<yMin||ny>yMax)continue;
+      const k=key(nx,ny);
+      if(seen.has(k))continue;
+      if(!pip(nx,ny,siteData.terrain))continue;
+      if((siteData.obs||[]).some(o=>pip(nx,ny,o)))continue;
+      if(fences.some(f=>laserBlocksPath(f,cur.x,cur.y,nx,ny)))continue;
+      seen.add(k);q.push({x:nx,y:ny});
+    }
+  }
+  return reached.size===stations.length;
+}
+
+function genLaserDefensesInSite(rng,siteData,entry,opts={}){
+  const fences=[],target=rng.int(1,3);
+  const axis=opts.axis==='vertical'?'vertical':'horizontal';
+  // NOTE: underground POWER_STATION buildings must already be in siteData.buildings
+  // before this runs, otherwise reachability enforcement cannot protect them.
+  const stations=(siteData.buildings||[]).filter(b=>b.classId===BUILDING_CLASS_IDS.POWER_STATION);
+  const yMin=Math.min((siteData.worldH||H)-90,Math.max(90,(entry?.y||0)+200));
+  const yMax=(siteData.worldH||H)-70;
+  const xMin=Math.max(90,(entry?.x||W/2)-220);
+  const xMax=Math.min(W-90,(entry?.x||W/2)+220);
+  const coordMin=axis==='vertical'?xMin:yMin;
+  const coordMax=axis==='vertical'?xMax:yMax;
+  const path=buildSiteMainPath(siteData,entry,16);
+  const pathCut=Math.floor(path.length*.2);
+  const pathSamples=path.slice(pathCut).filter(p=>{
+    const c=axis==='vertical'?p.x:p.y;
+    return c>=coordMin&&c<=coordMax;
+  });
+  for(let att=0;att<240&&fences.length<target;att++){
+    const prefer=(pathSamples.length&&rng.next()<.85)?rng.pick(pathSamples):null;
+    const rawCoord=prefer?(axis==='vertical'?prefer.x+rng.fl(-14,14):prefer.y+rng.fl(-18,18)):rng.fl(coordMin,coordMax);
+    const coord=Math.max(coordMin,Math.min(coordMax,rawCoord));
+    const f=mkFenceAcrossOpening(rng,siteData,axis,coord,prefer);
+    if(!f)continue;
+    if(fences.some(x=>Math.abs((x.coord??0)-coord)<18))continue;
+    if(!caveWalkReachable(siteData,entry,stations,[...fences,f]))continue;
+    fences.push(mkBuilding(BUILDING_CLASS_IDS.LASER_DEFENSE,Math.round((f.a.x+f.b.x)/2),Math.round((f.a.y+f.b.y)/2),{a:f.a,b:f.b,axis:f.axis,coord}));
+  }
+  if(!fences.length&&pathSamples.length){
+    for(const prefer of pathSamples){
+      const coord=axis==='vertical'?prefer.x:prefer.y;
+      const f=mkFenceAcrossOpening(rng,siteData,axis,coord,prefer);
+      if(!f)continue;
+      if(!caveWalkReachable(siteData,entry,stations,[...fences,f]))continue;
+      fences.push(mkBuilding(BUILDING_CLASS_IDS.LASER_DEFENSE,Math.round((f.a.x+f.b.x)/2),Math.round((f.a.y+f.b.y)/2),{a:f.a,b:f.b,axis:f.axis,coord}));
+      if(fences.length>=target)break;
+    }
+  }
+  for(let coord=coordMin;coord<=coordMax&&fences.length===0;coord+=14){
+    const f=mkFenceAcrossOpening(rng,siteData,axis,coord,null);
+    if(!f)continue;
+    if(!caveWalkReachable(siteData,entry,stations,[...fences,f]))continue;
+    fences.push(mkBuilding(BUILDING_CLASS_IDS.LASER_DEFENSE,Math.round((f.a.x+f.b.x)/2),Math.round((f.a.y+f.b.y)/2),{a:f.a,b:f.b,axis:f.axis,coord}));
+  }
+  if(!fences.length)console.warn('laser-defense placement failed for site',siteData?.kind);
+  return fences;
+}
+
 // ---- Compose a cave level from template + seed ----
 function genCaveLevel(tmpl,seed){
   const rng=mkRNG(seed);
@@ -288,7 +567,9 @@ function genCaveLevel(tmpl,seed){
   const fu       =genEnergy(rng,terrain,obs,en,wH,tmpl.nFu);
   const rx       ={...rxPos,hp:tmpl.rxHp};
   const ent      ={x:Math.round((eL+eR)/2),y:Math.round(wH*.038+18)};
-  return{...tmpl,kind:'cave',worldH:wH,terrain,obs,en,fu,rx,ent};
+  const cave={...tmpl,kind:'cave',worldH:wH,terrain,obs,en,fu,rx,ent};
+  cave.buildings=genLaserDefensesInSite(rng,cave,ent);
+  return cave;
 }
 
 // ---- Surface terrain helpers ----
@@ -867,7 +1148,9 @@ function genTunnel(rng,tmpl,seed){
   }
   const terrain=[...left,...right.reverse()];
   const en=_placeWallTurrets(rng,terrain,worldH,rng.int(2,4),50);
-  return{...tmpl,kind:'tunnel',worldH,terrain,obs:[],en,fu:[],entTop:{x:W/2,y:32},entBottom:{x:W/2,y:worldH-42},grav:tmpl.grav};
+  const tunnel={...tmpl,kind:'tunnel',worldH,terrain,obs:[],en,fu:[],entTop:{x:W/2,y:32},entBottom:{x:W/2,y:worldH-42},grav:tmpl.grav};
+  tunnel.buildings=genLaserDefensesInSite(rng,tunnel,tunnel.entTop,{axis:'horizontal'});
+  return tunnel;
 }
 
 function genSurface(tmpl,seed,sites){

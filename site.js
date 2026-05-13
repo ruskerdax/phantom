@@ -569,6 +569,15 @@ function updCaveSite(){
     return;
   }
   if(wHit(s.x,s.y,9,activeSiteBodyId())){siteBounce(s);if(s.hp<=0){siteKillShip();return;}}
+  for(const b of siteBuildings(site)){
+    if(!b.alive||b.classId!==BUILDING_CLASS_IDS.LASER_DEFENSE)continue;
+    if(!buildingIsPowered(site,b)||!b.a||!b.b)continue;
+    if(dseg(s.x,s.y,b.a.x,b.a.y,b.b.x,b.b.y)<4){
+      const hit=applyShipDamage(s,2,{source:{x:s.x,y:s.y},kind:'collision',weapon:b});
+      shipDamageTone(hit,420,.04,'square',.05);
+      if(s.hp<=0){siteKillShip();return;}
+    }
+  }
   for(const f of site.fu){if(!f.got&&Math.hypot(s.x-f.x,s.y-f.y)<22){f.got=true;pickupEnergy(s,f.x,f.y,site.pts,d.col);}}
   if(G.st==='esc'){site.esc--;if(site.esc<=0){saveActiveSiteState();saveGame();siteKillShip();return;}}
   const caveCtx={

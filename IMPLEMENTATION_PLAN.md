@@ -390,7 +390,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P1-07. Laser defense
+### P1-07. Laser defense ✅
 
 **Goal:** Indestructible fence-style laser; 60-tick/s × 2dmg = 120dmg/s contact damage; cave/tunnel only; powered.
 
@@ -586,3 +586,4 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 **Polish:** P3-01–P3-04.
 
 Total: 25 tasks.
+
