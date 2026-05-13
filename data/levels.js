@@ -678,6 +678,39 @@ function genSurfaceDroneFactory(rng,surface){
   }
 }
 
+function genSurfaceOrbitalGun(rng,surface){
+  // TEMP TEST OVERRIDE: force orbital gun spawn attempts on every planet.
+  const spans=surfaceFlatSpans(surface).filter(s=>s.x1-s.x0>=300);
+  if(!spans.length)return;
+  for(let attempt=0;attempt<180;attempt++){
+    const span=rng.pick(spans);
+    const x=wrap(rng.fl(span.x0+120,span.x1-120),surface.worldW);
+    if(!surfacePlacementClear(surface,x,140))continue;
+    const ground=surfaceYAt(surface,x),startLen=surface.buildings.length;
+    const gun=mkBuilding(BUILDING_CLASS_IDS.ORBITAL_GUN,Math.round(x),Math.round(ground-23),{idx:startLen});
+    surface.buildings.push(gun);
+    const left=placePairedTower(rng,surface,gun.x,'left')||placePairedTower(rng,surface,gun.x,'right');
+    const right=placePairedTower(rng,surface,gun.x,'right')||placePairedTower(rng,surface,gun.x,'left');
+    if(!left||!right){
+      surface.buildings.length=startLen;
+      continue;
+    }
+    const defenders=rng.int(2,3);
+    for(let i=0;i<defenders;i++){
+      const ex=wrap(gun.x+rng.fl(-170,170),surface.worldW);
+      const eg=surfaceYAt(surface,ex);
+      const type=rng.next()<.6?SURFACE_ENEMY_TYPES.SKIMMER:SURFACE_ENEMY_TYPES.DIVER;
+      const ey=type===SURFACE_ENEMY_TYPES.SKIMMER?eg-rng.fl(80,130):eg-rng.fl(140,220);
+      surface.en.push(mkSurfaceEnemy(type,Math.round(ex),Math.round(ey),{
+        vx:rng.fl(-1.1,1.1),
+        vy:0,
+        phase:rng.fl(0,Math.PI*2),
+      },rng));
+    }
+    return;
+  }
+}
+
 const CIV_DENSITY_RULES={
   sparse:{
     res:{allowed:['BUNGALOW','RANCH','TOWNHOUSE','MANSION','CONDO'],capped:{HIGH_RISE:1}},
@@ -858,6 +891,7 @@ function genSurface(tmpl,seed,sites){
   surface.en=genSurfaceEnemies(rng,surface,threatSlots);
   genSurfaceAirDefenseBase(rng,surface);
   genSurfaceDroneFactory(rng,surface);
+  genSurfaceOrbitalGun(rng,surface);
   genSurfaceCivilians(rng,surface);
   placeRandomSurfaceTowers(rng,surface);
   return surface;

@@ -559,6 +559,9 @@ function planetIndexFromSite(site){
 function powerStationClassId(){
   return (typeof BUILDING_CLASS_IDS!=='undefined'&&BUILDING_CLASS_IDS.POWER_STATION)||'POWER_STATION';
 }
+function orbitalGunClassId(){
+  return (typeof BUILDING_CLASS_IDS!=='undefined'&&BUILDING_CLASS_IDS.ORBITAL_GUN)||'ORBITAL_GUN';
+}
 function powerStationRefsForPlanet(pi){
   const p=LV?.[pi],stationId=powerStationClassId();
   if(!p)return [];
@@ -576,6 +579,34 @@ function powerStationRefsForPlanet(pi){
   add('surface',p.surface);
   add('tunnel',p.tunnel);
   return refs;
+}
+function orbitalGunRefsForPlanet(pi){
+  const p=LV?.[pi],gunId=orbitalGunClassId();
+  if(!p)return [];
+  if(typeof planetBuildingRefs==='function'){
+    return planetBuildingRefs(p).filter(r=>r.classId===gunId&&r.mode==='surface');
+  }
+  const refs=[];
+  let bitIndex=0;
+  const add=(mode,d)=>{
+    (d?.buildings||[]).forEach((b,i)=>{
+      if(b.classId!==gunId)return;
+      refs.push({mode,siteIndex:i,classId:gunId,bitIndex,b});
+      bitIndex++;
+    });
+  };
+  add('surface',p.surface);
+  add('tunnel',p.tunnel);
+  add('cave',p.cave);
+  return refs.filter(r=>r.mode==='surface');
+}
+function orbitalGunAliveRefsForPlanet(pi,bodyId=bodyIdForPlanetIndex(pi)){
+  const refs=orbitalGunRefsForPlanet(pi),gunId=orbitalGunClassId();
+  if(!refs.length)return [];
+  const bits=(G.lvState?.[bodyId]?.buildings)||{};
+  const hasState=Object.prototype.hasOwnProperty.call(bits,gunId);
+  if(!hasState)return refs.slice();
+  return refs.filter(ref=>!!(bits[gunId]&(1<<ref.bitIndex)));
 }
 function activeSiteBuildingAlive(bodyId,ref){
   if(activeBodyId()!==bodyId||!G.site||G.site.mode!==ref.mode)return null;

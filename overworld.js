@@ -1,6 +1,11 @@
 'use strict';
 
 // ===================== OVERWORLD =====================
+const ORBITAL_GUN_RANGE=700;
+const ORBITAL_GUN_COOLDOWN=480;
+const ORBITAL_GUN_PROJECTILE_SPEED=1.5;
+const ORBITAL_GUN_PROJECTILE_LIFE=180;
+
 function owSpawnPos(px,py,minDist=600){
   let x,y,attempts=0;
   do{const a=Math.random()*Math.PI*2,d=480+Math.random()*360;
@@ -76,6 +81,7 @@ function initOW(energy,sx,sy){
   const bp=owPos(BASE);
   const px=sx??bp.x,py=sy??bp.y;
   G.OW={s:mkShip(px,py),fleets:[],fu:[],pts:[],nearBodyId:null,nearBase:false,nearAst:-1,nearHBase:false,nearSlipgate:false,spatial:null,
+    owGunShots:[],owGunCd:{},
     slipgateSpawnTimer:1800,convoySpawnTimer:5400,cam:{x:Math.max(0,Math.min(OW_W-W,px-W/2)),y:Math.max(0,Math.min(OW_H-H,py-H/2)),z:1}};
   setShipEnergy(G.OW.s,energy);G.OW.s.inv=120;
   seedSystemFleets(px,py);
@@ -130,6 +136,8 @@ function doRebuildFinalize(){
   if(!G.OW){initOW(loadoutBatteryCapacity(),bp.x,bp.y);fillShipHull(G.OW.s);recordLastLocation('base');saveGame();return;}
   G.OW.s=mkShip(bp.x,bp.y);fillShipHull(G.OW.s);G.OW.s.inv=180;
   G.OW.fleets=[];
+  G.OW.owGunShots=[];
+  G.OW.owGunCd={};
   G.OW.slipgateSpawnTimer=1800;G.OW.convoySpawnTimer=5400;
   seedSystemFleets(bp.x,bp.y);
   recordLastLocation('base');
@@ -215,6 +223,52 @@ function startHBaseEnc(){
   saveGame();
   tone(180,.1,'square',.09);setTimeout(()=>tone(360,.2,'square',.09),120);setTimeout(()=>tone(540,.3,'square',.09),260);
 }
+function updOWOrbitalGuns(ow,s){
+  const cds=ow.owGunCd||(ow.owGunCd={}),shots=ow.owGunShots||(ow.owGunShots=[]);
+  for(let pi=0;pi<LV.length;pi++){
+    const bodyId=bodyIdForPlanetIndex(pi),guns=orbitalGunAliveRefsForPlanet(pi,bodyId);
+    if(!guns.length)continue;
+    const p=owPos(PP[pi]),inRange=Math.hypot(s.x-p.x,s.y-p.y)<=ORBITAL_GUN_RANGE;
+    for(const gun of guns){
+      const key=`${bodyId}:${gun.bitIndex}`;
+      let cd=Number.isFinite(cds[key])?cds[key]:ORBITAL_GUN_COOLDOWN;
+      cd--;
+      if(inRange&&cd<=0){
+        const dx=s.x-p.x,dy=s.y-p.y,dist=Math.hypot(dx,dy)||1;
+        shots.push({
+          x:p.x,y:p.y,
+          vx:dx/dist*ORBITAL_GUN_PROJECTILE_SPEED,
+          vy:dy/dist*ORBITAL_GUN_PROJECTILE_SPEED,
+          l:ORBITAL_GUN_PROJECTILE_LIFE,
+          dmg:150,
+          from:pi,
+        });
+        cd=ORBITAL_GUN_COOLDOWN;
+      }
+      cds[key]=cd;
+    }
+  }
+}
+function updOWOrbitalGunShots(ow,s){
+  const shots=ow.owGunShots||(ow.owGunShots=[]);
+  for(let i=shots.length-1;i>=0;i--){
+    const sh=shots[i];
+    sh.x+=sh.vx;sh.y+=sh.vy;sh.l--;
+    if(sh.l<=0||sh.x<0||sh.x>OW_W||sh.y<0||sh.y>OW_H){shots.splice(i,1);continue;}
+    if(Math.hypot(s.x-sh.x,s.y-sh.y)>=12)continue;
+    const hitSource={x:sh.x,y:sh.y};
+    const shieldHit=applyShipShieldDamage(s,sh.dmg,{source:hitSource,kind:'projectile',weapon:sh});
+    let hullDamage=0;
+    if(shieldHit.passthroughDamage>0){
+      const hullHit=applyShipDamage(s,shieldHit.passthroughDamage,{source:hitSource,kind:'projectile',weapon:sh});
+      hullDamage=hullHit.hullDamage||0;
+    }
+    shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage});
+    shots.splice(i,1);
+    if(s.hp<=0&&s.alive){owKillShip();return true;}
+  }
+  return false;
+}
 function owStartFleetEnc(fi,contactA,playerA){
   const ow=G.OW,f=ow.fleets[fi];
   const ens=[],total=f.comp.reduce((s,g)=>s+g.cnt,0);
@@ -288,6 +342,8 @@ function updOW(){
   {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
   if(sdist<22){owKillShip();return;}
   s.vx+=sdx*500/(sdist*sdist*sdist);s.vy+=sdy*500/(sdist*sdist*sdist);}
+  updOWOrbitalGuns(ow,s);
+  if(updOWOrbitalGunShots(ow,s))return;
   owPopulateSpatial(ow);
   const near=spatialQueryRadius(ow.spatial,s.x,s.y,owMaxInteractR(),ow._nearSpatial||(ow._nearSpatial=[]));
   ow.nearBase=false;
@@ -497,6 +553,25 @@ function drFleet(f){
   }
   cx.globalAlpha=1;cx.restore();
 }
+function drOWOrbitalGunShot(sh){
+  const pulse=.5+.5*Math.sin(G.fr*.22+sh.l*.09);
+  const trailLen=9;
+  const tx=sh.x-sh.vx*trailLen,ty=sh.y-sh.vy*trailLen;
+  cx.save();
+  cx.strokeStyle='rgba(255,170,120,.78)';
+  cx.lineWidth=1.2;
+  cx.beginPath();
+  cx.moveTo(tx,ty);
+  cx.lineTo(sh.x,sh.y);
+  cx.stroke();
+  cx.fillStyle='#ffbb88';
+  cx.shadowColor='#ffbb88';
+  cx.shadowBlur=sb(8+pulse*10);
+  cx.beginPath();
+  cx.arc(sh.x,sh.y,2.8+pulse*1.4,0,Math.PI*2);
+  cx.fill();
+  cx.restore();
+}
 // drawSlipgateMenu has moved to ui/screens/slipgate.js (DOM screen).
 
 function owOrbitBodies(){
@@ -688,6 +763,7 @@ function drawOW(){
   if(G.hbCleared){cx.save();cx.strokeStyle='#334';cx.lineWidth=1;cx.setLineDash([3,5]);cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;i?cx.lineTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW):cx.moveTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW);}cx.closePath();cx.stroke();cx.fillStyle='#446';cx.font='bold 10px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('cleared',hbp.x,hbp.y+3);cx.setLineDash([]);cx.restore();}
   else{const pu=.5+.5*Math.sin(G.fr*.07);cx.save();cx.strokeStyle='#e05109';cx.shadowColor='#e05109';cx.shadowBlur=sb(6+pu*8);cx.lineWidth=1.5;cx.beginPath();for(let i=0;i<6;i++){const a=i*Math.PI/3;i?cx.lineTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW):cx.moveTo(hbp.x+Math.cos(a)*HEX_R_OW,hbp.y+Math.sin(a)*HEX_R_OW);}cx.closePath();cx.stroke();cx.shadowBlur=0;cx.fillStyle='#e05109';cx.font='bold 10px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('hostile base',hbp.x,hbp.y-HEX_R_OW-8);if(ow.nearHBase){cx.fillStyle='#0f8';cx.shadowColor='#0f8';cx.shadowBlur=sb(10);cx.font='bold 12px MajorMonoDisplay, monospace';cx.fillText('[ fire to enter ]',hbp.x,hbp.y+HEX_R_OW+16);}cx.restore();}}
   for(let fvi=0;fvi<visFleets.length;fvi++){const f=ow.fleets[visFleets[fvi]];if(f?.alive)drFleet(f);}
+  for(const sh of (ow.owGunShots||[]))drOWOrbitalGunShot(sh);
   for(const f of ow.fu)drEnergy(f.x,f.y,'#0f8');
   drPts(ow.pts);
   if(visBase)drBase(ow.nearBase);

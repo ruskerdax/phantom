@@ -366,7 +366,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P1-06. Orbital gun
+### P1-06. Orbital gun ✅
 
 **Goal:** `ORBITAL_GUN` building (HP 500) with surface placeholder visual + overworld firing logic. Forbidden on `DEADB33F`.
 

@@ -6,6 +6,7 @@ const BUILDING_CLASS_IDS = {
   POWER_STATION: 'POWER_STATION',
   AIR_DEFENSE_BASE: 'AIR_DEFENSE_BASE',
   DRONE_FACTORY: 'DRONE_FACTORY',
+  ORBITAL_GUN: 'ORBITAL_GUN',
   BUNGALOW: 'BUNGALOW',
   RANCH: 'RANCH',
   TOWNHOUSE: 'TOWNHOUSE',
@@ -44,6 +45,43 @@ function _civObjectiveOnDestroyed(site, b) {
   const type = def.category === 'residence' ? OBJECTIVE_TYPE_IDS.CIV_RESIDENCES : OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE;
   const obj = bodyId ? objectiveForPlanetType(bodyId, type) : null;
   if(obj && !obj.complete) completeObjective(obj.id);
+}
+
+function _drawOrbitalGunPlaceholder(b) {
+  const pulse = .5 + .5 * Math.sin(G.fr * .06 + b.x * .01);
+  cx.save();
+  cx.translate(b.x, b.y);
+  cx.strokeStyle = '#ff9966';
+  cx.fillStyle = 'rgba(42,16,8,.9)';
+  cx.shadowColor = '#ff9966';
+  cx.shadowBlur = sb(8 + pulse * 9);
+  cx.lineWidth = 1.5;
+  cx.beginPath();
+  cx.rect(-36, -10, 72, 24);
+  cx.fill();
+  cx.stroke();
+  cx.beginPath();
+  cx.rect(-20, -22, 30, 12);
+  cx.fill();
+  cx.stroke();
+  cx.beginPath();
+  cx.moveTo(-5, -22);
+  cx.lineTo(23, -42);
+  cx.lineTo(31, -36);
+  cx.lineTo(4, -15);
+  cx.closePath();
+  cx.fill();
+  cx.stroke();
+  cx.beginPath();
+  cx.moveTo(19, -39);
+  cx.lineTo(34, -48);
+  cx.stroke();
+  cx.fillStyle = '#ff9966';
+  cx.font = 'bold 8px MajorMonoDisplay, monospace';
+  cx.textAlign = 'center';
+  cx.shadowBlur = 0;
+  cx.fillText(b.hp, 0, 6);
+  cx.restore();
 }
 
 const BUILDING_CLASSES = [
@@ -121,6 +159,19 @@ const BUILDING_CLASSES = [
     sc:0,
     drawSurface(b,site){drawDroneFactory(b,site);},
     update(b,site){updateDroneFactory(b,site);},
+    placement:{contexts:['surface']},
+  },
+  {
+    id:BUILDING_CLASS_IDS.ORBITAL_GUN,
+    name:'ORBITAL GUN',
+    hp:500,
+    footprint:{w:88,h:46},
+    requiresFlat:true,
+    requiresPower:false,
+    indestructible:false,
+    col:'#ff9966',
+    sc:0,
+    drawSurface(b){_drawOrbitalGunPlaceholder(b);},
     placement:{contexts:['surface']},
   },
   // ---- Civilian residences ----
