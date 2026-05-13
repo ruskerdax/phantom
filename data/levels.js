@@ -1153,11 +1153,6 @@ function genTunnel(rng,tmpl,seed){
   return tunnel;
 }
 
-function genBranchingTunnelStub(rng,tmpl,seed){
-  const tunnel=genTunnel(rng,tmpl,seed);
-  return {...tunnel,kind:'branching',en:[],fu:[],buildings:[],entBottom:null};
-}
-
 function genSurface(tmpl,seed,sites){
   const rng=mkRNG(seed);
   const screens=rng.int(8,14),worldW=screens*W;
@@ -1202,7 +1197,7 @@ function genPlanet(tmpl,seed,index=0){
   const cave=tunnelKind==='reactor'?genCaveLevel(tmpl,seedChild(seed,0x7200)):null;
   const tunnel=tunnelKind==='reactor'
     ?genTunnel(mkRNG(seedChild(seed,0x7300)),tmpl,seedChild(seed,0x7301))
-    :genBranchingTunnelStub(mkRNG(seedChild(seed,0x7300)),tmpl,seedChild(seed,0x7301));
+    :genBranchingTunnel(mkRNG(seedChild(seed,0x7300)),tmpl,seedChild(seed,0x7301));
   const surface=genSurface(tmpl,seedChild(seed,0x7400),sites);
   return{...tmpl,kind:'planet',index,tunnelKind,sites,cave,tunnel,surface};
 }

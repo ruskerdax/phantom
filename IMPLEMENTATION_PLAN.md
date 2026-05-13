@@ -429,7 +429,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P2-02. Branching tunnel generator
+### P2-02. Branching tunnel generator ✅
 
 **Goal:** Procedural branching tunnel world.
 
