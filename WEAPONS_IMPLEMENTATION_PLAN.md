@@ -704,6 +704,28 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 ---
 
+### P6-04. HUD bar token migration
+
+**Goal:** Retrofit the weapons-related HUD elements added in F-03 (top-right ammo line), F-04 (below-ship magazine bar + reload progress), F-05 (charge bar), and F-06 (target-lock square) to consume the unified `--bar-*` tokens introduced by UI_REWORK F-01 / F-11 (`themeBarTokens()`). Pure visual consistency pass — no mechanic changes, no layout changes.
+
+**Files:** `draw.js`, `weapon-mechanics.js` (only if any inline colors live there)
+
+**Outline:**
+- For each weapon HUD element below, replace inline hex literals with the corresponding `themeBarTokens()` field. The colors should already be cached and refresh on theme change per UI_REWORK F-11.
+  - **Top-right ammo line (F-03):** the 8-cell bar uses `#0f8` when `ammo > max*.2` else `#f40`. Map to `--bar-fill-active` (green) and `--bar-fill-danger` (red). The ammo-count text color `#aaffcc` stays as-is (it's text, not a bar primitive) unless UI_REWORK introduces a text token later.
+  - **Magazine bar (F-04):** filled cell color `#aaffcc` → `--bar-fill-active`. Empty cell color (currently background) → `--bar-empty`.
+  - **Reload progress line (F-04):** fill color → `--bar-fill-active` (same as mag fill so the progress reads as filling the next round). Background → `--bar-empty`.
+  - **Charge bar (F-05):** `#9df` (building) → `--bar-fill-active` (or a new `--bar-fill-charge` token if UI rework introduces one; if not, reuse `--bar-fill-active`). `#fb0` (held at cap) → `--bar-fill-warn`.
+  - **Target-lock square (F-06):** `#ffb060` → `--bar-fill-warn` (closest match). Keep the 1.5 px stroke and 30% opacity exactly.
+- Cache `themeBarTokens()` once per frame in `drHUD` to avoid recomputing per-bar. F-11 already provides the cache invalidation hook on theme change.
+- Confirm visual output is **identical** at the default theme — the goal is theme-driven recoloring, not a visual redesign.
+
+**Depends on:** F-03, F-04, F-05, F-06 (all ✅), UI_REWORK F-01 (theme tokens, ✅), UI_REWORK F-11 (`themeBarTokens()` bridge, ✅).
+
+**Acceptance:** Boot the game — all weapons HUD bars look identical to before. Changing `--bar-fill-active` in dev tools recolors the ammo bar, magazine bar, reload progress, and charge bar on the next frame. No inline hex literals remain in the weapons HUD draw paths.
+
+---
+
 ## Recommended execution order
 
 **Phase 0 sequential block:** F-01 → F-02.
@@ -720,6 +742,6 @@ Sequential block: F-01 → F-02. After F-02, F-03 through F-11 can run in parall
 
 **Phase 5** (after Phase 0): P5-01.
 
-**Phase 6** (after all weapons): P6-01, P6-02, P6-03.
+**Phase 6** (after all weapons): P6-01, P6-02, P6-03, P6-04. P6-04 also requires UI_REWORK F-01 / F-11 (both ✅).
 
-Total: 11 foundation tasks + 12 weapon tasks + 3 polish tasks = **26 tasks**.
+Total: 11 foundation tasks + 12 weapon tasks + 4 polish tasks = **27 tasks**.

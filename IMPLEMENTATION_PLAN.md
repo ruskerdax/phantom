@@ -53,6 +53,8 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 ### F-01. World size bump ✅
 
+**Superseded by OVERWORLD_REWORK_PLAN.md F-03** — current canonical world size is `OW_W = OW_H = 16000` with orbits scaled via `orbitMaxR() = OW_W * 0.45`. The 6000² / 1600 numbers below describe the intermediate state that shipped with this task and are no longer current.
+
 **Goal:** `OW_W = OW_H = 6000`; max orbital radius 1600.
 
 **Files:** `util.js`, `gen.js`
@@ -70,6 +72,8 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 ---
 
 ### F-02. Variable planet count + procedural per-planet template ✅
+
+**Superseded by OVERWORLD_REWORK_PLAN.md G-01 / G-02** — the 2d5 planet roll and `genPlanetTmpl` described below were the intermediate state. The current canonical generator is archetype-driven (`SYSTEM_ARCHETYPES`) and emits `BODIES[]` rather than `LV` / `PP`. Per-body kind/subtype/size/atmosphere/population come from the body roll, not from a planet template.
 
 **Goal:** Replace fixed 3 with 2d5 (2–10) planets, each with a procedurally rolled template. Drop planet names.
 
@@ -90,6 +94,8 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 ---
 
 ### F-03. Asteroid fields = 1d4 − 1 ✅
+
+**Superseded by OVERWORLD_REWORK_PLAN.md G-02** — canonical cap is `MAX_AST_FIELDS = 2` (0–2 fields per system). The 0–3 range described below was the intermediate state.
 
 **Goal:** 0–3 asteroid fields per system.
 
@@ -319,6 +325,8 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 ---
 
 ### P1-05. Civilian residences + infrastructure ✅
+
+**Note:** The population-class distribution below (20% none / 20% sparse / 40% moderate / 20% dense) is **superseded by OVERWORLD_REWORK_PLAN.md G-02**, which moves population-class assignment onto the body roll itself with per-subtype overrides (default 20/40/30/10 none/sparse/moderate/dense; Continental → 60/40 mod/dense; Rocky → 50/30/20 none/sparse/mod; Machine → `'uninhabited'`). The building tables and placement rules below remain authoritative; only the population-class probabilities change when G-02 lands.
 
 **Goal:** 8 residence + 8 infrastructure classes; per-planet population class roll; city-zone placement; 50%-by-points objective wiring.
 

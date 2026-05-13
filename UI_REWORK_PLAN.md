@@ -60,7 +60,7 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 **Assumptions made during planning:**
 - "Lifetime kills" counts encounter and surface enemy *ships* destroyed by the player. Buildings excluded.
-- "Sectors cleared" mirrors `G.cleared.length` rather than a separate counter.
+- "Sectors cleared" is **derived** from the objective system rather than a flat counter. Post-OVERWORLD F-04, `G.cleared` is `{bodyId: true}` (object/map), not an array, so `.length` no longer works. The derived value is `enterableBodies().filter(b => bodyObjectivesAllComplete(b.id)).length` — i.e. the count of habitable/uninhabitable bodies whose own objectives are all complete. Helper lives in `objectives.js` (see F-14).
 - "Systems visited" (lifetime) = distinct seeds added to `G.visitedSeeds` (re-visits don't increment).
 - Recent-chassis FIFO records on `finalizeRebuild` (chassis change is rebuild-only; refit cannot change chassis).
 - News ticker producers in v1 are objective completions only — other sources (hostile contact, market changes) are deferred.
@@ -70,12 +70,12 @@ This document is the source of truth for a multi-task UI rework. Tasks are desig
 
 ## Cross-plan notes (Overworld & Star System Overhaul)
 
-The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) changes the shape of `G.system.sites` and adds two new DOM screens. When implementing UI rework tasks that touch system data or planet listings, defer to these rules:
+The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) replaces `LV` / `PP` with a single `BODIES[]` global and adds two new DOM screens. When implementing UI rework tasks that touch system data or body listings, defer to these rules:
 
-- **SiteMap widget (F-09)** — only **planets** (parent bodies) and the non-body sites (BASE, HBASE, SLIPGATE, asteroid fields) are nodes. Moons are **not** nodes on the map; they appear as a sub-list in the right-side info card when a planet is focused. This keeps the map navigable as system body counts grow.
-- **System Map submenu (P4-02)** — the right-side info card has two sections: `selected · <planet>` (kind/subtype, atmosphere, gravity, objectives) and a moon sub-list (navigable up/down) where the first row is the parent planet itself. Confirming a row inspects that body (does not jump to it).
-- **`G.system.sites` shape change** — was a flat list of `{id, name, kind, objectives, visited}`. Now `kind ∈ {'planet','gas_giant','asteroid','base','hbase','slipgate'}` (no `'moon'` at top level); each planet entry includes a `moons: [{id, kind, subtype, size, atmoKind, populationClass, objectives}]` array.
-- **New registered DOM screen `body-info`** — added by the overworld rework. Entry popup shown before player enters a site (size, gravity, type/subtype, population density, atmosphere, objectives + an `enter` button). Pauses the world. This screen does not conflict with the rework's screen-stack pattern; it registers via `registerScreen('body-info', …)` like the others.
+- **No materialized `G.system.sites`.** Screens that need to list sites read directly from `BODIES[]` (planets + moons + gas giants + star), `AB[]`, `HBASE`, `SLIPGATE`. The "visited" flag is derived from `lvState[bodyId]` existing. There is no separate `G.system.sites` field to keep in sync.
+- **SiteMap widget (F-09)** — nodes are: planets (parent bodies), gas giants, asteroid fields, BASE, HBASE, SLIPGATE. The star is not a node (it's at world center and not interactable). Moons are **not** nodes; they appear as a sub-list in the right-side info card when a planet is focused. This keeps the map navigable as system body counts grow.
+- **System Map submenu (P4-02)** — the right-side info card uses the `BodySummaryPanel` widget (F-16). It renders fields appropriate to the focused node's kind (planet/moon → full body data; gas giant → kind/size only; HBASE → 'hostile base' + objectives; asteroid field → 'asteroid field' + objectives; BASE/SLIPGATE → label only). For planets, a moon sub-list follows the body summary; the **first row is the parent planet itself**, and remaining rows are its moons in orbital order. Confirming a SiteMap node opens the `body-info` screen as a **read-only popup** (no `enter` button when reached from system map). Confirming a moon sub-list row swaps the right-card content to that moon (no popup, no jump).
+- **New registered DOM screen `body-info`** — added by the overworld rework. Entry popup shown before player enters a site (size, gravity, type/subtype, population density, atmosphere, objectives + an `enter` button). Pauses the world. Body content rendered via `BodySummaryPanel` (F-16). When mounted in `'inspect'` mode from the system map, the `enter` button is hidden.
 - **New registered DOM screen `body-select`** — selection popup shown when ≥2 interactable sites are within the player's interaction radius. Lists each as a focusable row; confirming a row either opens `body-info` (for enterable bodies + HBASE + asteroid fields) or fires the direct-interact action (for BASE / SLIPGATE).
 
 ---
@@ -248,7 +248,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) changes the shap
 
 **Outline:**
 - `class RunSummaryPanel extends Widget` — `new RunSummaryPanel({mode})`. `mode:'current'` reads from `G.run`; `mode:'last'` reads from `G.lastRun.summary`. `focusable=false`.
-- Stats rendered: seed (hex), credits earned, systems visited, sectors cleared, kills, deaths, time (`{hh}h {mm}m` from `activeMs`), stake bonus (`+{n}%` green). Empty/missing fields render as `—`.
+- Stats rendered: seed (hex), credits earned, systems visited, sectors cleared, kills, deaths, time (`{hh}h {mm}m` from `activeMs`), stake bonus (`+{n}%` green). Empty/missing fields render as `—`. Note: `sectorsCleared` on `G.run` is **derived** from the objective system (see F-14), not a flat counter incremented on `G.cleared` mutations.
 - For `mode:'last'`, also render `fate: destroyed` in red.
 
 **Depends on:** F-04, F-12 (state surfaces — but ship the widget skeleton first; it'll just render `—` until F-12 lands)
@@ -282,7 +282,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) changes the shap
 
 **Outline:**
 - Add to G init:
-  - `G.run = {startMs:0, activeMs:0, kills:0, creditsEarned:0, sectorsCleared:0, deaths:0, objectivesDone:0, objectivesTotal:0, stakeBonusPct:0}` — per-run, reset on new run / charity rebuild.
+  - `G.run = {startMs:0, activeMs:0, kills:0, creditsEarned:0, sectorsCleared:0, deaths:0, objectivesDone:0, objectivesTotal:0, stakeBonusPct:0}` — per-run, reset on new run / charity rebuild. `sectorsCleared` is **derived** (see F-14): it is recomputed from the objective system on objective completion, not maintained on `G.cleared` mutations.
   - `G.totals = {kills:0, systemsVisited:0, stakeEarned:0}` — lifetime; never reset except Clear Data.
   - `G.lastRun = null` — `{seed, fate:'destroyed', summary:{...G.run, stakeLost}}` set on death.
   - `G.recentChassis = ['kestrel']` — FIFO max 3, most-recent first.
@@ -323,7 +323,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) changes the shap
 **Outline:**
 - `G.run.kills` and `G.totals.kills`: bump in `encKillShip` and the surface enemy kill sink (locate the existing kill handler that awards stake/credits).
 - `G.run.creditsEarned`: bump on every `G.credits += n` (gross only, no decrements).
-- `G.run.sectorsCleared`: after every mutation of `G.cleared`, set `G.run.sectorsCleared = G.cleared.filter(Boolean).length`.
+- `G.run.sectorsCleared`: **derived**, not maintained on `G.cleared` mutations. After OVERWORLD F-04, `G.cleared` is `{bodyId: true}` (object/map), so `.filter`/`.length` no longer apply. Add a helper `derivedSectorsCleared()` in `objectives.js` returning `enterableBodies().filter(b => bodyObjectivesAllComplete(b.id)).length`, where `bodyObjectivesAllComplete(bodyId)` is true iff every objective with `o.bodyId === bodyId` has `complete === true` (and there is at least one such objective; bodies with zero objectives are not counted). Recompute `G.run.sectorsCleared = derivedSectorsCleared()` inside `completeObjective(id)` (alongside the slipgate-unlock recompute), and on world load.
 - `G.run.deaths`: bump in the function that transitions `G.st` to `dead_ow` / `dead_enc`.
 - `G.run.objectivesDone` / `Total`: sync from `G.objectives` after `syncDerivedObjectives()`.
 - `G.totals.systemsVisited`: when `gen.js` records a new seed in `G.visitedSeeds` (only on a previously-unseen seed).
@@ -343,12 +343,47 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) changes the shap
 **Files:** `objectives.js`
 
 **Outline:**
-- In the function that flips `objective.complete = true` (likely `completeObjective` or the equivalent), append: `G.system.events.unshift({ts:Date.now(), text:`objective complete · ${objective.label.toLowerCase()}`}); if (G.system.events.length > 16) G.system.events.length = 16;`.
+- Add a helper `bodyShortName(bodyId)` in `bodies.js` returning the lowercased body id (e.g. `'p1'`, `'m2.0'`) for non-special sites, `'hbase'` / `'asteroid field'` / `'base'` / `'slipgate'` for the others.
+- Add `objectiveShortLabel(o)` in `objectives.js` returning the type-portion of the label only (e.g. `'reactor destroyed'`, `'surface targets destroyed'`, `'civilian residences'`). The existing `objectiveLabel(type, bodyId)` (OVERWORLD F-04) which produces `'P1 REACTOR DESTROYED'` is unchanged; `objectiveShortLabel` is a new lowercase, body-prefix-less variant.
+- In the function that flips `objective.complete = true` (likely `completeObjective` or the equivalent), append: `G.system.events.unshift({ts:Date.now(), text:`objective complete · ${bodyShortName(o.bodyId)}: ${objectiveShortLabel(o)}`}); if (G.system.events.length > 16) G.system.events.length = 16;`.
+- Result reads e.g. `objective complete · p1: reactor destroyed`.
 - No other producers in v1. Hostile-contact and market-change events are deferred.
 
 **Depends on:** F-12
 
-**Acceptance:** Completing an objective adds one entry to `G.system.events`; entry shows in the friendly base ticker after Phase 3 lands.
+**Acceptance:** Completing an objective adds one entry to `G.system.events` formatted as above; entry shows in the friendly base ticker after Phase 3 lands.
+
+---
+
+### F-16. BodySummaryPanel widget
+
+**Goal:** A single widget that renders a body's (or non-body site's) summary fields. Consumed by both the `body-info` DOM screen (OVERWORLD U-01) and the system-map right-side info card (P4-02), so the displayed field set stays in sync.
+
+**Files:** `ui/widgets.js`, `ui/ui.css`
+
+**Outline:**
+- `class BodySummaryPanel extends Widget` — `new BodySummaryPanel({siteRef, layout, moonFocusId})`.
+  - `siteRef` is one of: `{kind:'body', body}` for planets/moons/gas giants/star, `{kind:'hbase'}`, `{kind:'asteroid', idx}`, `{kind:'base'}`, `{kind:'slipgate'}`.
+  - `layout ∈ {'inspect','enter','compact'}`. `'inspect'` is the system-map right-card variant; `'enter'` is the body-info popup variant; `'compact'` is for the moon sub-list rows.
+  - `moonFocusId` is the currently-highlighted moon (or parent planet) row id when used inside a planet card with a moon sub-list. The widget itself does **not** own the moon sub-list — that lives in the consumer screen — but the widget exposes a hook so the consumer can swap which body it renders without re-mounting.
+  - `focusable = false` for the panel itself. The consumer is responsible for any focusable rows (e.g. the moon sub-list rows or the `enter` button).
+- Mutator: `setSiteRef(siteRef)` re-renders in place. Used by P4-02 when the moon sub-list selection changes.
+- Renderers per `siteRef.kind`:
+  - `'body'` with `body.kind ∈ {'habitable','uninhabitable'}` (a planet or moon): full panel — id label (`p1`, `m2.0`), `SectionHeader` per group, `KeyValueRow`s for `size`, `gravity` (descriptive label from size: 1=none, 2=very little, 3=some, 4=moderate, 5=high, 6=very high), `type` (kind), `subtype`, `population` (`populationClass`; `'uninhabited'` for uninhabitable), `atmosphere` (atmoKind). Objectives section via `objectivePanelRows({layout:'planet', bodyId:body.id})` (helper extended by OVERWORLD F-04 to accept `bodyId`).
+  - `'body'` with `body.kind === 'gas_giant'`: minimal panel — id label, `KeyValueRow`s for `size` and `type: gas giant`. No atmosphere/gravity/population/objectives section.
+  - `'body'` with `body.kind === 'star'`: not rendered (the star is not a site; the consumer should never pass a star siteRef).
+  - `'hbase'`: header label `hostile base`, `KeyValueRow`s as available (e.g. ARMADA fleet still active), objectives section showing HBASE objective state.
+  - `'asteroid'`: header label `asteroid field`, objectives section showing the field's objectives (if any). No size/atmosphere fields.
+  - `'base'`: label `friendly base`, single descriptive line, no objectives.
+  - `'slipgate'`: label `slipgate`, single descriptive line indicating locked/unlocked.
+- Layout variant `'enter'` (body-info popup): adds primary `enter` button at the bottom + `back` button. `enter` routes via `enterPlanetByBodyId(body.id)` for bodies, `enterAsteroidField(idx)` for asteroid fields, existing direct-interact path for HBASE. Disabled when the site has no interactable surface (gas giants, star). `back` pops the screen.
+- Layout variant `'inspect'` (from system map): no `enter`/`back` buttons; the widget is read-only display. The consumer screen owns its own back/return prompt.
+- Layout variant `'compact'` (per-moon row in the sub-list): one-line summary — `{id} · {subtype || kind} · size {n}`. Used by the moon sub-list rows the consumer renders; the widget exposes this as a static helper `bodySummaryRowText(body)` so the sub-list can use it without instantiating a Widget per row.
+- CSS in `ui/ui.css` under the rework banner: `.body-summary { display:flex; flex-direction:column; gap:6px; } .body-summary .bsp-id { font-size:var(--fs-section); color:var(--text-dim); letter-spacing:.12em; text-transform:uppercase; }` plus reuse of `.section-header` / `.kv-row` from F-04.
+
+**Depends on:** F-04, OVERWORLD F-04 (objectivePanelRows accepts `bodyId`)
+
+**Acceptance:** Mounting `new BodySummaryPanel({siteRef:{kind:'body', body:BODIES[1]}, layout:'inspect'})` on a habitable planet renders id, size, gravity, type, subtype, population, atmosphere, and the planet's objectives. Switching `setSiteRef` to a moon of that planet updates all fields in place. A gas-giant siteRef renders only id + size + `type: gas giant`. An `'asteroid'` siteRef renders only the asteroid-field header + objectives section.
 
 ---
 
@@ -530,7 +565,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
   - `SectionHeader('stat compare · current ▶ candidate')`.
   - Stack of `StatCompareRow`:
     - Chassis: hull, thrust, slots, mass.
-    - Weapons: dmg, rate, heat, range. **Render one row per equipped weapon slot**, label `slot {n}: {wp.name}` (or `(empty)`). Compare candidate against each.
+    - Weapons: dmg, rate, heat, range, plus `ammo` and `magazine` rows **only when the candidate weapon has the corresponding field** (`ammoMax` / `magMax`, both introduced by WEAPONS F-03/F-04). Ammo row compares `current.ammoMax` (or `—` if energy-only) vs `candidate.ammoMax`; magazine row compares `current.magMax` vs `candidate.magMax`. **Render one row per equipped weapon slot**, label `slot {n}: {wp.name}` (or `(empty)`). Compare candidate against each.
     - Shields: strength, regen.
   - Cost row: `cost {n} cr` + `chip green can afford` / `chip red insufficient`.
   - Action row: for multi-slot weapons, a small `target slot` `Cycle` over compatible empty slots, then a `buy & equip` Button reading from the cycle. Single-slot or non-weapon items skip the cycle. Secondary `buy only` Button retained for license-only purchases.
@@ -594,19 +629,33 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 **Files:** `ui/screens/system-map.js` (NEW), `ui/input-bridge.js` (register), `state.js`
 
 **Outline:**
-- Source `G.system.sites` from existing world data. Per cross-plan notes: shape is `{id, name, kind, objectives:[], visited, moons:[...]}` where `kind ∈ {'planet','gas_giant','asteroid','base','hbase','slipgate'}` (no `'moon'` at top level). Each planet entry includes a `moons` array of {id, kind, subtype, size, atmoKind, populationClass, objectives}. Populate during `genWorld` and update on entry/exit.
+- No materialized `G.system.sites` field. Read site data directly from `BODIES[]` (filter to `kind !== 'star'`), `AB[]`, `HBASE`, `SLIPGATE`, `BASE`.
 - New screen `makeSystemMapScreen()`:
-  - Top: lbl `system view · {seedHex}`, sub `docked at {currentSite.name}`.
-  - Center: `SiteMap({mode:'system', nodes: () => G.system.sites.filter(s => s.kind !== 'moon').map(s => ({id:s.id, x, y, kind:s.kind, label:s.name})), get/set: focused site id, onConfirm: noop+log warning})`. Current docked site is the center node. Moons are excluded from top-level nodes per cross-plan notes.
-  - Bottom card (above ticker): if focused site is a planet, show `SectionHeader('selected · {planet.name}')`, kind, atmosphere, gravity, objectives list (one line per objective; `chip green` for ready, `chip` for side), then `SectionHeader('moons')` with a focusable sub-list of the planet's moons. If focused site is a non-planet site (gas giant, asteroid, BASE, HBASE, SLIPGATE), show its info directly. Confirming a moon row inspects that moon (does not jump).
+  - Top: lbl `system view · {seedHex}`, sub `docked at {currentSiteName}` (resolve from `G.lvBodyId` or special-site id).
+  - Center: `SiteMap({mode:'system', nodes: () => systemMapNodes(), get/set: focused site id, onConfirm: id => openBodyInfoInspect(id)})`. `systemMapNodes()` returns one node per: each non-moon body in `BODIES[]` (planets and gas giants), each asteroid field in `AB[]`, plus HBASE / BASE / SLIPGATE. Each node carries `{id, x, y, kind, label}`; positions come from each entity's current overworld coordinates (via `bodyOWPos(b)` for bodies). Moons are intentionally excluded from top-level nodes (see right-card moon sub-list). The current docked site renders with `is-current` styling.
+  - **Right-side info card** (replaces the old ad-hoc rendering): mount `BodySummaryPanel` (F-16) with `layout:'inspect'` and a `siteRef` derived from the focused node:
+    - Body (planet or gas giant) → `{kind:'body', body: bodyById(focused.id)}`.
+    - Asteroid field → `{kind:'asteroid', idx}`.
+    - HBASE → `{kind:'hbase'}`.
+    - BASE → `{kind:'base'}`.
+    - SLIPGATE → `{kind:'slipgate'}`.
+  - **Moon sub-list**: when the focused node is a planet (`body.kind ∈ {'habitable','uninhabitable'}`) AND the planet has at least one moon, render a focusable sub-list below the `BodySummaryPanel`:
+    - **Row 0** is the parent planet itself (so the player can navigate back to viewing the parent after inspecting a moon). Label `↑ {parent.id}` to indicate it's the parent.
+    - Rows 1..N are the planet's moons sorted by `orbit.r` ascending.
+    - Each row uses `bodySummaryRowText(body)` (F-16 helper) — one-line summary `{id} · {subtype || kind} · size {n}`.
+    - Up/Down navigate within the sub-list. Confirming a row **swaps the right-card content** (calls `setSiteRef` on the `BodySummaryPanel`); does NOT open a popup, does NOT change the SiteMap focus.
+  - Gas giants, asteroid fields, HBASE, BASE, SLIPGATE focus → no moon sub-list section.
   - Footer: `NewsTicker` reading `G.system.events`.
+- **`openBodyInfoInspect(id)`** helper (in `ui/screens/system-map.js`, exported): mounts the `body-info` DOM screen (OVERWORLD U-01) in `'inspect'` mode (no `enter` button). When dismissed, returns to the system map. Routes per node kind:
+  - Body / asteroid / HBASE → mount `body-info` with the appropriate `siteRef`.
+  - BASE / SLIPGATE → noop (those nodes have nothing further to inspect from the map; they're direct-interact in the overworld).
 - Theme: default green.
 - Footer prompts: `bindHint('directions', 'select')` + `bindHint('confirm', 'inspect')` + `bindHint('cancel', 'back')`.
 - Register: `registerScreen('system-map', makeSystemMapScreen)`.
 
-**Depends on:** F-09, F-15, P4-01
+**Depends on:** F-09, F-15, F-16, P4-01, OVERWORLD U-01 (the `body-info` screen accepts an `'inspect'` mode)
 
-**Acceptance:** Open from pause; directional input switches focused site; ticker scrolls; ESC returns to pause.
+**Acceptance:** Open from pause; directional input switches focused site; right card updates via `BodySummaryPanel` (showing size, population, atmosphere, gravity, objectives for planets; minimal data for gas giants; appropriate labels for HBASE/asteroid/BASE/SLIPGATE); moons of the focused planet appear in the sub-list with the parent as row 0; confirming a moon row swaps the right card; confirming the SiteMap node opens `body-info` in inspect mode; ticker scrolls; ESC returns to pause.
 
 ---
 
@@ -810,7 +859,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ## Recommended execution order
 
-**Sequential block A (Foundations):** F-01 → F-02 → F-03 → F-04 → F-05 → F-06 → F-07 → F-08 → F-09 → F-10 → F-11 → F-12 → F-13 → F-14 → F-15.
+**Sequential block A (Foundations):** F-01 → F-02 → F-03 → F-04 → F-05 → F-06 → F-07 → F-08 → F-09 → F-10 → F-11 → F-12 → F-13 → F-14 → F-15 → F-16.
 
 **Parallelizable block B** (after A): P1-01, P1-02, P1-03 — three agents can take one each.
 
@@ -826,4 +875,4 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 **Final sweep:** P6-05.
 
-Total: 30 tasks (15 foundations + 15 screen tasks).
+Total: 31 tasks (16 foundations + 15 screen tasks).
