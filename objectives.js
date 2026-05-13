@@ -89,6 +89,15 @@ function completedObjectiveCount() {
   return (G.objectives || []).filter(o => o.complete).length;
 }
 
+function bodyObjectives(bodyId) {
+  return (G.objectives || []).filter(o => o.bodyId === bodyId);
+}
+
+function bodyObjectivesAllComplete(bodyId) {
+  const list = bodyObjectives(bodyId);
+  return list.length > 0 && list.every(o => o.complete);
+}
+
 function objectiveForPlanetType(bodyId, type) {
   return (G.objectives || []).find(o => o.bodyId === bodyId && o.type === type) || null;
 }
@@ -107,8 +116,7 @@ function syncSlipgateFromObjectives() {
 
 function syncPlanetCleared(bodyId=activeBodyId()) {
   G.cleared = clearedForBodies(G.cleared);
-  const planetObjectives = (G.objectives || []).filter(o => o.bodyId === bodyId);
-  G.cleared[bodyId] = planetObjectives.every(o => o.complete);
+  G.cleared[bodyId] = bodyObjectivesAllComplete(bodyId);
 }
 
 function syncAllPlanetCleared() {
