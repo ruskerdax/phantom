@@ -151,7 +151,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) changes the shap
 
 ---
 
-### F-05. StatCompareRow widget
+### F-05. StatCompareRow widget ✅
 
 **Goal:** Side-by-side stat compare row for shop detail.
 
@@ -168,7 +168,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) changes the shap
 
 ---
 
-### F-06. Tabs → TabBar rename
+### F-06. Tabs → TabBar rename ✅
 
 **Goal:** Rename the existing non-focusable `Tabs` widget into a focusable `TabBar` with badges and migrate the only caller.
 
