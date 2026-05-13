@@ -410,3 +410,56 @@ function drawDroneFactory(factory) {
   cx.fillText(factory.hp, 0, 7);
   cx.restore();
 }
+
+function drawLaserFence(fence, site, powered) {
+  const a = fence.a, b = fence.b;
+  if(!a || !b) return;
+  const pulse = .5 + .5 * Math.sin(G.fr * .22 + (fence.x || 0) * .01);
+  const turretRed = '#f44';
+  // Rapid low-cost flicker: frame-hash alpha jitter, avoids extra trig work.
+  const flickerBits = ((G.fr * 1103515245 + ((fence.x | 0) * 12345)) >>> 0) & 7;
+  const flickerAlpha = powered ? (.72 + flickerBits * .03) : (.45 + flickerBits * .02);
+  const capSize = powered ? 6 : 5;
+  const capHalf = capSize * .5;
+  cx.save();
+  cx.strokeStyle = powered ? '#66eeff' : 'rgba(102,238,255,.35)';
+  cx.shadowColor = '#66eeff';
+  cx.shadowBlur = sb(powered ? 10 + pulse * 8 : 2);
+  cx.lineWidth = powered ? 2 : 1;
+  cx.globalAlpha = flickerAlpha;
+  cx.beginPath();
+  cx.moveTo(a.x, a.y);
+  cx.lineTo(b.x, b.y);
+  cx.stroke();
+  if(powered) {
+    cx.globalAlpha = flickerAlpha * (.55 + pulse * .25);
+    cx.lineWidth = 1;
+    cx.strokeStyle = '#ffffff';
+    cx.shadowBlur = 0;
+    cx.beginPath();
+    cx.moveTo(a.x, a.y);
+    cx.lineTo(b.x, b.y);
+    cx.stroke();
+  }
+  cx.globalAlpha = 1;
+  cx.shadowBlur = sb(powered ? 8 + pulse * 5 : 2);
+  cx.fillStyle = powered ? 'rgba(54,12,12,.95)' : 'rgba(54,12,12,.72)';
+  cx.strokeStyle = powered ? turretRed : 'rgba(255,68,68,.6)';
+  cx.lineWidth = 1;
+  for(const p of [a, b]) {
+    cx.beginPath();
+    cx.rect(p.x - capHalf, p.y - capHalf, capSize, capSize);
+    cx.fill();
+    cx.stroke();
+  }
+  if(powered) {
+    cx.shadowBlur = 0;
+    cx.fillStyle = '#ffffff';
+    for(const p of [a, b]) {
+      cx.beginPath();
+      cx.rect(p.x - 1, p.y - 1, 2, 2);
+      cx.fill();
+    }
+  }
+  cx.restore();
+}

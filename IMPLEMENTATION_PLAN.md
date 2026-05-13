@@ -53,6 +53,8 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 
 ### F-01. World size bump ✅
 
+**Superseded by OVERWORLD_REWORK_PLAN.md F-03** — current canonical world size is `OW_W = OW_H = 16000` with orbits scaled via `orbitMaxR() = OW_W * 0.45`. The 6000² / 1600 numbers below describe the intermediate state that shipped with this task and are no longer current.
+
 **Goal:** `OW_W = OW_H = 6000`; max orbital radius 1600.
 
 **Files:** `util.js`, `gen.js`
@@ -70,6 +72,8 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 ---
 
 ### F-02. Variable planet count + procedural per-planet template ✅
+
+**Superseded by OVERWORLD_REWORK_PLAN.md G-01 / G-02** — the 2d5 planet roll and `genPlanetTmpl` described below were the intermediate state. The current canonical generator is archetype-driven (`SYSTEM_ARCHETYPES`) and emits `BODIES[]` rather than `LV` / `PP`. Per-body kind/subtype/size/atmosphere/population come from the body roll, not from a planet template.
 
 **Goal:** Replace fixed 3 with 2d5 (2–10) planets, each with a procedurally rolled template. Drop planet names.
 
@@ -90,6 +94,8 @@ This document is the source of truth for a multi-task gameplay expansion. Tasks 
 ---
 
 ### F-03. Asteroid fields = 1d4 − 1 ✅
+
+**Superseded by OVERWORLD_REWORK_PLAN.md G-02** — canonical cap is `MAX_AST_FIELDS = 2` (0–2 fields per system). The 0–3 range described below was the intermediate state.
 
 **Goal:** 0–3 asteroid fields per system.
 
@@ -320,6 +326,8 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ### P1-05. Civilian residences + infrastructure ✅
 
+**Note:** The population-class distribution below (20% none / 20% sparse / 40% moderate / 20% dense) is **superseded by OVERWORLD_REWORK_PLAN.md G-02**, which moves population-class assignment onto the body roll itself with per-subtype overrides (default 20/40/30/10 none/sparse/moderate/dense; Continental → 60/40 mod/dense; Rocky → 50/30/20 none/sparse/mod; Machine → `'uninhabited'`). The building tables and placement rules below remain authoritative; only the population-class probabilities change when G-02 lands.
+
 **Goal:** 8 residence + 8 infrastructure classes; per-planet population class roll; city-zone placement; 50%-by-points objective wiring.
 
 **Files:** `data/building-types.js`, `data/levels.js`, `objectives.js`
@@ -358,7 +366,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P1-06. Orbital gun
+### P1-06. Orbital gun ✅
 
 **Goal:** `ORBITAL_GUN` building (HP 500) with surface placeholder visual + overworld firing logic. Forbidden on `DEADB33F`.
 
@@ -382,7 +390,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P1-07. Laser defense
+### P1-07. Laser defense ✅
 
 **Goal:** Indestructible fence-style laser; 60-tick/s × 2dmg = 120dmg/s contact damage; cave/tunnel only; powered.
 
@@ -401,31 +409,9 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P1-08. Shield dome
-
-**Goal:** Indestructible domes covering civilian groups; geometric collision against ship + projectiles + beams; drops when planet unpowered.
-
-**Files:** `data/building-types.js`, `data/levels.js`, `buildings.js`, `site.js`
-
-**Outline:**
-- Two classes: `SHIELD_DOME_SMALL` (radius 200), `SHIELD_DOME_LARGE` (radius 400). Both `indestructible:true, requiresPower:true`.
-- Placement: after civilian placement, scan city zones for clusters where all enclosed building bounding boxes fit inside a half-circle of dome radius centered on zone midpoint AND at ground level. Reject misfits. Up to 2 small on moderate; up to 3 on dense (mix small/large).
-- Active dome adds half-circle outline to:
-  - `siteBeamWalls(site)` — emit ~32 segments approximating the arc; beams clip on dome surface.
-  - Ship collision: in `surfaceBounce`, after terrain bounce check, also test active domes; on intersection, push ship out radially and apply `applyShipBounce` with no-damage flag.
-  - Projectile/missile loops: detonate on dome arc intersection.
-- Inactive (unpowered): all three checks skipped; civilians inside become normally destructible from outside.
-- Civilians always destructible from inside the dome (player can't enter while up, but if they could—future mechanic—damage path works).
-
-**Depends on:** P1-02, P1-05, F-07
-
-**Acceptance:** Dense planet with dome over arcology cluster: bullets bounce off dome arc; ship cannot enter; killing all power stations drops the dome and the arcology becomes destructible.
-
----
-
 ## Phase 2 — Branching tunnels (sequential)
 
-### P2-01. Reactor existence roll (25%)
+### P2-01. Reactor existence roll (25%) ✅
 
 **Goal:** Per planet: 25% reactor (existing tunnel→cave), 75% branching tunnel (no cave).
 
@@ -443,7 +429,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P2-02. Branching tunnel generator
+### P2-02. Branching tunnel generator ✅
 
 **Goal:** Procedural branching tunnel world.
 
@@ -571,10 +557,9 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 **Parallelizable block C** (after B; Claude + Codex can take different ones): P1-03, P1-04, P1-05, P1-06, P1-07.
 
-**Then:** P1-08 (needs P1-05).
-
 **Sequential block D (Branching tunnels):** P2-01 → P2-02 → P2-03 → P2-04 → P2-05.
 
 **Polish:** P3-01–P3-04.
 
 Total: 25 tasks.
+

@@ -409,6 +409,99 @@ function applyShipDamage(s,amount,opts={}){
   if(hullDamage>0)s.hp=Math.max(0,s.hp-hullDamage);
   return{shieldDamage:shieldHit.shieldDamage,hullDamage,blocked:shieldHit.blocked,shieldBroken:shieldHit.shieldBroken};
 }
+// Beam damage path used by AI lasers and environmental laser defenses.
+// Shields absorb first based on incoming source angle; hull only takes passthrough
+// when the beam segment actually intersects the ship hull.
+function applyShipBeamDamage(s,amount,opts={}){
+  const dmg=Math.max(0,amount||0);
+  if(!s||dmg<=0)return{shieldDamage:0,hullDamage:0,blocked:false,shieldBroken:false,passthroughDamage:0};
+  const shieldHit=applyShipShieldDamage(s,dmg,opts);
+  const src=opts?.source,end=opts?.beamEnd;
+  const hasBeamSegment=Number.isFinite(src?.x)&&Number.isFinite(src?.y)&&Number.isFinite(end?.x)&&Number.isFinite(end?.y);
+  let hullDamage=0;
+  if(shieldHit.passthroughDamage>0&&(!hasBeamSegment||dseg(s.x,s.y,src.x,src.y,end.x,end.y)<=shipHitRadius(s))){
+    hullDamage=shieldHit.passthroughDamage;
+    s.hp=Math.max(0,s.hp-hullDamage);
+  }
+  return{shieldDamage:shieldHit.shieldDamage,hullDamage,blocked:shieldHit.blocked,shieldBroken:shieldHit.shieldBroken,passthroughDamage:shieldHit.passthroughDamage};
+}
+function projectileStepSegment(p){
+  return{x1:p?.px??p?.x??0,y1:p?.py??p?.y??0,x2:p?.x??0,y2:p?.y??0};
+}
+// Canonical projectile/explosion collision API.
+// Gameplay modes should adapt only coordinate wrapping via opts.segmentNear and route
+// all projectile/missile/explosion hit checks through these helpers.
+function projectileSegmentNearTarget(p,targetX,targetY,opts={}){
+  const seg=projectileStepSegment(p);
+  if(typeof opts.segmentNear==='function')return opts.segmentNear(seg,targetX,targetY,p);
+  return seg;
+}
+function projectileSourceForTarget(p,targetX,targetY,opts={}){
+  const seg=projectileSegmentNearTarget(p,targetX,targetY,opts);
+  const near=segPointNear(targetX,targetY,seg.x1,seg.y1,seg.x2,seg.y2);
+  return{source:{x:near.x,y:near.y},seg};
+}
+function projectileHitTest(p,target,opts={}){
+  const shape=target?.shape||'circle',tx=target?.x??opts.targetX??0,ty=target?.y??opts.targetY??0;
+  const seg=projectileSegmentNearTarget(p,tx,ty,opts);
+  let hit=false,distance=Infinity;
+  if(shape==='circle'){
+    const r=Math.max(0,target?.r??0);
+    distance=dseg(tx,ty,seg.x1,seg.y1,seg.x2,seg.y2);
+    hit=distance<=r;
+  }else if(shape==='rect'){
+    hit=segRectHit(seg.x1,seg.y1,seg.x2,seg.y2,target.x0,target.y0,target.x1,target.y1);
+  }else if(shape==='hull'){
+    const hh=hullSegmentHit(target.hull,seg.x1,seg.y1,seg.x2,seg.y2,target.pad??0);
+    hit=hh.hit;
+    if(hit)distance=hh.t;
+  }
+  return{hit,seg,distance,source:segPointNear(tx,ty,seg.x1,seg.y1,seg.x2,seg.y2)};
+}
+function shipImpactRadiusForHit(s,hitOpts){
+  return shipShieldCanTakeHit(s,hitOpts)?shipShieldHitRadius(s):shipHitRadius(s);
+}
+function applyProjectileDamageToShip(s,p,opts={}){
+  const dmg=Math.max(0,opts.damage??p?.dmg??0);
+  if(!s||dmg<=0)return{consumed:false,remainingDamage:dmg,shieldHit:null,hullHit:null,distance:Infinity,hitOpts:null};
+  const tx=opts.targetX??s.x,ty=opts.targetY??s.y;
+  const src=projectileSourceForTarget(p,tx,ty,opts);
+  const hitOpts={source:src.source,kind:opts.kind??'projectile',weapon:opts.weapon??p};
+  const distance=dseg(tx,ty,src.seg.x1,src.seg.y1,src.seg.x2,src.seg.y2);
+  let remainingDamage=dmg,shieldHit=null,hullHit=null,consumed=false;
+  if(distance<=shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,hitOpts)){
+    shieldHit=applyShipShieldDamage(s,remainingDamage,hitOpts);
+    remainingDamage=shieldHit.passthroughDamage;
+    if(shieldHit.blocked||remainingDamage<=0)consumed=true;
+  }
+  if(!consumed&&distance<=shipHitRadius(s)){
+    hullHit=applyShipDamage(s,remainingDamage,hitOpts);
+    consumed=true;
+  }
+  return{consumed,remainingDamage,shieldHit,hullHit,distance,hitOpts,source:src.source,segment:src.seg};
+}
+function explosionHitTest(x,y,r,target,opts={}){
+  const shape=target?.shape||'circle';
+  if(shape==='circle'){
+    const tx=target?.x??0,ty=target?.y??0,tr=Math.max(0,target?.r??0);
+    const distance=opts.distance??Math.hypot(tx-x,ty-y);
+    return{hit:distance<=r+tr,distance};
+  }
+  if(shape==='rect'){
+    return{hit:circleRectHit(x,y,r,target.x0,target.y0,target.x1,target.y1),distance:Infinity};
+  }
+  if(shape==='hull'){
+    return{hit:hullCircleHit(target.hull,x,y,r),distance:Infinity};
+  }
+  if(shape==='ship'){
+    const ship=target?.ship;
+    const hitOpts={source:opts.source??{x,y},kind:opts.kind??'explosion',weapon:opts.weapon};
+    const impactR=shipImpactRadiusForHit(ship,hitOpts);
+    const distance=opts.distance??Math.hypot((ship?.x??0)-x,(ship?.y??0)-y);
+    return{hit:distance<=r+impactR,distance,impactR,hitOpts};
+  }
+  return{hit:false,distance:Infinity};
+}
 function fillShipHull(s){
   if(!s)return;
   const maxHp=chassisDefForShip(s)?.maxHp;
@@ -476,10 +569,9 @@ function beamMotionPadding(o){return Math.min(4,Math.hypot(o?.vx||0,o?.vy||0));}
 function laserTargetRadius(tg,basePad=0){return tg.r+(tg.beamPad||0)+basePad;}
 function laserTargetHit(tg,ox,oy,ex,ey,hitPad=0){
   if(tg.hull)return hullSegmentHit(tg.hull,ox,oy,ex,ey,hitPad+(tg.beamPad||0));
-  if(dseg(tg.x,tg.y,ox,oy,ex,ey)<=laserTargetRadius(tg,hitPad)){
-    const rdx=ex-ox,rdy=ey-oy,len=Math.hypot(rdx,rdy)||1;
-    return{hit:true,t:((tg.x-ox)*(rdx/len)+(tg.y-oy)*(rdy/len))};
-  }
+  const r=laserTargetRadius(tg,hitPad);
+  const frac=circleSegHitFrac(tg.x,tg.y,r,ox,oy,ex,ey);
+  if(frac!=null)return{hit:true,t:Math.hypot(ex-ox,ey-oy)*frac};
   return{hit:false,t:Infinity};
 }
 // Ray-cast laser: marches a ray from (ox,oy) in direction a, finding the nearest target or wall segment.
@@ -559,6 +651,9 @@ function planetIndexFromSite(site){
 function powerStationClassId(){
   return (typeof BUILDING_CLASS_IDS!=='undefined'&&BUILDING_CLASS_IDS.POWER_STATION)||'POWER_STATION';
 }
+function orbitalGunClassId(){
+  return (typeof BUILDING_CLASS_IDS!=='undefined'&&BUILDING_CLASS_IDS.ORBITAL_GUN)||'ORBITAL_GUN';
+}
 function powerStationRefsForPlanet(pi){
   const p=LV?.[pi],stationId=powerStationClassId();
   if(!p)return [];
@@ -576,6 +671,34 @@ function powerStationRefsForPlanet(pi){
   add('surface',p.surface);
   add('tunnel',p.tunnel);
   return refs;
+}
+function orbitalGunRefsForPlanet(pi){
+  const p=LV?.[pi],gunId=orbitalGunClassId();
+  if(!p)return [];
+  if(typeof planetBuildingRefs==='function'){
+    return planetBuildingRefs(p).filter(r=>r.classId===gunId&&r.mode==='surface');
+  }
+  const refs=[];
+  let bitIndex=0;
+  const add=(mode,d)=>{
+    (d?.buildings||[]).forEach((b,i)=>{
+      if(b.classId!==gunId)return;
+      refs.push({mode,siteIndex:i,classId:gunId,bitIndex,b});
+      bitIndex++;
+    });
+  };
+  add('surface',p.surface);
+  add('tunnel',p.tunnel);
+  add('cave',p.cave);
+  return refs.filter(r=>r.mode==='surface');
+}
+function orbitalGunAliveRefsForPlanet(pi,bodyId=bodyIdForPlanetIndex(pi)){
+  const refs=orbitalGunRefsForPlanet(pi),gunId=orbitalGunClassId();
+  if(!refs.length)return [];
+  const bits=(G.lvState?.[bodyId]?.buildings)||{};
+  const hasState=Object.prototype.hasOwnProperty.call(bits,gunId);
+  if(!hasState)return refs.slice();
+  return refs.filter(ref=>!!(bits[gunId]&(1<<ref.bitIndex)));
 }
 function activeSiteBuildingAlive(bodyId,ref){
   if(activeBodyId()!==bodyId||!G.site||G.site.mode!==ref.mode)return null;

@@ -66,6 +66,19 @@ function angDiff(a,b){let d=b-a;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+
 function flightAngle(o,fallback=o?.a??0,minSpeed=.05){const vx=Number.isFinite(o?.vx)?o.vx:0,vy=Number.isFinite(o?.vy)?o.vy:0;return Math.hypot(vx,vy)>minSpeed?Math.atan2(vx,-vy):fallback;}
 function combatFacingAngle(o,fallback=o?.spin??0){return Number.isFinite(o?.a)?o.a:fallback;}
 function segParam(px,py,ax,ay,bx,by){const dx=bx-ax,dy=by-ay,l2=dx*dx+dy*dy;if(!l2)return 0;return Math.max(0,Math.min(1,((px-ax)*dx+(py-ay)*dy)/l2));}
+function segPointNear(px,py,ax,ay,bx,by){const t=segParam(px,py,ax,ay,bx,by);return{x:ax+(bx-ax)*t,y:ay+(by-ay)*t,t};}
+function segCircleHit(ax,ay,bx,by,cx2,cy2,r){return dseg(cx2,cy2,ax,ay,bx,by)<=r;}
+function segRectHit(ax,ay,bx,by,x0,y0,x1,y1){
+  if((ax>=x0&&ax<=x1&&ay>=y0&&ay<=y1)||(bx>=x0&&bx<=x1&&by>=y0&&by<=y1))return true;
+  return segHitParam(ax,ay,bx,by,x0,y0,x1,y0)!=null||
+    segHitParam(ax,ay,bx,by,x1,y0,x1,y1)!=null||
+    segHitParam(ax,ay,bx,by,x1,y1,x0,y1)!=null||
+    segHitParam(ax,ay,bx,by,x0,y1,x0,y0)!=null;
+}
+function circleRectHit(cx2,cy2,r,x0,y0,x1,y1){
+  const qx=Math.max(x0,Math.min(cx2,x1)),qy=Math.max(y0,Math.min(cy2,y1));
+  return Math.hypot(cx2-qx,cy2-qy)<=r;
+}
 function segHitParam(ax,ay,bx,by,cx2,cy2,dx2,dy2){
   const rX=bx-ax,rY=by-ay,sX=dx2-cx2,sY=dy2-cy2,den=rX*sY-rY*sX;
   if(Math.abs(den)<1e-9)return null;

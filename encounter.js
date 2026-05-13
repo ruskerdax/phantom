@@ -5,12 +5,29 @@ function encToroidalActive(enc){return !!(enc&&!enc.isHBase&&!enc.cleared);}
 function encDist(enc,ax,ay,bx,by){return encToroidalActive(enc)?toroidalDistance(ax,ay,bx,by,enc.ew,enc.eh):Math.hypot(ax-bx,ay-by);}
 function encDelta(enc,ax,ay,bx,by){return encToroidalActive(enc)?wrapDelta(ax,ay,bx,by,enc.ew,enc.eh):{dx:ax-bx,dy:ay-by};}
 function encPointNear(enc,x,y,refX,refY){return encToroidalActive(enc)?toroidalPointNear(x,y,refX,refY,enc.ew,enc.eh):{x,y};}
-function encEnemyCircleHit(enc,e,x,y,r){const p=encPointNear(enc,x,y,e.x,e.y);return enemyCircleHit(e,p.x,p.y,r);}
 function encEnemySegmentHit(enc,e,x1,y1,x2,y2,pad=0){
-  if(!encToroidalActive(enc))return enemySegmentHit(e,x1,y1,x2,y2,pad);
-  const ep=encPointNear(enc,e.x,e.y,x1,y1);
-  const sx2=wrapCoordNear(x2,x1,enc.ew),sy2=wrapCoordNear(y2,y1,enc.eh);
-  return enemySegmentHit({...e,x:ep.x,y:ep.y},x1,y1,sx2,sy2,pad);
+  const p={px:x1,py:y1,x:x2,y:y2};
+  const segOpts=encProjectileNearOpts(enc);
+  const seg=projectileSegmentNearTarget(p,e.x,e.y,segOpts);
+  const ep=encPointNear(enc,e.x,e.y,seg.x1,seg.y1);
+  return projectileHitTest(p,{shape:'hull',x:ep.x,y:ep.y,hull:enemyHullWorld({...e,x:ep.x,y:ep.y}),pad},segOpts).hit;
+}
+function encSegmentNear(enc,x1,y1,x2,y2,refX,refY){
+  if(!encToroidalActive(enc))return{x1,y1,x2,y2};
+  const p1=toroidalPointNear(x1,y1,refX,refY,enc.ew,enc.eh);
+  return{x1:p1.x,y1:p1.y,x2:wrapCoordNear(x2,p1.x,enc.ew),y2:wrapCoordNear(y2,p1.y,enc.eh)};
+}
+function encProjectileNearOpts(enc){
+  return{segmentNear:(seg,tx,ty)=>encSegmentNear(enc,seg.x1,seg.y1,seg.x2,seg.y2,tx,ty)};
+}
+function encSegmentCircleHit(enc,p,cx2,cy2,r){
+  return projectileHitTest(p,{shape:'circle',x:cx2,y:cy2,r},encProjectileNearOpts(enc)).hit;
+}
+function encDefenseSegmentHit(enc,p,t,pad=0){
+  const segOpts=encProjectileNearOpts(enc);
+  const seg=projectileSegmentNearTarget(p,t.x,t.y,segOpts);
+  const tp=encPointNear(enc,t.x,t.y,seg.x1,seg.y1);
+  return projectileHitTest(p,{shape:'hull',x:tp.x,y:tp.y,hull:defenseHullWorld({...t,x:tp.x,y:tp.y}),pad},segOpts).hit;
 }
 function updEncPts(enc){if(encToroidalActive(enc)){for(let i=enc.pts.length-1;i>=0;i--){const p=enc.pts[i];p.x=wrap(p.x+p.vx,enc.ew);p.y=wrap(p.y+p.vy,enc.eh);p.l--;if(p.l<=0)enc.pts.splice(i,1);}}else updPts(enc.pts);}
 function clampEncCameraForExit(enc){enc.cam=updateWorldCamera(enc.cam,enc.s.x,enc.s.y,enc.ew,enc.eh,encounterZoomTarget(enc),.5,.5,1);}
@@ -84,7 +101,7 @@ function encPlayerBulletStep(enc,b,{rocks=true}={}){
   if(rocks){
     for(let ri=enc.rocks.length-1;ri>=0;ri--){
       const rk=enc.rocks[ri];
-      if(encDist(enc,b.x,b.y,rk.x,rk.y)<rk.r){
+      if(encSegmentCircleHit(enc,b,rk.x,rk.y,rk.r)){
         rk.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,'#778',4);
         if(rk.hp<=0)splitRock(enc,ri);
         return true;
@@ -92,33 +109,32 @@ function encPlayerBulletStep(enc,b,{rocks=true}={}){
     }
   }
   for(const e of enc.en){if(!e.alive)continue;if(encEnemySegmentHit(enc,e,b.px??b.x,b.py??b.y,b.x,b.y,1)){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,enemyDef(e.t).enc.col,5);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}return true;}}
-  for(let mi=enc.emi.length-1;mi>=0;mi--){const m=enc.emi[mi];if(encDist(enc,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);encExplodeMissile(enc,m,true);enc.emi.splice(mi,1);}return true;}}
+  for(let mi=enc.emi.length-1;mi>=0;mi--){const m=enc.emi[mi];if(encSegmentCircleHit(enc,b,m.x,m.y,5)){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);encExplodeMissile(enc,m,true);enc.emi.splice(mi,1);}return true;}}
   if(enc.isHBase){
     if(pip(b.x,b.y,enc.hbase.hexPoly)){boomAt(enc.pts,b.x,b.y,'#cc2200',4);return true;}
-    for(const t of enc.hbase.turrets){if(!t.alive)continue;if(Math.hypot(b.x-t.x,b.y-t.y)<defenseRadius(t)){damageDefense(enc,t,b.dmg,b.x,b.y);return true;}}
-    for(const sp of enc.hbase.softpts){if(!sp.alive)continue;if(Math.hypot(b.x-sp.x,b.y-sp.y)<12){sp.alive=false;boomAt(enc.pts,sp.x,sp.y,'#ff8800',10);tone(350,.15,'square',.08);return true;}}
+    for(const t of enc.hbase.turrets){if(!t.alive)continue;if(encDefenseSegmentHit(enc,b,t,1)){damageDefense(enc,t,b.dmg,b.x,b.y);return true;}}
+    for(const sp of enc.hbase.softpts){if(!sp.alive)continue;if(encSegmentCircleHit(enc,b,sp.x,sp.y,12)){sp.alive=false;boomAt(enc.pts,sp.x,sp.y,'#ff8800',10);tone(350,.15,'square',.08);return true;}}
   }
   return false;
 }
 function encEnemyBulletStep(enc,b,s,{rocks=true}={}){
   if(rocks){
-    for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(encDist(enc,b.x,b.y,rk.x,rk.y)<rk.r){rk.hp-=10;boomAt(enc.pts,b.x,b.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);return true;}}
+    for(let ri=enc.rocks.length-1;ri>=0;ri--){const rk=enc.rocks[ri];if(encSegmentCircleHit(enc,b,rk.x,rk.y,rk.r)){rk.hp-=10;boomAt(enc.pts,b.x,b.y,'#778',4);if(rk.hp<=0)splitRock(enc,ri);return true;}}
   }
-  for(let mi=enc.mis.length-1;mi>=0;mi--){const m=enc.mis[mi];if(encDist(enc,b.x,b.y,m.x,m.y)<5){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);encExplodeMissile(enc,m,false);enc.mis.splice(mi,1);}return true;}}
+  for(let mi=enc.mis.length-1;mi>=0;mi--){const m=enc.mis[mi];if(encSegmentCircleHit(enc,b,m.x,m.y,5)){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);encExplodeMissile(enc,m,false);enc.mis.splice(mi,1);}return true;}}
   if(enc.isHBase&&pip(b.x,b.y,enc.hbase.hexPoly))return true;
-  const bSrc=encPointNear(enc,b.x,b.y,s.x,s.y),bHitOpts={source:bSrc,kind:'projectile',weapon:b};
-  if(encDist(enc,b.x,b.y,s.x,s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,bHitOpts)){
-    const shieldHit=applyShipShieldDamage(s,b.dmg,bHitOpts);
-    b.dmg=shieldHit.passthroughDamage;
-    shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
-    if(shieldHit.blocked||b.dmg<=0)return true;
+  const shipHit=applyProjectileDamageToShip(s,b,{...encProjectileNearOpts(enc),targetX:s.x,targetY:s.y,kind:'projectile',weapon:b,damage:b.dmg});
+  if(shipHit.shieldHit?.shieldDamage>0){
+    b.dmg=shipHit.remainingDamage;
+    shipDamageTone({shieldDamage:shipHit.shieldHit.shieldDamage,hullDamage:0});
+    if(shipHit.consumed)return true;
   }
-  if(encDist(enc,b.x,b.y,s.x,s.y)<shipHitRadius(s)){
-    const hit=applyShipDamage(s,b.dmg,bHitOpts);
-    shipDamageTone(hit);
+  if(shipHit.hullHit){
+    b.dmg=shipHit.remainingDamage;
+    shipDamageTone(shipHit.hullHit);
     return true;
   }
-  return false;
+  return shipHit.consumed;
 }
 function stepEncounterProjectile(enc,b,ew,eh,onStep){
   if(b.ricochetProjectile){
@@ -172,26 +188,30 @@ function encExplodeMissile(enc, m, isEnemy){
   const r=m.expR, d=m.expDmg;
   for(let ri=enc.rocks.length-1;ri>=0;ri--){
     const rk=enc.rocks[ri];
-    if(encDist(enc,m.x,m.y,rk.x,rk.y)<r+rk.r){rk.hp-=d;boomAt(enc.pts,rk.x,rk.y,'#778',3);if(rk.hp<=0)splitRock(enc,ri);}
+    if(explosionHitTest(m.x,m.y,r,{shape:'circle',x:rk.x,y:rk.y,r:rk.r},{distance:encDist(enc,m.x,m.y,rk.x,rk.y)}).hit){rk.hp-=d;boomAt(enc.pts,rk.x,rk.y,'#778',3);if(rk.hp<=0)splitRock(enc,ri);}
   }
   if(!isEnemy){
     for(const e of enc.en){if(!e.alive)continue;
-      if(encEnemyCircleHit(enc,e,m.x,m.y,r)){
+      const ep=encPointNear(enc,e.x,e.y,m.x,m.y);
+      if(explosionHitTest(m.x,m.y,r,{shape:'hull',hull:enemyHullWorld({...e,x:ep.x,y:ep.y})}).hit){
         e.hp-=d;boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,5);
         if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}
       }
     }
     if(enc.isHBase){
       for(const t of enc.hbase.turrets){if(!t.alive)continue;
-        if(Math.hypot(m.x-t.x,m.y-t.y)<r+defenseRadius(t))damageDefense(enc,t,d,m.x,m.y);
+        const mp=encPointNear(enc,m.x,m.y,t.x,t.y);
+        if(explosionHitTest(mp.x,mp.y,r,{shape:'hull',hull:defenseHullWorld(t)}).hit)damageDefense(enc,t,d,m.x,m.y);
       }
       for(const sp of enc.hbase.softpts){if(!sp.alive)continue;
-        if(Math.hypot(m.x-sp.x,m.y-sp.y)<r+12){sp.alive=false;boomAt(enc.pts,sp.x,sp.y,'#ff8800',10);tone(350,.15,'square',.08);}
+        if(explosionHitTest(m.x,m.y,r,{shape:'circle',x:sp.x,y:sp.y,r:12},{distance:encDist(enc,m.x,m.y,sp.x,sp.y)}).hit){sp.alive=false;boomAt(enc.pts,sp.x,sp.y,'#ff8800',10);tone(350,.15,'square',.08);}
       }
     }
   } else {
-    const ss=enc.s;if(ss.alive&&encDist(enc,m.x,m.y,ss.x,ss.y)<r+9){
-      const hit=applyShipDamage(ss,d,{source:encPointNear(enc,m.x,m.y,ss.x,ss.y),kind:'explosion',weapon:m});
+    const ss=enc.s,src=encPointNear(enc,m.x,m.y,ss.x,ss.y);
+    const blast=explosionHitTest(m.x,m.y,r,{shape:'ship',ship:ss},{source:src,kind:'explosion',weapon:m,distance:encDist(enc,m.x,m.y,ss.x,ss.y)});
+    if(ss?.alive&&blast.hit){
+      const hit=applyShipDamage(ss,d,blast.hitOpts);
       shipDamageTone(hit);
     }
   }
@@ -238,7 +258,7 @@ function updEncMissiles(enc, mis, isEnemy, ew, eh){
     if(!det){
       for(let ri=enc.rocks.length-1;ri>=0;ri--){
         const rk=enc.rocks[ri];
-        if(encDist(enc,m.x,m.y,rk.x,rk.y)<rk.r){
+        if(encSegmentCircleHit(enc,m,rk.x,rk.y,rk.r)){
           if(sticky){stickMissileToTerrain(m,m.x,m.y);}
           else{
             rk.hp-=m.dmg;boomAt(enc.pts,m.x,m.y,'#778',4);
@@ -263,32 +283,30 @@ function updEncMissiles(enc, mis, isEnemy, ew, eh){
           }
         }
       } else if(s.alive){
-        const src=encPointNear(enc,m.x,m.y,s.x,s.y),hitOpts={source:src,kind:'missile',weapon:m};
-        if(encDist(enc,m.x,m.y,s.x,s.y)<shipShieldHitRadius(s)&&shipShieldCanTakeHit(s,hitOpts)){
-          const shieldHit=applyShipShieldDamage(s,m.dmg,hitOpts);
-          m.dmg=shieldHit.passthroughDamage;
-          shipDamageTone({shieldDamage:shieldHit.shieldDamage,hullDamage:0});
-          if(shieldHit.blocked||m.dmg<=0)det=true;
+        const shipHit=applyProjectileDamageToShip(s,m,{...encProjectileNearOpts(enc),targetX:s.x,targetY:s.y,kind:'missile',weapon:m,damage:m.dmg});
+        if(shipHit.shieldHit?.shieldDamage>0){
+          m.dmg=shipHit.remainingDamage;
+          shipDamageTone({shieldDamage:shipHit.shieldHit.shieldDamage,hullDamage:0});
         }
-        if(!det&&encDist(enc,m.x,m.y,s.x,s.y)<shipHitRadius(s)){
-          const hit=applyShipDamage(s,m.dmg,hitOpts);
-          shipDamageTone(hit);
-          det=true;
+        if(shipHit.hullHit){
+          m.dmg=shipHit.remainingDamage;
+          shipDamageTone(shipHit.hullHit);
         }
+        det=shipHit.consumed||!!shipHit.hullHit;
       }
     }
     if(!det&&enc.isHBase){
       if(pip(m.x,m.y,enc.hbase.hexPoly)){if(sticky)stickMissileToTerrain(m,m.x,m.y);else det=true;}
       if(!det&&!isEnemy){
         for(const t of enc.hbase.turrets){if(!t.alive)continue;
-          if(Math.hypot(m.x-t.x,m.y-t.y)<defenseRadius(t)){
+          if(encDefenseSegmentHit(enc,m,t,1)){
             if(sticky){stickProjectile(m,t,'turret');tone(220,.06,'square',.05);}
             else{damageDefense(enc,t,m.dmg,m.x,m.y);det=true;}
             break;
           }
         }
         if(!det) for(const sp of enc.hbase.softpts){if(!sp.alive)continue;
-          if(Math.hypot(m.x-sp.x,m.y-sp.y)<12){
+          if(encSegmentCircleHit(enc,m,sp.x,sp.y,12)){
             if(sticky)stickMissileToTerrain(m,m.x,m.y);
             else{sp.alive=false;boomAt(enc.pts,sp.x,sp.y,'#ff8800',10);tone(350,.15,'square',.08);det=true;}
             break;

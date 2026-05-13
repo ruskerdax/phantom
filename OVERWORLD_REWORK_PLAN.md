@@ -332,18 +332,20 @@ SUBTYPE_WEIGHTS = {
 
 **Files:** `UI_REWORK_PLAN.md`
 
-**Outline:**
-- Append a section after the `Assumptions made during planning` block titled `### Cross-plan notes (Overworld & Star System Overhaul)`:
-  - **SiteMap widget (F-09)** — only **planets** (parent bodies) are nodes. Moons are not nodes on the map; they appear as a sub-list in the right-side info card when a planet is focused. Asteroid fields, BASE, HBASE remain as their own nodes (not children).
-  - **System Map submenu (P4-02)** — the right-side info card has two sections: `selected · <planet>` (kind/subtype, atmosphere, gravity, objectives) and a moon sub-list (navigable up/down) where the first row is the parent planet itself.
-  - **`G.system.sites` shape change** — was a flat list of `{id, name, kind, objectives, visited}`. Now `kind ∈ {'planet','gas_giant','asteroid','base','hbase','slipgate'}` (no `'moon'`); each planet entry includes `moons: [{id, kind, subtype, size, atmoKind, populationClass, objectives}]`.
-  - **New registered DOM screen `body-info`** — entry popup shown before player enters a site (size, gravity, type/subtype, population density, atmosphere, objectives + an `enter` button). Pauses the world.
-  - **New registered DOM screen `body-select`** — selection popup shown when multiple interactable sites are within the player's interaction radius. Lists each as a focusable row; confirming a row either opens `body-info` (for enterable bodies) or fires the direct-interact action (for BASE / SLIPGATE).
+**Outline (historical — F-05 originally appended the cross-plan notes section; that section has since been refined further as part of a multi-plan reconciliation pass):**
+- Append a section after the `Assumptions made during planning` block titled `### Cross-plan notes (Overworld & Star System Overhaul)`. Current canonical content of that section (re-read it before doing follow-up UI tasks):
+  - **No materialized `G.system.sites`** — read directly from `BODIES[] / AB[] / HBASE / SLIPGATE`. "Visited" derives from `lvState[bodyId]` existing.
+  - **SiteMap widget nodes** — planets, gas giants, asteroid fields, BASE, HBASE, SLIPGATE. Not the star, not moons.
+  - **System Map info card** — uses the `BodySummaryPanel` widget (UI_REWORK F-16); fields depend on focused node's kind. Moon sub-list appears below the body summary when the focused node is a planet with moons; row 0 is the parent itself.
+  - **SiteMap node confirm** → opens `body-info` in `'inspect'` mode (read-only, no `enter` button).
+  - **Moon sub-list row confirm** → swaps the right-card content (no popup, no SiteMap focus change).
+  - **`body-info` screen** — supports two modes: `'enter'` (popup from overworld fire-key, has enter button) and `'inspect'` (read-only popup from system map). Body content rendered via `BodySummaryPanel` in both modes.
+  - **`body-select` screen** — selection popup when ≥2 interactable sites are within interaction radius; confirming a row opens `body-info` (in `'enter'` mode) for bodies/HBASE/asteroid, or fires direct-interact for BASE/SLIPGATE.
 - No code changes — pure plan doc edits.
 
 **Depends on:** —
 
-**Acceptance:** UI_REWORK_PLAN.md contains the new notes section; existing UI rework tasks (P4-02, F-09) reference the changes consistently when read.
+**Acceptance:** UI_REWORK_PLAN.md contains the cross-plan notes section; existing UI rework tasks (P4-02, F-09, F-16) reference the changes consistently when read.
 
 ---
 
@@ -763,29 +765,25 @@ SUBTYPE_WEIGHTS = {
 
 ### U-01. body-info DOM screen
 
-**Goal:** New `body-info` registered DOM screen displayed when player fires near a single interactable body. Pauses the world.
+**Goal:** New `body-info` registered DOM screen, used in two modes: (a) `'enter'` — popup shown when player fires near a single interactable site, with an `enter` button that descends to the site; (b) `'inspect'` — read-only popup mounted from the system map (UI_REWORK P4-02), with no `enter` button. Pauses the world in both modes.
 
 **Files:** `ui/screens/body-info.js` (NEW), `ui/input-bridge.js`
 
 **Outline:**
-- `makeBodyInfoScreen()`:
-  - Title row: `body.subtype || body.kind` (e.g., "DESERT") + small id label (`p3`).
-  - Body: a grouped column of `KeyValueRow` widgets (per UI rework F-04):
-    - `size: <size>`
-    - `gravity: <felt label>` (mapped from size: 1=none, 2=very little, 3=some, 4=moderate, 5=high, 6=very high)
-    - `type: <kind>` + `subtype: <subtype>`
-    - `population: <populationClass>` ("uninhabited" for machine + all uninhabitable)
-    - `atmosphere: <atmoKind>`
-  - `SectionHeader('objectives')` + one row per objective on this body (using `objectivePanelRows({layout:'planet', bodyId})` — extend `objectives.js` to accept `bodyId` instead of `planetIdx`).
-  - Bottom buttons: `enter` (primary) + `back` (cancel). `enter` calls the existing planet-entry path via `enterPlanetByBodyId(bodyId)`.
-  - For cleared planets: show objectives section with all ✓; the `enter` button still works.
+- `makeBodyInfoScreen()` reads `G.bodyInfoCtx = {siteRef, mode}` set by the caller before mount:
+  - `siteRef` is one of: `{kind:'body', body}` (planet, moon, or gas giant — gas giants reachable only in `'inspect'` mode), `{kind:'hbase'}`, `{kind:'asteroid', idx}`.
+  - `mode ∈ {'enter','inspect'}`. Default `'enter'`.
+- Body content: mount `BodySummaryPanel` (UI_REWORK F-16) with `layout: mode === 'enter' ? 'enter' : 'inspect'` and the supplied `siteRef`. The widget owns all field rendering (id, size, gravity, type/subtype, population, atmosphere, objectives) and the `enter`/`back` button row when in `'enter'` mode. This is the single source of truth for body summary content; do **not** roll a parallel field set inside this screen.
+- For cleared bodies (`G.cleared[body.id] === true`): the objectives section already shows ✓s via `objectivePanelRows` (per F-04). The `enter` button still works.
+- Title bar above the panel: brief screen title `body info` plus a `[esc] back` hint via `bindPrompt`. The widget itself does not draw a screen-level title.
+- For BASE / SLIPGATE: do not mount this screen. They use the existing direct-interact paths (`openBaseMenu()` / `openSlipgateMenu()`). The body-info screen is only for bodies, HBASE, and asteroid fields.
 - `registerScreen('body-info', makeBodyInfoScreen)`.
 - On open, pause the world (`G.paused = true`); on close, resume.
 - Theme: default green.
 
-**Depends on:** F-04, UI rework F-04 (SectionHeader / KeyValueRow widgets) — if UI rework hasn't landed, use raw DOM with classnames matching the rest of the screen pipeline.
+**Depends on:** F-04, UI rework F-04 (SectionHeader / KeyValueRow), UI rework F-16 (`BodySummaryPanel` widget). If UI rework F-16 hasn't landed yet, this task is blocked — F-16 is a foundation in UI_REWORK_PLAN.md Phase 0.
 
-**Acceptance:** Pressing fire near a planet opens the body-info screen. Pressing the enter button starts the surface descent. The back button returns to the overworld unpaused.
+**Acceptance:** Pressing fire near a planet opens the body-info screen in `'enter'` mode showing all body fields via `BodySummaryPanel`. Pressing the enter button starts the surface descent. The back button returns to the overworld unpaused. Mounting with `mode:'inspect'` from the system map shows the same panel without the enter button; back returns to the system map.
 
 ---
 
