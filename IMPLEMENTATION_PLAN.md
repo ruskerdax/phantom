@@ -409,28 +409,6 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P1-08. Shield dome
-
-**Goal:** Indestructible domes covering civilian groups; geometric collision against ship + projectiles + beams; drops when planet unpowered.
-
-**Files:** `data/building-types.js`, `data/levels.js`, `buildings.js`, `site.js`
-
-**Outline:**
-- Two classes: `SHIELD_DOME_SMALL` (radius 200), `SHIELD_DOME_LARGE` (radius 400). Both `indestructible:true, requiresPower:true`.
-- Placement: after civilian placement, scan city zones for clusters where all enclosed building bounding boxes fit inside a half-circle of dome radius centered on zone midpoint AND at ground level. Reject misfits. Up to 2 small on moderate; up to 3 on dense (mix small/large).
-- Active dome adds half-circle outline to:
-  - `siteBeamWalls(site)` — emit ~32 segments approximating the arc; beams clip on dome surface.
-  - Ship collision: in `surfaceBounce`, after terrain bounce check, also test active domes; on intersection, push ship out radially and apply `applyShipBounce` with no-damage flag.
-  - Projectile/missile loops: detonate on dome arc intersection.
-- Inactive (unpowered): all three checks skipped; civilians inside become normally destructible from outside.
-- Civilians always destructible from inside the dome (player can't enter while up, but if they could—future mechanic—damage path works).
-
-**Depends on:** P1-02, P1-05, F-07
-
-**Acceptance:** Dense planet with dome over arcology cluster: bullets bounce off dome arc; ship cannot enter; killing all power stations drops the dome and the arcology becomes destructible.
-
----
-
 ## Phase 2 — Branching tunnels (sequential)
 
 ### P2-01. Reactor existence roll (25%)
@@ -578,8 +556,6 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 **Sequential block B (Building bedrock):** P1-01 → P1-02.
 
 **Parallelizable block C** (after B; Claude + Codex can take different ones): P1-03, P1-04, P1-05, P1-06, P1-07.
-
-**Then:** P1-08 (needs P1-05).
 
 **Sequential block D (Branching tunnels):** P2-01 → P2-02 → P2-03 → P2-04 → P2-05.
 
