@@ -114,7 +114,7 @@ function activeSolidSiteData(bodyId=activeSiteBodyId()){
   const li=activeSitePlanetIndex(bodyId);
   if(li==null)return G.site?.d;
   const d=G.site?.d;
-  if(d&&(d.kind==='cave'||d.kind==='tunnel'))return d;
+  if(d&&(d.kind==='cave'||d.kind==='tunnel'||d.kind==='branching'))return d;
   const lv=LV[li];
   return lv?.cave||lv;
 }
@@ -520,13 +520,15 @@ function enterTunnel(dir='down',ship=null){
   if(pi==null||!LV[pi])return;
   const p=LV[pi],d=p.tunnel,ps=bodyLevelState(bodyId);
   if(!d){enterSurface(ship);return;}
-  const ent=dir==='up'?d.entBottom:d.entTop;
+  const reactorTunnel=(p.tunnelKind||'reactor')==='reactor';
+  const ent=(dir==='up'&&reactorTunnel&&d.entBottom)?d.entBottom:d.entTop;
+  const tunnelDir=reactorTunnel?dir:'branching';
   const s=ship||siteShipAt(ent.x,ent.y);
-  s.x=ent.x;s.y=ent.y;if(!ship)s.a=dir==='up'?0:Math.PI;s.vx*=.35;s.vy*=.35;
-  G.site={mode:'tunnel',tunnelDir:dir,bodyId,planet:p,d,s,
+  s.x=ent.x;s.y=ent.y;if(!ship)s.a=tunnelDir==='up'?0:Math.PI;s.vx*=.35;s.vy*=.35;
+  G.site={mode:'tunnel',tunnelDir,bodyId,planet:p,d,s,
     en:d.en.map((e,i)=>initDefense(e,ps.tunnel.enemyAlive[i])),
     buildings:initSiteBuildings(p,'tunnel',ps),
-    fu:[],rx:{alive:false,hp:0},bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:dir==='up'?Math.max(0,d.worldH-H):0,z:1}};
+    fu:[],rx:{alive:false,hp:0},bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:tunnelDir==='up'?Math.max(0,d.worldH-H):0,z:1}};
   G.absAimTarget=null;G.st='play';
   saveGame();
 }
@@ -911,7 +913,7 @@ function drawCaveSite(){
   cx.fillStyle='#000';cx.beginPath();polyPath(d.terrain);cx.fill();
   cx.fillStyle=d.bg;for(const o of d.obs){cx.beginPath();polyPath(o);cx.fill();}
   cx.save();cx.shadowColor=col;cx.shadowBlur=sb(10);cx.strokeStyle=col;cx.lineWidth=1.5;
-  const tunnelBottomOpen=site.mode==='tunnel'&&!bodyLevelState(activeSiteBodyId()).completedSites['cave'];
+  const tunnelBottomOpen=site.mode==='tunnel'&&site.tunnelDir==='down'&&!bodyLevelState(activeSiteBodyId()).completedSites['cave'];
   cx.beginPath();for(const s of siteBoundarySegments(d)){if(tunnelBottomOpen&&Math.min(s[1],s[3])>d.worldH-4)continue;cx.moveTo(s[0],s[1]);cx.lineTo(s[2],s[3]);}cx.stroke();
   cx.restore();
   for(const f of site.fu)if(!f.got)drEnergy(f.x,f.y,col);

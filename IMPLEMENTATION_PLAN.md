@@ -411,7 +411,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ## Phase 2 — Branching tunnels (sequential)
 
-### P2-01. Reactor existence roll (25%)
+### P2-01. Reactor existence roll (25%) ✅
 
 **Goal:** Per planet: 25% reactor (existing tunnel→cave), 75% branching tunnel (no cave).
 

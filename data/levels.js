@@ -1153,6 +1153,11 @@ function genTunnel(rng,tmpl,seed){
   return tunnel;
 }
 
+function genBranchingTunnelStub(rng,tmpl,seed){
+  const tunnel=genTunnel(rng,tmpl,seed);
+  return {...tunnel,kind:'branching',en:[],fu:[],buildings:[],entBottom:null};
+}
+
 function genSurface(tmpl,seed,sites){
   const rng=mkRNG(seed);
   const screens=rng.int(8,14),worldW=screens*W;
@@ -1163,10 +1168,10 @@ function genSurface(tmpl,seed,sites){
   const hasTargets=sites.some(s=>s.type==='surface_targets');
   if(hasTargets)surface.buildings=genSurfaceDishes(rng,surface,rng.int(4,6),'targets');
   surface.fu=genSurfaceEnergy(rng,surface,rng.int(2,4));
-  const caveSite=sites.find(s=>s.type==='cave_connector');
-  if(caveSite){
+  const tunnelSite=sites.find(s=>s.type==='cave_connector'||s.type==='branching_tunnel');
+  if(tunnelSite){
     const tx=wrap(rng.fl(W*.8,worldW-W*.8),worldW);
-    surface.tunnel={x:Math.round(tx),y:Math.round(surfaceYAt(surface,tx)),siteId:caveSite.id};
+    surface.tunnel={x:Math.round(tx),y:Math.round(surfaceYAt(surface,tx)),siteId:tunnelSite.id};
   }
   genSurfacePowerStations(rng,surface,rng.int(1,3));
   const threatSlots=rng.int(6,10);
@@ -1180,21 +1185,24 @@ function genSurface(tmpl,seed,sites){
   return surface;
 }
 
-function genPlanetSites(rng){
+function genPlanetSites(rng,tunnelKind){
   const hasTargets=rng.next()<.25;
-  const hasCave=rng.next()<.72;
   const sites=[];
   if(hasTargets)sites.push({id:'targets',type:'surface_targets',label:'SURFACE TARGETS',required:true});
-  if(hasCave||!hasTargets)sites.push({id:'cave',type:'cave_connector',label:'CAVE ACCESS',required:true});
+  if(tunnelKind==='reactor')sites.push({id:'cave',type:'cave_connector',label:'CAVE ACCESS',required:true});
+  else sites.push({id:'branching',type:'branching_tunnel',label:'TUNNEL ACCESS',required:true});
   return sites;
 }
 
 // ---- Compose a planet hub from template + seed ----
 function genPlanet(tmpl,seed,index=0){
   const rng=mkRNG(seedChild(seed,0x7100));
-  const sites=genPlanetSites(rng);
-  const cave=genCaveLevel(tmpl,seedChild(seed,0x7200));
-  const tunnel=sites.some(s=>s.type==='cave_connector')?genTunnel(mkRNG(seedChild(seed,0x7300)),tmpl,seedChild(seed,0x7301)):null;
+  const tunnelKind=rng.next()<.25?'reactor':'branching';
+  const sites=genPlanetSites(rng,tunnelKind);
+  const cave=tunnelKind==='reactor'?genCaveLevel(tmpl,seedChild(seed,0x7200)):null;
+  const tunnel=tunnelKind==='reactor'
+    ?genTunnel(mkRNG(seedChild(seed,0x7300)),tmpl,seedChild(seed,0x7301))
+    :genBranchingTunnelStub(mkRNG(seedChild(seed,0x7300)),tmpl,seedChild(seed,0x7301));
   const surface=genSurface(tmpl,seedChild(seed,0x7400),sites);
-  return{...tmpl,kind:'planet',index,sites,cave,tunnel,surface};
+  return{...tmpl,kind:'planet',index,tunnelKind,sites,cave,tunnel,surface};
 }
