@@ -339,7 +339,7 @@ function updEnc(){
     drainEnergy(s, thrustEnergyDrainForMode('encounter')*thrustEnergyScale(thrustIn));
   }
   thrusterSound(thrustIn,'encounter',s.energy<=0);
-  const sp=Math.hypot(s.vx,s.vy);if(sp>5){s.vx=s.vx/sp*5;s.vy=s.vy/sp*5;}
+  const sp=Math.hypot(s.vx,s.vy);if(sp>10){s.vx=s.vx/sp*10;s.vy=s.vy/sp*10;}
   if(enc.cleared){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){encWin();return;}}
   else if(enc.isHBase){s.x+=s.vx;s.y+=s.vy;if(s.x<-30||s.x>ew+30||s.y<-30||s.y>eh+30){G.hbState={turrets:enc.hbase.turrets.map(t=>t.alive),softpts:enc.hbase.softpts.map(sp=>sp.alive)};const ow=G.OW;rechargeShieldFromEnergy(s,true);copyShipEnergyState(s,ow.s);ow.s.hp=s.hp;ow.s.maxHp=s.maxHp;copyShieldState(s,ow.s);copyAmmoStateForLoadout(s,ow.s);copyMagStateForLoadout(s,ow.s);ow.s.inv=80;G.ENC=null;returnToOverworld();return;}}
   else{s.x=wrap(s.x+s.vx,ew);s.y=wrap(s.y+s.vy,eh);}
@@ -453,7 +453,18 @@ function drawEnc(){
     drawOffscreenIndicators(collectOffscreenIndicators({
       cam:enc.cam||{x:camX,y:camY,z:1},player:enc.s,worldW:enc.ew,worldH:enc.eh,toroidal:tor,
       targets:[
-        ...enc.en.map(e=>({x:e.x,y:e.y,r:enemyCollisionRadius(e),col:enemyDef(e.t).enc.col,alive:e.alive})),
+        ...enc.en.map(e=>({
+          x:e.x, y:e.y, r:enemyCollisionRadius(e),
+          col:enemyDef(e.t).enc.col, alive:e.alive,
+          drawMini:(sx,sy,scale,alpha)=>{
+            cx.save();
+            cx.translate(sx,sy);
+            cx.scale(scale,scale);
+            cx.globalAlpha=alpha;
+            enemyDef(e.t).drawEnc({...e, x:0, y:0});
+            cx.restore();
+          },
+        })),
         ...enc.fu.map(f=>({x:f.x,y:f.y,r:12,col:'#0f8',kind:'energy'}))
       ]
     }));

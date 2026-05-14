@@ -6,6 +6,8 @@ const NEIGHBOR_MAX  = 8;
 const MAX_AST_FIELDS = 2;
 const HU_ORBIT_OUTER_FRAC = 0.49;
 const GAS_ORBIT_INNER_FRAC = 0.50;
+const MAX_BODY_SIZE_FOR_ORBITS = Math.max(...Object.values(BODY_SIZE_BY_KIND).map(r=>r[1]));
+const MIN_ORBIT_SEPARATION = bodyDrawRadius(MAX_BODY_SIZE_FOR_ORBITS)+24;
 
 // Level data and planet positions - populated by genWorld()
 let LV=[];
@@ -277,13 +279,12 @@ function rollMoonForPlanet(seed,parentBody,sysLockouts,moonIndex=0,moonCount=1){
   const atmoKind=atmoRange[rng.int(0,atmoRange.length-1)];
   const populationClass=rollPopulationClass(rng,kind,subtype);
   const orbitR=rollMoonOrbitRadius(rng,parentBody.size,moonIndex,moonCount);
-  const spdBuckets=ORBITAL_SPEED_BUCKETS.moon;
   return{
     kind,
     subtype,
     size,
     parentId:parentBody.id,
-    orbit:{r:orbitR,a:rng.fl(0,Math.PI*2),spd:spdBuckets[rng.int(0,spdBuckets.length-1)]},
+    orbit:{r:orbitR,a:rng.fl(0,Math.PI*2),spd:0},
     palette,
     atmoKind,
     populationClass,
@@ -394,34 +395,66 @@ function bodyLevelTemplateFromBody(body){
 function bodyXY(b){
   return{x:OW_W/2+Math.cos(b.orbitA)*b.orbitR,y:OW_H/2+Math.sin(b.orbitA)*b.orbitR};
 }
-function orbitSpdFor(orbitR){
+function siteOrbitSpdFor(orbitR){
   const maxR=Math.max(ORBIT_MIN_R+1,orbitMaxR());
   return 0.00060-(orbitR-ORBIT_MIN_R)/(maxR-ORBIT_MIN_R)*0.00045;
 }
-function isTooCloseToPlaced(body,placed){
-  const p=bodyXY(body);
-  return placed.some(b=>{
-    const q=bodyXY(b);
-    return Math.hypot(p.x-q.x,p.y-q.y)<MIN_SITE_SEP;
-  });
-}
-function placeSite(rng,placed,label,opts={}){
-  const minR=opts.minR??ORBIT_MIN_R,maxR=opts.maxR??orbitMaxR();
-  let body=null;
-  for(let att=0;att<60;att++){
-    const orbitR=opts.orbitR??(minR+rng.fl(0,Math.max(1,maxR-minR)));
-    body={orbitR,orbitA:rng.fl(0,Math.PI*2),orbitSpd:orbitSpdFor(orbitR)};
-    if(!isTooCloseToPlaced(body,placed)){
-      placed.push(body);
-      return body;
+function rollOrbit(rng,placed,labelOrOptions={},maybeOptions=null){
+  const opts=typeof labelOrOptions==='string'
+    ?{...(maybeOptions||{}),label:labelOrOptions}
+    :(labelOrOptions||{});
+  const sysMaxR=Math.max(ORBIT_MIN_R+1,orbitMaxR());
+  let minR=Number.isFinite(opts.minR)?opts.minR:ORBIT_MIN_R;
+  let maxR=Number.isFinite(opts.maxR)?opts.maxR:sysMaxR;
+
+  if(opts.zone==='inner')maxR=Math.min(maxR,GOLDILOCKS_INNER*sysMaxR);
+  else if(opts.zone==='outer')minR=Math.max(minR,GOLDILOCKS_OUTER*sysMaxR);
+  else if(opts.zone==='goldilocks'){
+    minR=Math.max(minR,GOLDILOCKS_INNER*sysMaxR);
+    maxR=Math.min(maxR,GOLDILOCKS_OUTER*sysMaxR);
+  }
+
+  minR=Math.max(ORBIT_MIN_R,Math.min(minR,sysMaxR));
+  maxR=Math.max(minR+1,Math.min(maxR,sysMaxR));
+  let orbit=null;
+  for(let att=0;att<30;att++){
+    const orbitR=Number.isFinite(opts.orbitR)?opts.orbitR:rng.fl(minR,maxR);
+    orbit={
+      orbitR,
+      orbitA:rng.fl(0,Math.PI*2),
+      orbitSpd:siteOrbitSpdFor(orbitR),
+    };
+    const tooClose=placed.some(b=>Math.abs((b.orbitR||0)-orbitR)<MIN_ORBIT_SEPARATION);
+    if(!tooClose){
+      placed.push(orbit);
+      return orbit;
     }
   }
-  console.warn(`[PHANTOM] site spacing exhausted for ${label}; keeping last position`);
-  placed.push(body);
-  return body;
+  console.warn(`[PHANTOM] orbit placement exhausted${opts.label?` for ${opts.label}`:''}; accepting overlap`);
+  placed.push(orbit);
+  return orbit;
 }
-function rollOrbit(rng,placed,label,opts={}){
-  return placeSite(rng,placed,label,opts);
+function placeSite(rng,placed,label,opts={}){
+  return rollOrbit(rng,placed,{...opts,label});
+}
+function assignOrbitalSpeed(bodies,isMoon){
+  if(!Array.isArray(bodies)||!bodies.length)return;
+  const buckets=isMoon?ORBITAL_SPEED_BUCKETS.moon:ORBITAL_SPEED_BUCKETS.planet;
+  const sorted=bodies.slice().sort((a,b)=>(a.orbit?.r||0)-(b.orbit?.r||0));
+  let prevIdx=-1;
+  for(const body of sorted){
+    const orbit=body.orbit||(body.orbit={r:0,a:0,spd:0});
+    let startIdx=((Math.floor((orbit.r||0)*10)+Math.floor((orbit.a||0)*1000))%buckets.length+buckets.length)%buckets.length;
+    if(isMoon)startIdx=(startIdx+Math.floor(buckets.length/2))%buckets.length;
+    let chosenIdx=-1;
+    for(let off=0;off<buckets.length;off++){
+      const idx=(startIdx+off)%buckets.length;
+      if(idx!==prevIdx){chosenIdx=idx;break;}
+    }
+    if(chosenIdx<0)chosenIdx=(prevIdx+1+buckets.length)%buckets.length;
+    orbit.spd=buckets[chosenIdx];
+    prevIdx=chosenIdx;
+  }
 }
 
 // Asteroid belt bodies + belt particles
@@ -548,6 +581,11 @@ function genWorld(seed){
       moonBodies.push(moon);
     }
     if(hitBodyCap)break;
+  }
+  assignOrbitalSpeed(planets,false);
+  for(let pi=0;pi<planets.length;pi++){
+    const parentId=planets[pi].id;
+    assignOrbitalSpeed(moonBodies.filter(m=>m.parentId===parentId),true);
   }
 
   const star={

@@ -58,7 +58,7 @@ function enemySetSpeedLimit(e, speed) {
 // Clears once back in close-fight range (hysteresis prevents flapping at the edge).
 // Raw strings (not ENEMY_TYPES.*) because data/enemies.js loads after this file.
 const PURSUIT_BOOST_TYPES=new Set(['fighter','destroyer','interceptor']);
-const PURSUIT_BOOST_SPEED=5.4;
+const PURSUIT_BOOST_SPEED=10.8;
 const PURSUIT_BOOST_FAR=280;
 const PURSUIT_BOOST_NEAR=170;
 const PURSUIT_BOOST_ENGAGE_FRAMES=420;     // ~7s sustained at far range before boost engages

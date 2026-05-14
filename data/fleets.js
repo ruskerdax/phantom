@@ -6,7 +6,7 @@
 // Behaviors: 'orbit_system' (Hunters drift around the star), 'orbit_post' (anchor to a body), 'triangle' (3-body loop),
 // 'route' (2-body shuttle), 'idle' (stationary).
 const FLEETS = [
-  { id:'HUNTER',  aggroR:500, trigR:24, owSpd:3.0, maxOnOW:3,
+  { id:'HUNTER',  aggroR:500, trigR:24, owSpd:6.0, maxOnOW:3,
     behavior:'orbit_system',
     composition:{ rolls:[
       { t:ENEMY_TYPES.INTERCEPTOR, min:1, max:3 },
@@ -14,11 +14,11 @@ const FLEETS = [
       { t:ENEMY_TYPES.DESTROYER, cnt:1, chance:.33 }
     ]},
     glyph:'hunter' },
-  { id:'SWARM',   aggroR:90,  trigR:22, owSpd:2.5, maxOnOW:6,
+  { id:'SWARM',   aggroR:90,  trigR:22, owSpd:5.0, maxOnOW:6,
     behavior:'orbit_post',
     composition:{ rolls:[{ t:ENEMY_TYPES.DRONE, min:4, max:6 }] },
     glyph:'swarm' },
-  { id:'PATROL',  aggroR:300,  trigR:24, owSpd:3.0,  maxOnOW:2,
+  { id:'PATROL',  aggroR:300,  trigR:24, owSpd:6.0,  maxOnOW:2,
     behavior:'triangle',
     composition:{ rolls:[
       { t:ENEMY_TYPES.DESTROYER, cnt:1 },
@@ -29,7 +29,7 @@ const FLEETS = [
       { t:ENEMY_TYPES.DRONE, min:0, max:2 }
     ]},
     glyph:'patrol' },
-  { id:'CONVOY',  aggroR:0,    trigR:26, owSpd:2.0,  maxOnOW:2,
+  { id:'CONVOY',  aggroR:0,    trigR:26, owSpd:4.0,  maxOnOW:2,
     behavior:'route',
     spawnsHunters:{ everyFrames:2400 },
     composition:{ rolls:[
@@ -41,7 +41,7 @@ const FLEETS = [
       { t:ENEMY_TYPES.DRONE, min:0, max:2 }
     ]},
     glyph:'convoy' },
-  { id:'ARMADA',  aggroR:500,  trigR:28, owSpd:1.5,  maxOnOW:1,
+  { id:'ARMADA',  aggroR:500,  trigR:28, owSpd:3.0,  maxOnOW:1,
     behavior:'orbit_post',
     composition:{ rolls:[
       { t:ENEMY_TYPES.BATTLESHIP, cnt:1, chance:.6 },

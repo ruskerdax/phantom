@@ -1045,7 +1045,17 @@ function drawSurfaceIndicators(site){
   const d=site.d,cam=site.cam||{x:0,y:0,z:1};
   const targets=[
     ...siteBuildings(site).map(o=>({x:o.x,y:o.y,r:buildingTargetRadius(o),col:buildingDef(o).col,alive:o.alive})),
-    ...site.en.map(o=>({x:o.x,y:o.y,r:surfaceEnemyRadius(o),col:surfaceEnemyColor(o),alive:o.alive})),
+    ...site.en.map(o=>({
+      x:o.x, y:o.y, r:surfaceEnemyRadius(o), col:surfaceEnemyColor(o), alive:o.alive,
+      drawMini:(sx,sy,scale,alpha)=>{
+        cx.save();
+        cx.translate(sx,sy);
+        cx.scale(scale,scale);
+        cx.globalAlpha=alpha;
+        drawSurfaceEnemy({...o, x:0, y:0});
+        cx.restore();
+      },
+    })),
     ...site.defenses.map(o=>({x:o.x,y:o.y,r:defenseRadius(o),col:defenseColor(o),alive:o.alive})),
     ...site.fu.map(o=>({x:o.x,y:o.y,r:12,col:'#0f8',alive:!o.got,kind:'energy'})),
   ];

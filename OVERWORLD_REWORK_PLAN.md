@@ -454,7 +454,7 @@ SUBTYPE_WEIGHTS = {
 
 ---
 
-### G-04. Orbital speed buckets & staggered placement
+### G-04. Orbital speed buckets & staggered placement ✅
 
 **Goal:** Assign orbital radii and speeds such that no two adjacent orbits share a bucket (staggers visual motion).
 

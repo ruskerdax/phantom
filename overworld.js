@@ -321,8 +321,7 @@ function updOW(){
     drainEnergy(s, thrustEnergyDrainForMode('overworld')*thrustEnergyScale(thrustIn));
   }
   thrusterSound(thrustIn,'overworld',s.energy<=0);
-  {const sdx=OW_W/2-s.x,sdy=OW_H/2-s.y,sdist=Math.hypot(sdx,sdy)||1;
-  const maxSpd=sdist<220?7:4.2;
+  {const maxSpd=8.4;
   // Normalize velocity vector then scale to maxSpd — the standard way to cap speed without distorting direction.
   const sp=Math.hypot(s.vx,s.vy);if(sp>maxSpd){s.vx=s.vx/sp*maxSpd;s.vy=s.vy/sp*maxSpd;}}
   {const bz=600;
@@ -502,6 +501,10 @@ let owStarGrad=null;
 const FLEET_COLS={HUNTER:'#ff6655',SWARM:'#00ddff',PATROL:'#ffaa44',CONVOY:'#ddccaa',ARMADA:'#ff3322'};
 function fleetColor(id){return FLEET_COLS[id]||'#fff';}
 function owIndicatorRange(){return Math.max(900,Math.min(OW_W,OW_H)*0.15);}
+function owBodyIndicatorRange(){return 2*owIndicatorRange();}
+function bodyChevronColor(b){
+  return b?.palette?.primary || (b?.kind==='gas_giant'?'#fa6':'#8af');
+}
 function owRectIntersectsRect(ax0,ay0,ax1,ay1,bx0,by0,bx1,by1){
   return !(ax1<bx0||bx1<ax0||ay1<by0||by1<ay0);
 }
@@ -519,11 +522,42 @@ function owRectIntersectsAnnulus(r,cx2,cy2,orbitR,pad){
 }
 function owIndicatorTargets(ow){
   const out=[];
+  // Fleets: render as miniatures at the screen edge; visibility range unchanged.
   for(const f of ow.fleets){
     if(!f.alive)continue;
     const F=fleetDef(f.id);
-    out.push({x:f.x,y:f.y,r:F.trigR||18,col:fleetColor(f.id),alive:true});
+    const col=fleetColor(f.id);
+    out.push({
+      x:f.x, y:f.y, r:F.trigR||18, col, alive:true,
+      drawMini:(sx,sy,scale,alpha)=>{
+        cx.save();
+        cx.translate(sx,sy);
+        cx.scale(scale,scale);
+        cx.globalAlpha=alpha;
+        drFleet({...f, x:0, y:0, flash:0});
+        cx.restore();
+      },
+    });
   }
+  // Bodies, asteroid fields, and the three static sites: chevrons at the doubled body range.
+  // Coded so new entity kinds can be added by appending here.
+  const bodyMax=owBodyIndicatorRange();
+  if(typeof BODIES!=='undefined'){
+    for(const b of BODIES){
+      if(b.kind==='star')continue;
+      const p=bodyOWPos(b);
+      out.push({x:p.x, y:p.y, r:bodyDrawRadius(b.size)||16, col:bodyChevronColor(b), alive:true, maxRange:bodyMax});
+    }
+  }
+  if(typeof AB!=='undefined'){
+    for(let ai=0; ai<AB.length; ai++){
+      const a=AB[ai],p=owPos(a);
+      out.push({x:p.x, y:p.y, r:a.r||30, col:'#998877', alive:true, maxRange:bodyMax});
+    }
+  }
+  if(BASE){const p=owPos(BASE);out.push({x:p.x, y:p.y, r:BASE.r, col:'#aaccff', alive:true, maxRange:bodyMax});}
+  if(HBASE){const p=owPos(HBASE);out.push({x:p.x, y:p.y, r:HBASE.r, col:G.hbCleared?'#334':'#e05109', alive:true, maxRange:bodyMax});}
+  if(SLIPGATE){const p=owPos(SLIPGATE);out.push({x:p.x, y:p.y, r:SLIPGATE.r, col:'#cc99ff', alive:true, maxRange:bodyMax});}
   return out;
 }
 function drFleet(f){
