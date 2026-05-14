@@ -152,6 +152,117 @@ function forceContinentalBody(seed,sysLockouts){
   };
 }
 
+function moonCountForSize(rng,parentSize){
+  if(parentSize<3)return 0;
+  const n=Math.ceil((parentSize+2)/2);
+  const rolled=rng.int(1,n)+rng.int(1,n)-2;
+  return Math.min(parentSize,Math.max(0,rolled));
+}
+
+function rollMoonSize(rng,parentSize){
+  const maxSize=moonMaxSize(parentSize);
+  if(maxSize<=0)return 0;
+  let size=1;
+  while(size<maxSize){
+    if(rng.next()>=0.25)break;
+    size++;
+  }
+  return size;
+}
+
+function rollMoonOrbitRadius(rng,parentSize,moonIndex=0,moonCount=1){
+  const prParent=bodyDrawRadius(parentSize);
+  const minOrbitR=prParent*2.2;
+  const sizeClamped=Math.max(1,Math.min(10,parentSize||1));
+  const maxOrbitScale=1+((sizeClamped-1)/9)*2;
+  const maxOrbitR=prParent*4.7*maxOrbitScale*4;
+  if(moonCount<=1)return rng.fl(minOrbitR,maxOrbitR);
+  const span=Math.max(0,maxOrbitR-minOrbitR);
+  const slot=span/moonCount;
+  const center=minOrbitR+slot*(moonIndex+0.5);
+  const jitter=slot*0.4;
+  return Math.max(minOrbitR,Math.min(maxOrbitR,center+rng.fl(-jitter,jitter)));
+}
+
+function rollMoonForPlanet(seed,parentBody,sysLockouts,moonIndex=0,moonCount=1){
+  const rng=mkRNG(seed);
+  const size=rollMoonSize(rng,parentBody.size);
+  if(size<=0)return null;
+
+  let kind=size>=2&&rng.next()<0.5?'habitable':'uninhabitable';
+  let subtype=null;
+
+  if(kind==='habitable'){
+    subtype=weightedPickKey(rng,SUBTYPE_WEIGHTS.habitable,name=>{
+      if(name==='continental'&&(size<CONTINENTAL_SIZE_RANGE[0]||sysLockouts.continental))return false;
+      return true;
+    });
+    if(!subtype)kind='uninhabitable';
+  }
+  if(kind==='uninhabitable'){
+    subtype=weightedPickKey(rng,SUBTYPE_WEIGHTS.uninhabitable,name=>name!=='machine'||!sysLockouts.machine);
+    if(!subtype)throw new Error('No uninhabitable moon subtype available');
+  }
+
+  if(subtype==='continental'||subtype==='machine'){
+    sysLockouts.continental=true;
+    sysLockouts.machine=true;
+  }
+
+  const palette=rollPaletteForSubtype(rng,subtype);
+  const atmoRange=ATMO_RANGE_BY_SUBTYPE[subtype];
+  if(!Array.isArray(atmoRange)||!atmoRange.length)throw new Error(`Missing atmosphere range for moon subtype ${subtype}`);
+  const atmoKind=atmoRange[rng.int(0,atmoRange.length-1)];
+  const populationClass=rollPopulationClass(rng,kind,subtype);
+  const orbitR=rollMoonOrbitRadius(rng,parentBody.size,moonIndex,moonCount);
+  const spdBuckets=ORBITAL_SPEED_BUCKETS.moon;
+  return{
+    kind,
+    subtype,
+    size,
+    parentId:parentBody.id,
+    orbit:{r:orbitR,a:rng.fl(0,Math.PI*2),spd:spdBuckets[rng.int(0,spdBuckets.length-1)]},
+    palette,
+    atmoKind,
+    populationClass,
+  };
+}
+
+function parentIndexForMoonId(parentBody){
+  const m=/^p(\d+)$/.exec(parentBody?.id||'');
+  return m?Number(m[1]):0;
+}
+
+function ppBodyFromEnterableBody(body){
+  const orbit=body.orbit||{r:0,a:0,spd:0};
+  if(body.parentId==='star'){
+    return{bodyId:body.id,orbitR:orbit.r,orbitA:orbit.a,orbitSpd:orbit.spd};
+  }
+  const proxy={bodyId:body.id,_owPos:null,_owPosFr:-1};
+  Object.defineProperty(proxy,'orbitR',{enumerable:true,get(){
+    if(typeof bodyById==='function'&&typeof bodyOWPos==='function'){
+      const b=bodyById(this.bodyId);
+      if(b){
+        const p=bodyOWPos(b),dx=p.x-OW_W/2,dy=p.y-OW_H/2;
+        return Math.hypot(dx,dy);
+      }
+    }
+    return orbit.r;
+  }});
+  Object.defineProperty(proxy,'orbitA',{enumerable:true,get(){
+    if(typeof bodyById==='function'&&typeof bodyOWPos==='function'){
+      const b=bodyById(this.bodyId);
+      if(b){
+        const p=bodyOWPos(b);
+        return Math.atan2(p.y-OW_H/2,p.x-OW_W/2);
+      }
+    }
+    return orbit.a;
+  }});
+  Object.defineProperty(proxy,'orbitSpd',{enumerable:true,get(){return 0;}});
+  return proxy;
+}
+
 function rollGasGiant(seed){
   const rng=mkRNG(seed);
   const size=rng.int(7,10);
@@ -348,6 +459,35 @@ function genWorld(seed){
     planets[i].pr=bodyDrawRadius(planets[i].size);
   }
 
+  const moonBodies=[];
+  let tutorialDesertClamped=false;
+  let tutorialBarrenClamped=false;
+  let hitBodyCap=false;
+  for(let pi=0;pi<planets.length;pi++){
+    if(1+planets.length+moonBodies.length>=MAX_BODY_COUNT){hitBodyCap=true;break;}
+    const parent=planets[pi];
+    const parentSeed=seedChild(seed,0x6000+pi);
+    let moonCount=moonCountForSize(mkRNG(parentSeed),parent.size);
+    if(seed===TUTORIAL_SEED&&parent.subtype==='desert'&&!tutorialDesertClamped){
+      moonCount=Math.min(moonCount,2);
+      tutorialDesertClamped=true;
+    }
+    if(seed===TUTORIAL_SEED&&parent.subtype==='barren'&&!tutorialBarrenClamped){
+      moonCount=Math.min(moonCount,1);
+      tutorialBarrenClamped=true;
+    }
+    const parentIndex=parentIndexForMoonId(parent);
+    for(let mi=0;mi<moonCount;mi++){
+      if(1+planets.length+moonBodies.length>=MAX_BODY_COUNT){hitBodyCap=true;break;}
+      const moon=rollMoonForPlanet(seedChild(parentSeed,mi+1),parent,sysLockouts,mi,moonCount);
+      if(!moon)continue;
+      moon.id=`m${parentIndex}.${mi}`;
+      moon.pr=bodyDrawRadius(moon.size);
+      moonBodies.push(moon);
+    }
+    if(hitBodyCap)break;
+  }
+
   const star={
     id:'star',
     parentId:null,
@@ -356,7 +496,8 @@ function genWorld(seed){
   };
   star.pr=bodyDrawRadius(star.size);
 
-  const enterable=planets.filter(b=>b.kind==='habitable'||b.kind==='uninhabitable');
+  const allNonStarBodies=[...planets,...moonBodies];
+  const enterable=allNonStarBodies.filter(b=>b.kind==='habitable'||b.kind==='uninhabitable');
   const gasGiants=planets.filter(b=>b.kind==='gas_giant');
 
   // Keep enterables first for legacy LV/PP index consumers.
@@ -369,7 +510,7 @@ function genWorld(seed){
     lv.body=body;
     return lv;
   });
-  PP=enterable.map(body=>({orbitR:body.orbit.r,orbitA:body.orbit.a,orbitSpd:body.orbit.spd}));
+  PP=enterable.map(body=>ppBodyFromEnterableBody(body));
 
   BASE={...rollOrbit(orbitRng,placed,'BASE',{minR:825}),r:22};
   const astRange=preferredAsteroidRange(enterable,gasGiants);

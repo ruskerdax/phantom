@@ -623,6 +623,11 @@ function castLaserForSpace(ox,oy,a,range,targets,walls=[],space=null,hitPad=0){
 }
 
 function owPos(b){
+  if(!b)return{x:OW_W/2,y:OW_H/2};
+  if(b?.bodyId&&typeof bodyById==='function'&&typeof bodyOWPos==='function'){
+    const body=bodyById(b.bodyId);
+    if(body)return bodyOWPos(body);
+  }
   if(b._owPosFr===G.owFr&&b._owPos)return b._owPos;
   const a=b.orbitA+G.owFr*b.orbitSpd;
   const p=b._owPos||(b._owPos={x:0,y:0});

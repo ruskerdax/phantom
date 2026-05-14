@@ -569,8 +569,28 @@ function drOWOrbitalGunShot(sh){
 }
 // drawSlipgateMenu has moved to ui/screens/slipgate.js (DOM screen).
 
+function owOrbitGuideForLegacyBody(col,b){
+  return{col,r:b.orbitR,b,cx:OW_W/2,cy:OW_H/2,a:b.orbitA+G.owFr*b.orbitSpd};
+}
+function owOrbitGuideForEnterable(i){
+  const body=LV[i]?.body||(typeof bodyById==='function'?bodyById(bodyIdForPlanetIndex(i)):null);
+  const b=PP[i];
+  if(body?.parentId&&body.parentId!=='star'&&typeof bodyById==='function'&&typeof bodyOWPos==='function'){
+    const parent=bodyById(body.parentId);
+    if(parent){
+      const center=bodyOWPos(parent),orbit=body.orbit||{};
+      return{col:LV[i].pcol,r:orbit.r||0,b,cx:center.x,cy:center.y,a:(orbit.a||0)+G.owFr*(orbit.spd||0)};
+    }
+  }
+  return owOrbitGuideForLegacyBody(LV[i].pcol,b);
+}
 function owOrbitBodies(){
-  return [['#aaccff',BASE.orbitR,BASE],...PP.map((b,i)=>[LV[i].pcol,b.orbitR,b]),...(G.hbCleared?[]:[['#ff4444',HBASE.orbitR,HBASE]]),['#aa99cc',SLIPGATE.orbitR,SLIPGATE]];
+  return [
+    owOrbitGuideForLegacyBody('#aaccff',BASE),
+    ...PP.map((b,i)=>owOrbitGuideForEnterable(i)),
+    ...(G.hbCleared?[]:[owOrbitGuideForLegacyBody('#ff4444',HBASE)]),
+    owOrbitGuideForLegacyBody('#aa99cc',SLIPGATE)
+  ];
 }
 function owOrbitProfile(){
   const q=renderQuality();
@@ -620,9 +640,9 @@ function owDrawCulledRing(cx2,cy2,r,rect){
 }
 function drawOWOrbitGuides(camRect,s){
   const prof=owOrbitProfile(),arrowBodies=owOrbitBodies();
-  const cx2=OW_W/2,cy2=OW_H/2;
+  const sysCx=OW_W/2,sysCy=OW_H/2;
   cx.save();cx.lineWidth=1;cx.globalAlpha=prof.orbitAlpha;cx.setLineDash([4,2]);
-  for(const[col,r,b]of arrowBodies){
+  for(const{col,r,b,cx:cx2,cy:cy2}of arrowBodies){
     const bp=owPos(b),bodyVisible=owPointInRect(bp.x,bp.y,camRect);
     const playerInBox=s.x>=cx2-r&&s.x<=cx2+r&&s.y>=cy2-r&&s.y<=cy2+r;
     if(!bodyVisible&&!playerInBox&&!owRectIntersectsAnnulus(camRect,cx2,cy2,r,12))continue;
@@ -631,20 +651,19 @@ function drawOWOrbitGuides(camRect,s){
   }
   if(AB.length>0){
     const abR=AB[0].orbitR;
-    if(owRectIntersectsAnnulus(camRect,cx2,cy2,abR,24)){
+    if(owRectIntersectsAnnulus(camRect,sysCx,sysCy,abR,24)){
       cx.strokeStyle='#998877';cx.shadowColor='#998877';cx.shadowBlur=sb(prof.orbitBlur);
-      owDrawCulledRing(cx2,cy2,abR,camRect);
+      owDrawCulledRing(sysCx,sysCy,abR,camRect);
     }
   }
   cx.setLineDash([]);
   if(prof.arrows>0){
     const arrowSpd=0.00173,N=prof.arrows,arrowGap=renderQuality()==='full'?0.2:0.35;
     const chevR=prof.arrowSize+4;
-    for(const[col,r,b]of arrowBodies){
+    for(const{col,r,b,cx:cx2,cy:cy2,a:bodyA}of arrowBodies){
       const bp=owPos(b),bodyVisible=owPointInRect(bp.x,bp.y,camRect);
       const playerInBox=s.x>=cx2-r&&s.x<=cx2+r&&s.y>=cy2-r&&s.y<=cy2+r;
       if(!bodyVisible&&!playerInBox&&!owRectIntersectsAnnulus(camRect,cx2,cy2,r,12))continue;
-      const bodyA=b.orbitA+G.owFr*b.orbitSpd;
       cx.shadowColor=col;cx.shadowBlur=sb(prof.arrowBlur);
       for(let i=0;i<N;i++){
         const phase=(G.fr*arrowSpd+i*Math.PI/N)%Math.PI;

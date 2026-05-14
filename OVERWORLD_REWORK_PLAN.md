@@ -172,7 +172,7 @@ SUBTYPE_WEIGHTS = {
 ### Orbital speed buckets (binding)
 
 - `ORBITAL_SPEED_BUCKETS.planet = [0.00040, 0.00050, 0.00060, 0.00070, 0.00080, 0.00090, 0.00100, 0.00110]` — 8 values.
-- `ORBITAL_SPEED_BUCKETS.moon = ORBITAL_SPEED_BUCKETS.planet.map(s => s * 5)` — 8 values, 5× planet speeds.
+- `ORBITAL_SPEED_BUCKETS.moon = ORBITAL_SPEED_BUCKETS.planet.slice()` — 8 values, same as planet speeds.
 - Assignment rule: sort bodies by `orbitR` ascending. For each body, pick a bucket whose value differs from the previous (sorted-neighbor) body's bucket. If all buckets fall through, just take the next bucket modulo 8 to break ties.
 - Moons are assigned per-parent separately (sorted by their orbit-around-parent radius).
 - Direction is uniformly clockwise — encoded as positive `orbit.spd` (existing rendering already advances `orbitA + frame * orbitSpd`).
@@ -252,7 +252,7 @@ SUBTYPE_WEIGHTS = {
   - `SUBTYPE_PALETTES = { ... }` (literal hex arrays per Conventions: Palettes).
   - `ATMO_KINDS`, `ATMO_DRAG_PER_FRAME`, `ATMO_DRAG_CAVE_TUNNEL_FACTOR`, `ATMO_STAR_OPACITY`, `ATMO_RANGE_BY_SUBTYPE` (per Conventions: Atmosphere).
   - `SUBTYPE_WEIGHTS = { ... }` (per Conventions: Subtype weight tables).
-  - `ORBITAL_SPEED_BUCKETS = {planet:[…8 values…], moon:[…planet × 5…]}` (per Conventions: Orbital speed buckets).
+  - `ORBITAL_SPEED_BUCKETS = {planet:[…8 values…], moon:[…same 8 values…]}` (per Conventions: Orbital speed buckets).
   - `MAX_BODY_COUNT = 60`.
   - `GOLDILOCKS_INNER = 0.35`, `GOLDILOCKS_OUTER = 0.65`.
   - `assertBodiesRegistry()` validates: every `BODY_KIND` has a size range; every habitable/uninhabitable subtype has a palette entry; weight tables sum to ~100; bucket lists are length 8. Called at module load (same pattern as `assertBuildingRegistry`).
@@ -423,7 +423,7 @@ SUBTYPE_WEIGHTS = {
 
 ---
 
-### G-03. Moon generation
+### G-03. Moon generation ✅
 
 **Goal:** For each planet (non-star, non-gas-giant when applicable), roll moon count and per-moon size. Enforce body cap (60).
 
@@ -441,8 +441,8 @@ SUBTYPE_WEIGHTS = {
   - Determine size via `rollMoonSize`. Size-1 moon → roll subtype from uninhabitable table only. Size ≥ 2 → use the standard 50/50 habitable roll (but moons don't depend on Goldilocks — moons always allow the habitable roll because they're in the parent's local frame).
   - Apply the same Continental/Machine mutex as planets (`sysLockouts` is global to the system).
   - Roll palette, atmosphere, populationClass.
-  - Roll orbit radius around parent: `pr_parent * 2.2 + rng.fl(0, pr_parent * 2.5)`, with `pr_parent = bodyDrawRadius(parentSize)`.
-  - Roll orbit speed bucket from `ORBITAL_SPEED_BUCKETS.moon` (5× planet speeds).
+  - Roll orbit radius around parent: keep the prior minimum `pr_parent * 2.2`; make the maximum scale with parent size using `maxScale = 1 + ((parentSize - 1) / 9) * 2` (size 1 → 1×, size 10 → 3×), then apply a global 4× expansion, so `max = pr_parent * 4.7 * maxScale * 4`, with `pr_parent = bodyDrawRadius(parentSize)`. For planets with multiple moons, assign each moon to a jittered radial slot across `[min,max]` (stratified sampling) to prevent sibling moons from bunching.
+  - Roll orbit speed bucket from `ORBITAL_SPEED_BUCKETS.moon` (same values as planet speeds).
 - Moon-spawning order: iterate planets sorted by `orbit.r` ascending (closest to star first), spawn each planet's moons in that order. When `BODIES.length === MAX_BODY_COUNT`, halt all further moon spawning.
 - Tutorial seed (G-05) clamps moon count for the Desert (2) and Barren (1) planets after rolling.
 - Each moon gets a stable id `m<parentIndex>.<moonIndexWithinParent>` (e.g., `m2.0`).
