@@ -397,7 +397,7 @@ function bodyXY(b){
 }
 function siteOrbitSpdFor(orbitR){
   const maxR=Math.max(ORBIT_MIN_R+1,orbitMaxR());
-  return 0.00060-(orbitR-ORBIT_MIN_R)/(maxR-ORBIT_MIN_R)*0.00045;
+  return 0.00024-(orbitR-ORBIT_MIN_R)/(maxR-ORBIT_MIN_R)*0.00018;
 }
 function rollOrbit(rng,placed,labelOrOptions={},maybeOptions=null){
   const opts=typeof labelOrOptions==='string'
