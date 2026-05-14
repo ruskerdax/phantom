@@ -75,6 +75,67 @@ function weightedPickKey(rng,weights,allowFn=null){
   return entries[entries.length-1][0];
 }
 
+function clamp01(v){return Math.max(0,Math.min(1,v));}
+function wrapHue(h){h%=360;return h<0?h+360:h;}
+
+function hexToRgb(hex){
+  const m=/^#?([0-9a-f]{6})$/i.exec(hex||'');
+  if(!m)return null;
+  const n=parseInt(m[1],16);
+  return{r:(n>>16)&255,g:(n>>8)&255,b:n&255};
+}
+
+function rgbToHex(r,g,b){
+  const n=(Math.round(r)<<16)|(Math.round(g)<<8)|Math.round(b);
+  return '#'+n.toString(16).padStart(6,'0');
+}
+
+function rgbToHsl({r,g,b}){
+  r/=255;g/=255;b/=255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b);
+  let h=0,s=0,l=(max+min)/2;
+  const d=max-min;
+  if(d!==0){
+    s=d/(1-Math.abs(2*l-1));
+    if(max===r)h=60*(((g-b)/d)%6);
+    else if(max===g)h=60*((b-r)/d+2);
+    else h=60*((r-g)/d+4);
+  }
+  return{h:wrapHue(h),s,l};
+}
+
+function hslToHex(h,s,l){
+  h=wrapHue(h);s=clamp01(s);l=clamp01(l);
+  const c=(1-Math.abs(2*l-1))*s;
+  const x=c*(1-Math.abs((h/60)%2-1));
+  const m=l-c/2;
+  let r=0,g=0,b=0;
+  if(h<60){r=c;g=x;}
+  else if(h<120){r=x;g=c;}
+  else if(h<180){g=c;b=x;}
+  else if(h<240){g=x;b=c;}
+  else if(h<300){r=x;b=c;}
+  else{r=c;b=x;}
+  return rgbToHex((r+m)*255,(g+m)*255,(b+m)*255);
+}
+
+function atmosphereColorFromBase(rng,base,avoid=[]){
+  const rgb=hexToRgb(base);
+  if(!rgb)return base;
+  const hsl=rgbToHsl(rgb);
+  const shifts=[-24,-14,16,24];
+  const avoidSet=new Set(avoid.filter(Boolean).map(c=>c.toLowerCase()));
+  const start=rng.int(0,shifts.length-1);
+  for(let tries=0;tries<shifts.length;tries++){
+    const shift=shifts[(start+tries)%shifts.length];
+    const sat=Math.max(hsl.s+.08,0.20);
+    const light=clamp01(hsl.l+(shift < 0 ? .04 : -.02));
+    const col=hslToHex(hsl.h+shift,sat,light);
+    if(!avoidSet.has(col.toLowerCase()))return col;
+  }
+  return hslToHex(hsl.h+32,Math.max(hsl.s+.12,0.24),clamp01(hsl.l+.03));
+}
+
 function rollPaletteForSubtype(rng,subtype){
   const def=SUBTYPE_PALETTES[subtype];
   if(!def||!Array.isArray(def.terrain)||def.terrain.length<2)throw new Error(`Missing terrain palette for subtype ${subtype}`);
@@ -82,11 +143,12 @@ function rollPaletteForSubtype(rng,subtype){
   const primary=def.terrain[baseIdx];
   const secondary=def.terrain[(baseIdx+1)%def.terrain.length];
   const sea=Array.isArray(def.sea)&&def.sea.length?def.sea[rng.int(0,def.sea.length-1)]:null;
+  const atmo=atmosphereColorFromBase(rng,sea||primary,[...def.terrain,...(def.sea||[])]);
   return{
     primary,
     secondary,
     sea,
-    atmo:sea||primary,
+    atmo,
     bg:secondary,
   };
 }

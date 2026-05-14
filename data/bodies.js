@@ -50,7 +50,8 @@ const SUBTYPE_PALETTES = {
 const ATMO_KINDS = ['none','trace','thin','moderate','thick'];
 const ATMO_DRAG_PER_FRAME = {none:1.0, trace:0.998, thin:0.994, moderate:0.988, thick:0.978};
 const ATMO_DRAG_CAVE_TUNNEL_FACTOR = 0.5;
-const ATMO_STAR_OPACITY = {none:1.0, trace:0.85, thin:0.55, moderate:0.25, thick:0.05};
+const ATMO_STAR_OPACITY = {none:1.0, trace:0.95, thin:0.85, moderate:0.72, thick:0.58};
+const ATMO_SKY_OPACITY = {none:0, trace:0.08, thin:0.18, moderate:0.32, thick:0.48};
 
 const ATMO_RANGE_BY_SUBTYPE = {
   desert: ['thin','moderate','thick'],

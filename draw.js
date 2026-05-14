@@ -232,9 +232,11 @@ function drawOffscreenIndicators(indicators,opts={}){
   }
 }
 
-function drStars(scroll=0){
+function drStars(scroll=0,alpha=1){
   const layer=getStarLayer(),p=renderProfile();
   const dx=((scroll%W)+W)%W;
+  cx.save();
+  cx.globalAlpha=alpha;
   if(dx===0)cx.drawImage(layer,0,0,W,H);
   else{cx.drawImage(layer,dx,0,W,H);cx.drawImage(layer,dx-W,0,W,H);}
   for(let i=0;i<p.twinkleCount&&i<STARS.length;i++){
@@ -242,11 +244,11 @@ function drStars(scroll=0){
     const phase=s.ph+G.fr*(.018+s.ci*.002);
     const tw=.5-.5*Math.cos(phase);
     const eased=tw*tw*(3-2*tw);
-    cx.globalAlpha=.03+eased*.92;
+    cx.globalAlpha=(.03+eased*.92)*alpha;
     cx.fillStyle=SCOLS[s.ci];
     cx.beginPath();cx.arc(x<0?x+W:x,s.y,s.r+eased*.45,0,Math.PI*2);cx.fill();
   }
-  cx.globalAlpha=1;
+  cx.restore();
 }
 function dustVelocityForShip(s,cam){
   const simRunning=G.st==='overworld'||G.st==='encounter'||G.st==='play'||G.st==='esc';

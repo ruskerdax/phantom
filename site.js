@@ -1054,10 +1054,31 @@ function drawSurfaceIndicators(site){
     cam,player:site.s,worldW:d.worldW,wrapX:true,maxRange:SURFACE_INDICATOR_RANGE,targets
   }));
 }
+function surfaceSkyTintColor(col){
+  const m=/^#?([0-9a-f]{6})$/i.exec(col||'');
+  if(!m)return col||'#334466';
+  const n=parseInt(m[1],16);
+  const r=(n>>16)&255,g=(n>>8)&255,b=n&255;
+  const max=Math.max(r,g,b),min=Math.min(r,g,b);
+  const light=(max+min)/510;
+  const mix=light<.52?.55:.28;
+  const tr=Math.round(r+(255-r)*mix),tg=Math.round(g+(255-g)*mix),tb=Math.round(b+(255-b)*mix);
+  return '#'+((tr<<16)|(tg<<8)|tb).toString(16).padStart(6,'0');
+}
 function drawSurface(){
   const site=G.site,d=site.d,col=d.col,cam=site.cam||{x:0,y:0,z:1};
-  cx.fillStyle=d.bg;cx.fillRect(0,0,W,H);
-  drStars(-(cam.x||0)*.035);
+  const atmoKind=d.atmoKind||site.planet?.body?.atmoKind||site.planet?.atmoKind||'none';
+  const atmoColor=d.palette?.atmo||site.planet?.body?.palette?.atmo||site.planet?.palette?.atmo||d.bg;
+  cx.fillStyle='#000008';cx.fillRect(0,0,W,H);
+  drStars(-(cam.x||0)*.035, ATMO_STAR_OPACITY[atmoKind] ?? 1);
+  const skyAlpha=ATMO_SKY_OPACITY[atmoKind] ?? 0;
+  if(skyAlpha>0){
+    cx.save();
+    cx.globalAlpha=skyAlpha;
+    cx.fillStyle=surfaceSkyTintColor(atmoColor);
+    cx.fillRect(0,0,W,H);
+    cx.restore();
+  }
   const dustV=dustVelocityForShip(site.s,cam);drDust(dustV.x,0,cam);
   cx.save();applyWorldCamera(cam);
   const z=cam.z||1,left=cam.x,right=cam.x+W/z;

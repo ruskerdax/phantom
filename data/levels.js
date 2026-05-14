@@ -1156,7 +1156,7 @@ function genTunnel(rng,tmpl,seed){
 function genSurface(tmpl,seed,sites){
   const rng=mkRNG(seed);
   const screens=rng.int(8,14),worldW=screens*W;
-  const surface={...tmpl,kind:'surface',screenCount:screens,worldW,worldH:Math.round(H*1.05),exitY:-90,terrain:[],regions:[],buildings:[],en:[],defenses:[],fu:[],tunnel:null,ent:{x:Math.round(W*.5),y:Math.round(H*.28)}};
+  const surface={...tmpl,kind:'surface',bg:tmpl.palette?.atmo||tmpl.bg,screenCount:screens,worldW,worldH:Math.round(H*1.05),exitY:-90,terrain:[],regions:[],buildings:[],en:[],defenses:[],fu:[],tunnel:null,ent:{x:Math.round(W*.5),y:Math.round(H*.28)}};
   const surfaceTerrain=genSurfaceTerrain(rng,worldW);
   surface.terrain=surfaceTerrain.terrain;
   surface.regions=surfaceTerrain.regions;
