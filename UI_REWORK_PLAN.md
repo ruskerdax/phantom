@@ -314,7 +314,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) replaces `LV` / 
 
 ---
 
-### F-14. Counter wiring
+### F-14. Counter wiring ✅
 
 **Goal:** Bump the F-12 counters at the right events.
 

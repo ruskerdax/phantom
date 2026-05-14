@@ -98,6 +98,11 @@ function bodyObjectivesAllComplete(bodyId) {
   return list.length > 0 && list.every(o => o.complete);
 }
 
+function derivedSectorsCleared() {
+  if(typeof enterableBodies !== 'function') return 0;
+  return enterableBodies().filter(b => bodyObjectivesAllComplete(b.id)).length;
+}
+
 function objectiveForPlanetType(bodyId, type) {
   return (G.objectives || []).find(o => o.bodyId === bodyId && o.type === type) || null;
 }
@@ -131,6 +136,9 @@ function syncDerivedObjectives() {
   syncAllPlanetCleared();
   const hb = (G.objectives || []).find(o => o.type === OBJECTIVE_TYPE_IDS.HBASE);
   if(hb?.complete) G.hbCleared = true;
+  G.run.objectivesDone = completedObjectiveCount();
+  G.run.objectivesTotal = (G.objectives || []).length;
+  G.run.sectorsCleared = derivedSectorsCleared();
   syncSlipgateFromObjectives();
 }
 

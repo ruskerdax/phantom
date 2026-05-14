@@ -632,5 +632,10 @@ function genWorld(seed){
     tier:        flavorRng.int(1,5),
   };
   if(typeof genObjectives === 'function')genObjectives(mkRNG(seedChild(seed,0x3300)));
+  const sysSeed=seed>>>0;
+  if(!G.visitedSeeds.includes(sysSeed)){
+    G.visitedSeeds.push(sysSeed);
+    G.totals.systemsVisited++;
+  }
   console.log(`[PHANTOM] world seed: 0x${seed.toString(16).toUpperCase().padStart(8,'0')}`,G.systemFlavor);
 }

@@ -129,6 +129,10 @@ function drawDeadShipBanner(){
 // are tuned per tick, so update() must not run once per high-refresh display frame.
 const SIM_STEP_MS=1000/60,SIM_MAX_FRAME_MS=250,SIM_MAX_STEPS=5;
 let simAccumMs=0,lastLoopTs=null;
+function shouldAccumulateRunActiveMs(){
+  const st=G.st;
+  return !G.paused&&st!=='title'&&!(typeof st==='string'&&st.startsWith('dead_'));
+}
 function trackFPS(ts){
   if(typeof ts!=='number') return;
   if(G.lastFrameTs){
@@ -149,6 +153,7 @@ function loop(ts){
 
   let steps=0;
   while(simAccumMs>=SIM_STEP_MS&&steps<SIM_MAX_STEPS){
+    if(shouldAccumulateRunActiveMs())G.run.activeMs+=SIM_STEP_MS;
     update();
     if(typeof effectsTick==='function')effectsTick();
     musicUpdate();

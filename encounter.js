@@ -35,6 +35,21 @@ function encKillShip(){
   const enc=G.ENC;killShip(enc.s,enc.pts,'dead_enc');
   G.absAimTarget=null;
 }
+function encMarkEnemyKill(enc,e){
+  const def=enemyDef(e.t);
+  e.alive=false;
+  addStake(def.sc);
+  addRunKill();
+  boomAt(enc.pts,e.x,e.y,def.enc.col,14);
+  boomAt(enc.pts,e.x,e.y,def.enc.col2,8);
+  tone(200,.3,'sawtooth',.1);
+  if(def.energy&&Math.random()<.75){
+    for(let k=0;k<2;k++){
+      const a2=Math.random()*Math.PI*2;
+      enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});
+    }
+  }
+}
 function encBeamTargets(enc){
   const tgts=[];
   enc.rocks.forEach((rk,i)=>tgts.push({x:rk.x,y:rk.y,r:rk.r,kind:'rock',idx:i}));
@@ -69,12 +84,7 @@ function encHandleBeamHit(enc,tg,wp,res){
   }else if(tg.kind==='enemy'){
     const e=enc.en[tg.idx];e.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,enemyDef(e.t).enc.col,3);
     if(e.hp<=0){
-      e.alive=false;addStake(enemyDef(e.t).sc);
-      boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);
-      tone(200,.3,'sawtooth',.1);
-      if(enemyDef(e.t).energy&&Math.random()<.75){
-        for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}
-      }
+      encMarkEnemyKill(enc,e);
     }
   }else if(tg.kind==='missile'){
     const m=enc.emi[tg.idx];m.hp-=wp.dmg;boomAt(enc.pts,res.x2,res.y2,m.col,3);
@@ -108,7 +118,7 @@ function encPlayerBulletStep(enc,b,{rocks=true}={}){
       }
     }
   }
-  for(const e of enc.en){if(!e.alive)continue;if(encEnemySegmentHit(enc,e,b.px??b.x,b.py??b.y,b.x,b.y,1)){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,enemyDef(e.t).enc.col,5);if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}return true;}}
+  for(const e of enc.en){if(!e.alive)continue;if(encEnemySegmentHit(enc,e,b.px??b.x,b.py??b.y,b.x,b.y,1)){e.hp-=b.dmg;tone(400,.05,'square',.06);boomAt(enc.pts,b.x,b.y,enemyDef(e.t).enc.col,5);if(e.hp<=0)encMarkEnemyKill(enc,e);return true;}}
   for(let mi=enc.emi.length-1;mi>=0;mi--){const m=enc.emi[mi];if(encSegmentCircleHit(enc,b,m.x,m.y,5)){m.hp-=b.dmg;boomAt(enc.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);encExplodeMissile(enc,m,true);enc.emi.splice(mi,1);}return true;}}
   if(enc.isHBase){
     if(pip(b.x,b.y,enc.hbase.hexPoly)){boomAt(enc.pts,b.x,b.y,'#cc2200',4);return true;}
@@ -195,7 +205,7 @@ function encExplodeMissile(enc, m, isEnemy){
       const ep=encPointNear(enc,e.x,e.y,m.x,m.y);
       if(explosionHitTest(m.x,m.y,r,{shape:'hull',hull:enemyHullWorld({...e,x:ep.x,y:ep.y})}).hit){
         e.hp-=d;boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,5);
-        if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}
+        if(e.hp<=0)encMarkEnemyKill(enc,e);
       }
     }
     if(enc.isHBase){
@@ -276,7 +286,7 @@ function updEncMissiles(enc, mis, isEnemy, ew, eh){
             if(sticky){stickProjectile(m,e,'enemy');tone(220,.06,'square',.05);}
             else{
               e.hp-=m.dmg;boomAt(enc.pts,m.x,m.y,enemyDef(e.t).enc.col,5);
-              if(e.hp<=0){e.alive=false;addStake(enemyDef(e.t).sc);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col,14);boomAt(enc.pts,e.x,e.y,enemyDef(e.t).enc.col2,8);tone(200,.3,'sawtooth',.1);if(enemyDef(e.t).energy&&Math.random()<.75){for(let k=0;k<2;k++){const a2=Math.random()*Math.PI*2;enc.fu.push({x:e.x,y:e.y,vx:Math.cos(a2)*1.2,vy:Math.sin(a2)*1.2,timer:380});}}}
+              if(e.hp<=0)encMarkEnemyKill(enc,e);
               det=true;
             }
             break;

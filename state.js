@@ -61,6 +61,25 @@ var G={
 };
 G.system=G.system||{};
 G.system.events=[];
+let _creditBalance=Number.isFinite(G.credits)?G.credits:0;
+let _suspendCreditEarnedTracking=false;
+Object.defineProperty(G,'credits',{
+  enumerable:true,
+  configurable:true,
+  get(){return _creditBalance;},
+  set(value){
+    const next=Number.isFinite(value)?value:0;
+    const delta=next-_creditBalance;
+    _creditBalance=next;
+    if(!_suspendCreditEarnedTracking&&delta>0)G.run.creditsEarned+=delta;
+  }
+});
+function setCreditsWithoutEarning(value){
+  const wasSuspended=_suspendCreditEarnedTracking;
+  _suspendCreditEarnedTracking=true;
+  G.credits=value;
+  _suspendCreditEarnedTracking=wasSuspended;
+}
 const ORBIT_MIN_R=1000;
 function orbitMaxR(){return OW_W*0.45;}
 function cancelChargesForActiveShips(){
@@ -120,7 +139,14 @@ function openRebuildMenu(){
   G.paused=false;
   G.st='rebuild';
 }
-function addStake(n){G.stake+=n;}
+function addStake(n){
+  G.stake+=n;
+  if(n>0)G.totals.stakeEarned+=n;
+}
+function addRunKill(){
+  G.run.kills++;
+  G.totals.kills++;
+}
 function activeChassisObj(){return CHASSIS.find(c=>c.id===G.loadout.chassis)||CHASSIS[0];}
 function activeAuxObj(){return AUX_ITEMS.find(a=>a.id===G.loadout.aux)||null;}
 function activeShieldObj(){return SHIELDS.find(s=>s.id===G.loadout.shield)||null;}
@@ -582,6 +608,7 @@ function killShip(s,pts,deadState,orangeCount=16){
   if(!s.alive)return false;
   s.alive=false;boomAt(pts,s.x,s.y,'#fff',28);boomAt(pts,s.x,s.y,'#fa0',orangeCount);
   tone(200,.5,'sawtooth',.15);
+  if(deadState==='dead_ow'||deadState==='dead_enc')G.run.deaths++;
   G.st=deadState;markNeedsRebuild();
   setTimeout(()=>{enterRebuild();},1800);
   return true;
@@ -862,7 +889,7 @@ function startFromSave(){
   G.totals={...(sv?.totals??def.totals)};
   G.lastRun=(sv?.lastRun&&typeof sv.lastRun==='object')?sv.lastRun:null;
   G.recentChassis=[...(sv?.recentChassis??def.recentChassis)];
-  G.credits=sv?.credits??0;
+  setCreditsWithoutEarning(sv?.credits??0);
   G.stake=0;
   G.cleared={};
   G.hbCleared=false;

@@ -292,6 +292,7 @@ function damageSurfaceEnemy(site, e, dmg, x = e.x, y = e.y) {
       if(base) base.guardAlive = false;
     }
     addStake(def.sc);
+    addRunKill();
     boomAt(site.pts, e.x, e.y, site.d.col, 14);
     boomAt(site.pts, e.x, e.y, def.col2, 8);
     tone(200, .25, 'sawtooth', .08);
