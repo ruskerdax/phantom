@@ -336,7 +336,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) replaces `LV` / 
 
 ---
 
-### F-15. News ticker plumbing
+### F-15. News ticker plumbing ✅
 
 **Goal:** Append objective-completion events to `G.system.events`.
 

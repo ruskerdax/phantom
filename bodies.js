@@ -11,6 +11,16 @@ function bodyById(id){
   return null;
 }
 
+function bodyShortName(bodyId){
+  const id = (bodyId ?? '').toString().trim().toLowerCase();
+  if(!id) return 'hbase';
+  if(id === 'hbase') return 'hbase';
+  if(id === 'base') return 'base';
+  if(id === 'slipgate') return 'slipgate';
+  if(id === 'asteroid' || id === 'asteroid field' || id.startsWith('asteroid ')) return 'asteroid field';
+  return id;
+}
+
 function enterableBodies(){
   return BODIES.filter(b => b.kind === 'habitable' || b.kind === 'uninhabitable');
 }

@@ -14,6 +14,17 @@ function objectiveLabel(type, bodyId=null) {
   return def.scope === 'planet' ? `${labelId} ${def.name}` : def.name;
 }
 
+function objectiveShortLabel(o) {
+  const type = typeof o === 'string' ? o : o?.type;
+  if(type === OBJECTIVE_TYPE_IDS.CAVE_REACTOR) return 'reactor destroyed';
+  if(type === OBJECTIVE_TYPE_IDS.SURFACE_TARGETS) return 'surface targets destroyed';
+  if(type === OBJECTIVE_TYPE_IDS.CIV_RESIDENCES) return 'civilian residences';
+  if(type === OBJECTIVE_TYPE_IDS.CIV_INFRASTRUCTURE) return 'civilian infrastructure';
+  if(type === OBJECTIVE_TYPE_IDS.HBASE) return 'hostile base destroyed';
+  const def = OBJECTIVE_TYPE_MAP[type];
+  return (def?.name || type || '').toString().toLowerCase();
+}
+
 function objectiveBodySortIndex(bodyId) {
   if(bodyId == null) return Number.MAX_SAFE_INTEGER;
   if(typeof bodyIndexFromId === 'function') {
@@ -146,6 +157,8 @@ function completeObjective(id) {
   const obj = (G.objectives || []).find(o => o.id === id);
   if(!obj || obj.complete) return false;
   obj.complete = true;
+  G.system.events.unshift({ts:Date.now(), text:`objective complete · ${bodyShortName(obj.bodyId)}: ${objectiveShortLabel(obj)}`});
+  if(G.system.events.length > 16) G.system.events.length = 16;
   addStake(250);
   if(obj.type === OBJECTIVE_TYPE_IDS.HBASE) G.hbCleared = true;
   syncDerivedObjectives();
