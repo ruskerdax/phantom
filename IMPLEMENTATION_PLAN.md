@@ -452,7 +452,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P2-03. Branching tunnel site mode
+### P2-03. Branching tunnel site mode ✅
 
 **Goal:** Plug branching tunnel into the site state machine.
 

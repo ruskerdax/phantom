@@ -160,9 +160,10 @@ function surfaceBuildingSegmentHit(site,b,p){
 
 function cavePlayerBulletStep(site,b,{terrain=true}={}) {
   const d=site.d;
+  const worldW=d.worldW||W,worldH=d.worldH||H;
   if(terrain) {
-    if(b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,activeSiteBodyId()))return true;
-  } else if(b.y<0||b.y>(d.worldH||H)+20) return true;
+    if(b.x<0||b.x>worldW||b.y<0||b.y>worldH||wHit(b.x,b.y,4,activeSiteBodyId()))return true;
+  } else if(b.y<0||b.y>worldH+20) return true;
   for(const e of site.en){if(!e.alive)continue;if(siteDefenseSegmentHit(b,e,1)){damageDefense(site,e,b.dmg,b.x,b.y);return true;}}
   for(const bd of siteBuildings(site)){if(!bd.alive)continue;const hb=buildingHitBox(bd);if(siteSegmentRectHit(b,hb.x0,hb.y0,hb.x1,hb.y1)){damageBuilding(site,bd,b.dmg,b.x,b.y);return true;}}
   for(let mi=site.emi.length-1;mi>=0;mi--){const m=site.emi[mi];if(siteSegmentCircleHit(b,m.x,m.y,5)){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);siteExplodeMissile(site,m,true);site.emi.splice(mi,1);}return true;}}
@@ -172,9 +173,10 @@ function cavePlayerBulletStep(site,b,{terrain=true}={}) {
 
 function caveEnemyBulletStep(site,b,s,{terrain=true}={}) {
   const d=site.d;
+  const worldW=d.worldW||W,worldH=d.worldH||H;
   if(terrain) {
-    if(b.x<0||b.x>W||b.y<0||b.y>(d.worldH||H)||wHit(b.x,b.y,4,activeSiteBodyId()))return true;
-  } else if(b.y<0||b.y>(d.worldH||H)+20) return true;
+    if(b.x<0||b.x>worldW||b.y<0||b.y>worldH||wHit(b.x,b.y,4,activeSiteBodyId()))return true;
+  } else if(b.y<0||b.y>worldH+20) return true;
   for(let mi=site.mis.length-1;mi>=0;mi--){const m=site.mis[mi];if(siteSegmentCircleHit(b,m.x,m.y,5)){m.hp-=b.dmg;boomAt(site.pts,b.x,b.y,m.col,3);if(m.hp<=0){finishStickyMissile(m);siteExplodeMissile(site,m,false);site.mis.splice(mi,1);}return true;}}
   const shipHit=applyProjectileDamageToShip(s,b,{...siteProjectileOpts(),targetX:s.x,targetY:s.y,kind:'projectile',weapon:b,damage:b.dmg});
   if(shipHit.shieldHit?.shieldDamage>0){
@@ -223,7 +225,7 @@ function siteExplodeMissile(site, m, isEnemy){
 
 // Update one site missile array. Returns true if the player ship was killed.
 function updSiteMissiles(site, mis, isEnemy){
-  const s=site.s,d=site.d,worldH=d.worldH||H;
+  const s=site.s,d=site.d,worldW=d.worldW||W,worldH=d.worldH||H;
   for(let i=mis.length-1;i>=0;i--){
     const m=mis[i];
     let det=false;
@@ -231,7 +233,7 @@ function updSiteMissiles(site, mis, isEnemy){
     m.px=m.x;m.py=m.y;
     if(sticky){
       const state=tickStickyMissileState(m,{stickyTarget:st=>siteStickyTarget(site,st),flash:mm=>siteStickyFlash(site,mm)});
-      if(state.expired||m.x<0||m.x>W||m.y<0||m.y>worldH){finishStickyMissile(m);mis.splice(i,1);continue;}
+      if(state.expired||m.x<0||m.x>worldW||m.y<0||m.y>worldH){finishStickyMissile(m);mis.splice(i,1);continue;}
       det=state.detonate;
       if(!det&&!state.stuck){
         accelerateMissileVector(m,m.gravityScale==='bomb'?BOMB_GRAVITY:0);
@@ -249,7 +251,7 @@ function updSiteMissiles(site, mis, isEnemy){
       setMissileWorldVelocity(m);
       m.x+=m.vx;m.y+=m.vy;
       m.l--;
-      if(m.l<=0||m.x<0||m.x>W||m.y<0||m.y>worldH||wHit(m.x,m.y,4,activeSiteBodyId())) det=true;
+      if(m.l<=0||m.x<0||m.x>worldW||m.y<0||m.y>worldH||wHit(m.x,m.y,4,activeSiteBodyId())) det=true;
     }
     if(--m.trailTimer<=0){
       m.trailTimer=2;
@@ -369,8 +371,9 @@ function planetBuildingRefs(p){
       refs.push({mode,siteIndex:i,classId,bitIndex,b});
     });
   };
+  const tunnelMode=p?.tunnelKind==='branching'?'branching':'tunnel';
   add('surface',p.surface);
-  add('tunnel',p.tunnel);
+  add(tunnelMode,p.tunnel);
   add('cave',p.cave);
   return refs;
 }
@@ -406,6 +409,7 @@ function saveSiteBuildings(site,ps){
 function defaultPlanetState(p){
   const completedSites={};
   for(const site of p.sites||[])completedSites[site.id]=false;
+  const branchingTunnel=p.tunnelKind==='branching';
   return{
     completedSites,
     buildings:defaultBuildingBits(p),
@@ -415,6 +419,10 @@ function defaultPlanetState(p){
       fuGot:(p.surface?.fu||[]).map(()=>false),
     },
     tunnel:{enemyAlive:(p.tunnel?.en||[]).map(()=>true)},
+    branching:{
+      buildings:{},
+      en:branchingTunnel?(p.tunnel?.en||[]).map(()=>true):[],
+    },
     cave:{
       en:(p.cave?.en||[]).map(()=>true),
       fu:(p.cave?.fu||[]).map(()=>false),
@@ -425,7 +433,7 @@ function defaultPlanetState(p){
 function bodyLevelState(bodyId=activeSiteBodyId()){
   const pi=activeSitePlanetIndex(bodyId);
   const p=pi==null?null:LV[pi];
-  if(!p||!bodyId)return {completedSites:{},buildings:{},surface:{enemyAlive:[],defenseAlive:[],fuGot:[]},tunnel:{enemyAlive:[]},cave:{en:[],fu:[],rx:{hp:0,alive:false}}};
+  if(!p||!bodyId)return {completedSites:{},buildings:{},surface:{enemyAlive:[],defenseAlive:[],fuGot:[]},tunnel:{enemyAlive:[]},branching:{buildings:{},en:[]},cave:{en:[],fu:[],rx:{hp:0,alive:false}}};
   let ps=G.lvState[bodyId];
   if(!ps||typeof ps!=='object')ps=defaultPlanetState(p);
   ps.completedSites=ps.completedSites&&typeof ps.completedSites==='object'?ps.completedSites:{};
@@ -437,6 +445,10 @@ function bodyLevelState(bodyId=activeSiteBodyId()){
   ps.surface.fuGot=gotStateArray(ps.surface.fuGot,(p.surface?.fu||[]).length);
   ps.tunnel=ps.tunnel&&typeof ps.tunnel==='object'?ps.tunnel:{};
   ps.tunnel.enemyAlive=boolStateArray(ps.tunnel.enemyAlive,(p.tunnel?.en||[]).length,true);
+  ps.branching=ps.branching&&typeof ps.branching==='object'?ps.branching:{};
+  ps.branching.buildings=ps.buildings;
+  const branchingEnemyCount=p.tunnelKind==='branching'?(p.tunnel?.en||[]).length:0;
+  ps.branching.en=boolStateArray(ps.branching.en,branchingEnemyCount,true);
   ps.cave=ps.cave&&typeof ps.cave==='object'?ps.cave:{};
   ps.cave.en=boolStateArray(ps.cave.en,(p.cave?.en||[]).length,true);
   ps.cave.fu=gotStateArray(ps.cave.fu,(p.cave?.fu||[]).length);
@@ -466,6 +478,10 @@ function saveActiveSiteState(){
   }else if(site.mode==='tunnel'){
     saveSiteBuildings(site,ps);
     ps.tunnel.enemyAlive=site.en.map(e=>e.alive);
+  }else if(site.mode==='branching'){
+    saveSiteBuildings(site,ps);
+    ps.branching.buildings=ps.buildings;
+    ps.branching.en=site.en.map(e=>e.alive);
   }else if(site.mode==='cave'){
     saveSiteBuildings(site,ps);
     ps.cave.en=site.en.map(e=>e.alive);
@@ -520,15 +536,34 @@ function enterTunnel(dir='down',ship=null){
   if(pi==null||!LV[pi])return;
   const p=LV[pi],d=p.tunnel,ps=bodyLevelState(bodyId);
   if(!d){enterSurface(ship);return;}
-  const reactorTunnel=(p.tunnelKind||'reactor')==='reactor';
-  const ent=(dir==='up'&&reactorTunnel&&d.entBottom)?d.entBottom:d.entTop;
-  const tunnelDir=reactorTunnel?dir:'branching';
+  if((p.tunnelKind||'reactor')==='branching'){
+    enterBranchingTunnel(ship);
+    return;
+  }
+  const ent=(dir==='up'&&d.entBottom)?d.entBottom:d.entTop;
   const s=ship||siteShipAt(ent.x,ent.y);
-  s.x=ent.x;s.y=ent.y;if(!ship)s.a=tunnelDir==='up'?0:Math.PI;s.vx*=.35;s.vy*=.35;
-  G.site={mode:'tunnel',tunnelDir,bodyId,planet:p,d,s,
+  s.x=ent.x;s.y=ent.y;if(!ship)s.a=dir==='up'?0:Math.PI;s.vx*=.35;s.vy*=.35;
+  G.site={mode:'tunnel',tunnelDir:dir,bodyId,planet:p,d,s,
     en:d.en.map((e,i)=>initDefense(e,ps.tunnel.enemyAlive[i])),
     buildings:initSiteBuildings(p,'tunnel',ps),
-    fu:[],rx:{alive:false,hp:0},bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:tunnelDir==='up'?Math.max(0,d.worldH-H):0,z:1}};
+    fu:[],rx:{alive:false,hp:0},bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],rdone:false,esc:0,cam:{x:0,y:dir==='up'?Math.max(0,d.worldH-H):0,z:1}};
+  G.absAimTarget=null;G.st='play';
+  saveGame();
+}
+function enterBranchingTunnel(ship=null){
+  const bodyId=activeBodyId();
+  const pi=activeSitePlanetIndex(bodyId);
+  if(pi==null||!LV[pi])return;
+  const p=LV[pi],d=p.tunnel,ps=bodyLevelState(bodyId);
+  if(!d){enterSurface(ship);return;}
+  const ent=d.entTop||d.ent||{x:Math.round(W*.5),y:32};
+  const s=ship||siteShipAt(ent.x,ent.y);
+  s.x=ent.x;s.y=ent.y;if(!ship)s.a=Math.PI;s.vx*=.35;s.vy*=.35;
+  G.site={mode:'branching',bodyId,planet:p,d,s,
+    en:d.en.map((e,i)=>initDefense(e,ps.branching.en[i])),
+    buildings:initSiteBuildings(p,'branching',ps),
+    fu:[],bul:[],ebu:[],mis:[],emi:[],pts:[],lsb:[],
+    cam:updateWorldCamera({x:0,y:0,z:1},s.x,s.y,d.worldW||W,d.worldH||H,cameraZoomTarget('site',s),.5,.45,1)};
   G.absAimTarget=null;G.st='play';
   saveGame();
 }
@@ -579,11 +614,11 @@ function updCaveSite(){
   s.vy+=d.grav;s.vx*=.9985;s.vy*=.9985;const sp=Math.hypot(s.vx,s.vy);if(sp>SITE_CAP_CAVE){s.vx=s.vx/sp*SITE_CAP_CAVE;s.vy=s.vy/sp*SITE_CAP_CAVE;}
   s.x+=s.vx;s.y+=s.vy;
   tickWeaponCooldowns(s);if(s.inv>0)s.inv--;
-  const wH=d.worldH||H;
-  site.cam=updateWorldCamera(site.cam,s.x,s.y,W,wH,cameraZoomTarget('site',s),.5,.45,dynZoomOn()?.12:1);
+  const wW=d.worldW||W,wH=d.worldH||H;
+  site.cam=updateWorldCamera(site.cam,s.x,s.y,wW,wH,cameraZoomTarget('site',s),.5,.45,dynZoomOn()?.12:1);
   if(s.y<0){
     saveActiveSiteState();
-    if(site.mode==='tunnel'){
+    if(site.mode==='tunnel'||site.mode==='branching'){
       const pi=activeSitePlanetIndex(activeSiteBodyId());
       const p=pi==null?null:LV[pi],mouth=p?.surface?.tunnel;
       if(!p)return;
@@ -944,7 +979,7 @@ function drawCaveSite(){
   cx.restore();
   drHUD(site.s.energy,site.s.maxEnergy,site.s.hp,site.s.maxHp,site.s);
   drawPowerOfflineIndicator(activeSiteBodyId());
-  cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.fillStyle=col;cx.textAlign='center';cx.fillText(site.mode==='tunnel'?'tunnel':'cave',W/2,18);cx.restore();
+  cx.save();cx.font='13px MajorMonoDisplay, monospace';cx.fillStyle=col;cx.textAlign='center';cx.fillText(site.mode==='tunnel'?'tunnel':(site.mode==='branching'?'branching':'cave'),W/2,18);cx.restore();
   if(G.st==='esc'){const sec=Math.ceil(site.esc/60);cx.save();cx.fillStyle=sec<=3?'#f40':'#ff0';cx.shadowColor=cx.fillStyle;cx.shadowBlur=sb(12);cx.font='bold 20px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('reactor critical — escape now!',W/2,52);cx.font='bold 34px MajorMonoDisplay, monospace';cx.fillText(sec+'s',W/2,84);cx.restore();}
   if(G.st==='dead_site'){cx.save();cx.fillStyle='rgba(0,0,0,.4)';cx.fillRect(0,0,W,H);cx.fillStyle='#f43';cx.shadowColor='#f43';cx.shadowBlur=sb(14);cx.font='bold 26px MajorMonoDisplay, monospace';cx.textAlign='center';cx.fillText('ship destroyed',W/2,H/2);cx.restore();}
 }

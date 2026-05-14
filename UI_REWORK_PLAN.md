@@ -274,7 +274,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) replaces `LV` / 
 
 ---
 
-### F-12. State surfaces on G
+### F-12. State surfaces on G ✅
 
 **Goal:** New per-run, lifetime, and ephemeral state fields, grouped on G.
 

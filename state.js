@@ -4,6 +4,20 @@
 // sub-system runs per frame. Active mode data lives in sub-objects: G.OW (overworld), G.ENC (encounter), G.site (site).
 const STARTING_POWER=defaultPowerForChassisId('kestrel');
 var BODIES=[];
+function zeroRunCounters(){
+  return {
+    startMs:0,
+    activeMs:0,
+    kills:0,
+    creditsEarned:0,
+    sectorsCleared:0,
+    deaths:0,
+    objectivesDone:0,
+    objectivesTotal:0,
+    stakeBonusPct:0,
+  };
+}
+function resetRunCounters(){G.run=zeroRunCounters();}
 // Master game state.
 //
 // Selection state for menus (titleSel/pauseSel/cheatSubSel/baseSel/shopSel/
@@ -36,10 +50,17 @@ var G={
   customSeed:null,seedInputOpen:false,
   licenses:[],
   loadout:{chassis:'kestrel',battery:STARTING_POWER.battery,reactor:STARTING_POWER.reactor,weapons:['mass driver','pulse laser'],aux:null,shield:'shield_std'},
+  run:zeroRunCounters(),
+  totals:{kills:0,systemsVisited:0,stakeEarned:0},
+  lastRun:null,
+  recentChassis:['kestrel'],
+  lastDeath:null,
   visitedSeeds:[],tutorialDone:false,prevSeed:null,systemFlavor:null,
   menuSuppressUntil:0,systemStates:{},
   needsRebuild:false,lastLocation:null,
 };
+G.system=G.system||{};
+G.system.events=[];
 const ORBIT_MIN_R=1000;
 function orbitMaxR(){return OW_W*0.45;}
 function cancelChargesForActiveShips(){
