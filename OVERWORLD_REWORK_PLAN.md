@@ -376,7 +376,7 @@ SUBTYPE_WEIGHTS = {
 
 ---
 
-### G-02. Body kind/subtype generation pipeline
+### G-02. Body kind/subtype generation pipeline ✅
 
 **Goal:** Roll each non-moon body's size, kind (habitable / uninhabitable / gas_giant), subtype, palette, atmosphere. Enforce Goldilocks band, size-range constraints, and Continental/Machine mutex.
 

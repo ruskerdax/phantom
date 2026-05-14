@@ -3,8 +3,11 @@
 const TUTORIAL_SEED = 0xDEADB33F;
 const NEIGHBOR_MIN  = 3;
 const NEIGHBOR_MAX  = 8;
+const MAX_AST_FIELDS = 2;
+const HU_ORBIT_OUTER_FRAC = 0.49;
+const GAS_ORBIT_INNER_FRAC = 0.50;
 
-// Level data and planet positions — populated by genWorld()
+// Level data and planet positions - populated by genWorld()
 let LV=[];
 let PP=[];
 let BASE=null;
@@ -15,7 +18,7 @@ let SLIPGATE=null;
 
 const MIN_SITE_SEP=440;
 
-// Seeded PRNG — mulberry32
+// Seeded PRNG - mulberry32
 function mkRNG(seed){
   let s=seed>>>0;
   return{
@@ -60,7 +63,161 @@ function rollSystemComposition(seed){
   return{archetypeId:arch.id,huCount,gasCount};
 }
 
-// ---- Overworld body orbital parameters ----
+function weightedPickKey(rng,weights,allowFn=null){
+  const entries=Object.entries(weights).filter(([k,v])=>v>0&&(!allowFn||allowFn(k)));
+  if(!entries.length)return null;
+  const total=entries.reduce((sum,[,w])=>sum+w,0);
+  let roll=rng.next()*total;
+  for(const [k,w] of entries){
+    roll-=w;
+    if(roll<=0)return k;
+  }
+  return entries[entries.length-1][0];
+}
+
+function rollPaletteForSubtype(rng,subtype){
+  const def=SUBTYPE_PALETTES[subtype];
+  if(!def||!Array.isArray(def.terrain)||def.terrain.length<2)throw new Error(`Missing terrain palette for subtype ${subtype}`);
+  const baseIdx=rng.int(0,def.terrain.length-1);
+  const primary=def.terrain[baseIdx];
+  const secondary=def.terrain[(baseIdx+1)%def.terrain.length];
+  const sea=Array.isArray(def.sea)&&def.sea.length?def.sea[rng.int(0,def.sea.length-1)]:null;
+  return{
+    primary,
+    secondary,
+    sea,
+    atmo:sea||primary,
+    bg:secondary,
+  };
+}
+
+function rollPopulationClass(rng,kind,subtype){
+  if(kind!=='habitable'||subtype==='machine')return 'uninhabited';
+  const r=rng.next();
+  if(subtype==='continental')return r<0.6?'moderate':'dense';
+  if(subtype==='rocky'){
+    if(r<0.5)return 'none';
+    if(r<0.8)return 'sparse';
+    return 'moderate';
+  }
+  if(r<0.2)return 'none';
+  if(r<0.6)return 'sparse';
+  if(r<0.9)return 'moderate';
+  return 'dense';
+}
+
+function rollHUBody(seed,sysLockouts,orbitR,maxR){
+  const rng=mkRNG(seed);
+  const size=rng.int(1,6);
+  const inGoldilocks=orbitR>=GOLDILOCKS_INNER*maxR&&orbitR<=GOLDILOCKS_OUTER*maxR;
+  let kind=(size>=2&&size<=4&&inGoldilocks&&rng.next()<0.5)?'habitable':'uninhabitable';
+  let subtype=null;
+
+  if(kind==='habitable'){
+    subtype=weightedPickKey(rng,SUBTYPE_WEIGHTS.habitable,name=>{
+      if(name==='continental'&&(size<CONTINENTAL_SIZE_RANGE[0]||sysLockouts.continental))return false;
+      return true;
+    });
+    if(!subtype)kind='uninhabitable';
+  }
+  if(kind==='uninhabitable'){
+    subtype=weightedPickKey(rng,SUBTYPE_WEIGHTS.uninhabitable,name=>name!=='machine'||!sysLockouts.machine);
+    if(!subtype)throw new Error('No uninhabitable subtype available');
+  }
+
+  if(subtype==='continental'||subtype==='machine'){
+    sysLockouts.continental=true;
+    sysLockouts.machine=true;
+  }
+
+  const palette=rollPaletteForSubtype(rng,subtype);
+  const atmoRange=ATMO_RANGE_BY_SUBTYPE[subtype];
+  if(!Array.isArray(atmoRange)||!atmoRange.length)throw new Error(`Missing atmosphere range for subtype ${subtype}`);
+  const atmoKind=atmoRange[rng.int(0,atmoRange.length-1)];
+  const populationClass=rollPopulationClass(rng,kind,subtype);
+  return{kind,subtype,size,palette,atmoKind,populationClass};
+}
+
+function forceContinentalBody(seed,sysLockouts){
+  const rng=mkRNG(seed);
+  sysLockouts.continental=true;
+  sysLockouts.machine=true;
+  return{
+    kind:'habitable',
+    subtype:'continental',
+    size:3,
+    palette:rollPaletteForSubtype(rng,'continental'),
+    atmoKind:'moderate',
+    populationClass:rng.next()<0.6?'moderate':'dense',
+  };
+}
+
+function rollGasGiant(seed){
+  const rng=mkRNG(seed);
+  const size=rng.int(7,10);
+  const bands=SUBTYPE_PALETTES.gas_giant.bands;
+  const start=rng.int(0,bands.length-1);
+  const count=rng.int(2,3);
+  const picked=[];
+  for(let i=0;i<count;i++)picked.push(bands[(start+i)%bands.length]);
+  return{
+    kind:'gas_giant',
+    subtype:null,
+    size,
+    palette:{
+      primary:picked[0],
+      secondary:picked[1]||picked[0],
+      sea:null,
+      atmo:null,
+      bg:picked[picked.length-1],
+      bands:picked,
+    },
+    atmoKind:null,
+    populationClass:null,
+  };
+}
+
+function rollStar(seed){
+  const rng=mkRNG(seed);
+  const size=rng.int(15,20);
+  const family=rng.next()<0.5?'warm':'cool';
+  const fam=SUBTYPE_PALETTES.star[family];
+  return{
+    kind:'star',
+    subtype:null,
+    size,
+    palette:{
+      primary:fam.inner[0],
+      secondary:fam.mid[0],
+      sea:null,
+      atmo:null,
+      bg:fam.outer[0],
+      core:SUBTYPE_PALETTES.star.core[0],
+      family,
+    },
+    atmoKind:null,
+    populationClass:null,
+  };
+}
+
+function bodyLevelTemplateFromBody(body){
+  const counts=bodySurfaceCounts(body);
+  return{
+    ...body,
+    bodyId:body.id,
+    pcol:body.palette.primary,
+    col:body.palette.secondary,
+    bg:body.palette.bg||body.palette.secondary,
+    grav:FELT_GRAVITY_BY_SIZE[body.size]||0,
+    pr:body.pr,
+    nObs:counts.nObs,
+    nEn:counts.nEn,
+    nFu:counts.nFu,
+    rxHp:counts.rxHp,
+  };
+}
+
+// Overworld body orbital parameters
 function bodyXY(b){
   return{x:OW_W/2+Math.cos(b.orbitA)*b.orbitR,y:OW_H/2+Math.sin(b.orbitA)*b.orbitR};
 }
@@ -79,7 +236,7 @@ function placeSite(rng,placed,label,opts={}){
   const minR=opts.minR??ORBIT_MIN_R,maxR=opts.maxR??orbitMaxR();
   let body=null;
   for(let att=0;att<60;att++){
-    const orbitR=opts.orbitR??(minR+rng.fl(0,maxR-minR));
+    const orbitR=opts.orbitR??(minR+rng.fl(0,Math.max(1,maxR-minR)));
     body={orbitR,orbitA:rng.fl(0,Math.PI*2),orbitSpd:orbitSpdFor(orbitR)};
     if(!isTooCloseToPlaced(body,placed)){
       placed.push(body);
@@ -90,22 +247,20 @@ function placeSite(rng,placed,label,opts={}){
   placed.push(body);
   return body;
 }
-
-// Returns bodies: [0]=base, [1..planetCount]=planets. Each has {orbitR, orbitA, orbitSpd}.
-function genOWBodies(rng,planetCount,placed){
-  const bodies=[];
-  bodies.push(placeSite(rng,placed,'BASE',{minR:825}));
-  for(let i=0;i<planetCount;i++)bodies.push(placeSite(rng,placed,`planet ${i+1}`));
-  return bodies;
+function rollOrbit(rng,placed,label,opts={}){
+  return placeSite(rng,placed,label,opts);
 }
 
-// ---- Asteroid belt bodies + belt particles ----
-function genABodies(rng,placed){
-  const count=rng.int(1,4)-1;
+// Asteroid belt bodies + belt particles
+function genABodies(rng,placed,opts={}){
+  const count=Math.min(MAX_AST_FIELDS,rng.int(1,4)-1);
   if(count===0)return{bodies:[],belt:[]};
   const bodies=[];
+  const hasRange=Number.isFinite(opts.minR)&&Number.isFinite(opts.maxR)&&opts.maxR>opts.minR;
   for(let i=0;i<count;i++){
-    const body=placeSite(rng,placed,`asteroid field ${i+1}`);
+    const body=hasRange
+      ?placeSite(rng,placed,`asteroid field ${i+1}`,{minR:opts.minR,maxR:opts.maxR})
+      :placeSite(rng,placed,`asteroid field ${i+1}`);
     bodies.push({...body,r:50});
   }
   const belt=[],spread=20,N=160;
@@ -114,37 +269,121 @@ function genABodies(rng,placed){
   }
   return{bodies,belt};
 }
-// ---- Hostile base orbital parameters ----
+
+// Hostile base orbital parameters
 function genHBaseBody(rng,placed){
   return{...placeSite(rng,placed,'HBASE'),r:20};
 }
-// ---- Slipgate orbital parameters — always at maximum orbit radius ----
+// Slipgate orbital parameters - always at maximum orbit radius
 function genSlipgateBody(rng,placed){
   const maxOtherOrbit=placed.reduce((m,b)=>Math.max(m,b.orbitR||0),ORBIT_MIN_R);
   const slipOrbit=maxOtherOrbit+400+rng.fl(0,200);
   return{...placeSite(rng,placed,'SLIPGATE',{orbitR:slipOrbit}),r:26};
 }
-// ---- Master world-generation entry point ----
+
+function preferredAsteroidRange(enterablePlanets,gasGiants){
+  if(!gasGiants.length||!enterablePlanets.length)return null;
+  const innermostGas=Math.min(...gasGiants.map(b=>b.orbit.r));
+  const middle=enterablePlanets[Math.floor(enterablePlanets.length/2)].orbit.r;
+  const lo=Math.min(innermostGas,middle);
+  const hi=Math.max(innermostGas,middle);
+  if(hi-lo<120)return null;
+  return{minR:lo,maxR:hi};
+}
+
+// Master world-generation entry point
 function genWorld(seed){
   if(typeof genBackground==='function')genBackground(seed);
   const composition=seed===TUTORIAL_SEED?tutorialSystemComposition():rollSystemComposition(seed);
   const bodyCount=1+composition.huCount+composition.gasCount;
   const worldSize=Math.max(16000,7000+bodyCount*250);
   setOWBounds(worldSize,worldSize);
-  const planetCount=composition.huCount+composition.gasCount;
-  const tmplRng=mkRNG(seedChild(seed,0x3200)),prevColors=[];
-  LV=Array.from({length:planetCount},(_,i)=>genPlanet(genPlanetTmpl(tmplRng,prevColors),seedChild(seed,i),i));
+
   const placed=[];
-  const bodies=genOWBodies(mkRNG(seedChild(seed,99)),planetCount,placed);
-  BASE={...bodies[0],r:22};
-  PP=bodies.slice(1);
-  const abData=genABodies(mkRNG(seedChild(seed,300)),placed);
-  AB=abData.bodies;AB_BELT=abData.belt;
+  const maxR=orbitMaxR();
+  const orbitRng=mkRNG(seedChild(seed,99));
+  const sysLockouts={continental:false,machine:false};
+  const planets=[];
+
+  const firstMinR=Math.max(ORBIT_MIN_R,GOLDILOCKS_INNER*maxR);
+  const firstMaxR=Math.max(firstMinR+1,Math.min(GOLDILOCKS_OUTER*maxR,maxR*HU_ORBIT_OUTER_FRAC));
+  const firstOrbit=rollOrbit(orbitRng,placed,'hu body 0',{minR:firstMinR,maxR:firstMaxR});
+  let firstHU=null;
+  for(let att=0;att<10;att++){
+    const candidate=rollHUBody(seedChild(seed,0x5100+att),sysLockouts,firstOrbit.orbitR,maxR);
+    if(candidate.kind==='habitable'){firstHU=candidate;break;}
+  }
+  if(!firstHU)firstHU=forceContinentalBody(seedChild(seed,0x51FF),sysLockouts);
+  planets.push({
+    ...firstHU,
+    parentId:'star',
+    orbit:{r:firstOrbit.orbitR,a:firstOrbit.orbitA,spd:firstOrbit.orbitSpd},
+  });
+
+  const huMaxR=Math.max(ORBIT_MIN_R+1,maxR*HU_ORBIT_OUTER_FRAC);
+  for(let i=1;i<composition.huCount;i++){
+    const orbit=rollOrbit(orbitRng,placed,`hu body ${i}`,{minR:ORBIT_MIN_R,maxR:huMaxR});
+    const hu=rollHUBody(seedChild(seed,0x5200+i),sysLockouts,orbit.orbitR,maxR);
+    planets.push({
+      ...hu,
+      parentId:'star',
+      orbit:{r:orbit.orbitR,a:orbit.orbitA,spd:orbit.orbitSpd},
+    });
+  }
+
+  const gasMinR=Math.max(ORBIT_MIN_R,maxR*GAS_ORBIT_INNER_FRAC);
+  for(let i=0;i<composition.gasCount;i++){
+    const orbit=rollOrbit(orbitRng,placed,`gas giant ${i+1}`,{minR:gasMinR,maxR:maxR});
+    const gas=rollGasGiant(seedChild(seed,0x5300+i));
+    planets.push({
+      ...gas,
+      parentId:'star',
+      orbit:{r:orbit.orbitR,a:orbit.orbitA,spd:orbit.orbitSpd},
+    });
+  }
+
+  planets.sort((a,b)=>a.orbit.r-b.orbit.r);
+  for(let i=0;i<planets.length;i++){
+    planets[i].id=`p${i}`;
+    planets[i].pr=bodyDrawRadius(planets[i].size);
+  }
+
+  const star={
+    id:'star',
+    parentId:null,
+    orbit:{r:0,a:0,spd:0},
+    ...rollStar(seedChild(seed,0x5000)),
+  };
+  star.pr=bodyDrawRadius(star.size);
+
+  const enterable=planets.filter(b=>b.kind==='habitable'||b.kind==='uninhabitable');
+  const gasGiants=planets.filter(b=>b.kind==='gas_giant');
+
+  // Keep enterables first for legacy LV/PP index consumers.
+  BODIES=[...enterable,...gasGiants,star];
+  if(typeof invalidateBodyOWPosCache==='function')invalidateBodyOWPosCache();
+
+  LV=enterable.map((body,i)=>{
+    const lv=genPlanet(bodyLevelTemplateFromBody(body),seedChild(seed,0x7000+i),i);
+    lv.bodyId=body.id;
+    lv.body=body;
+    return lv;
+  });
+  PP=enterable.map(body=>({orbitR:body.orbit.r,orbitA:body.orbit.a,orbitSpd:body.orbit.spd}));
+
+  BASE={...rollOrbit(orbitRng,placed,'BASE',{minR:825}),r:22};
+  const astRange=preferredAsteroidRange(enterable,gasGiants);
+  const abData=astRange
+    ?genABodies(mkRNG(seedChild(seed,300)),placed,astRange)
+    :genABodies(mkRNG(seedChild(seed,300)),placed);
+  AB=abData.bodies;
+  AB_BELT=abData.belt;
   HBASE=genHBaseBody(mkRNG(seedChild(seed,400)),placed);
   SLIPGATE=genSlipgateBody(mkRNG(seedChild(seed,500)),placed);
+
   const flavorRng=mkRNG(seedChild(seed,0x3000));
   G.systemFlavor={
-    levelCount:  planetCount,
+    levelCount:  LV.length,
     archetypeId: composition.archetypeId,
     hasHostileBase: true,                               // placeholder: forced true
     shopSeed:    seedChild(seed,0x3001),                // for future shop variation

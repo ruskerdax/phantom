@@ -23,6 +23,28 @@ function bodyChildren(id){
   return planetsOf(id);
 }
 
+function hashBodyKey(str){
+  let h=2166136261>>>0;
+  for(let i=0;i<str.length;i++){
+    h^=str.charCodeAt(i);
+    h=Math.imul(h,16777619)>>>0;
+  }
+  return h>>>0;
+}
+
+function bodySurfaceCounts(body){
+  const size=Math.max(1,Math.min(6,Math.round(body?.size||1)));
+  const key=`${body?.id||'body'}|${body?.subtype||''}|${size}`;
+  const rawSeed=hashBodyKey(key);
+  const seed=typeof seedChild==='function'?seedChild(rawSeed,size):rawSeed;
+  const rng=typeof mkRNG==='function'?mkRNG(seed):{int:(lo,hi)=>Math.floor((lo+hi)/2)};
+  const nObs=rng.int(2+size,5+size);
+  const nEn=rng.int(2+size,4+size);
+  const nFu=rng.int(1+Math.floor(size/2),2+Math.floor(size/2));
+  const rxHp=rng.int(24+size*10,48+size*14);
+  return{nObs,nEn,nFu,rxHp};
+}
+
 function invalidateBodyOWPosCache(){
   for(const b of BODIES){
     b._cachedPos = null;
