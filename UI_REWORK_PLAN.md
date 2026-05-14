@@ -391,7 +391,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) replaces `LV` / 
 
 These three validate the F-04 widgets and `bindPrompt` in real screens. After F-* is done, all three can be picked up in parallel.
 
-### P1-01. Options two-pane
+### P1-01. Options two-pane ✅
 
 **Goal:** 09-b layout — categories list left, settings for the focused category right.
 

@@ -26,14 +26,14 @@ function clearJust(code){if(code)K[code+'j']=false;}
 function clearMenuJustPresses(){
   ['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','Enter','NumpadEnter','Backspace','Delete'].forEach(clearJust);
   ACT_DEFS.forEach(a=>clearJust(BND[a.id]?.key));
-  GP.menuUp=GP.menuDown=GP.menuLeft=GP.menuRight=GP.confirmj=GP.startj=false;
+  GP.menuUp=GP.menuDown=GP.menuLeft=GP.menuRight=GP.confirmj=GP.startj=GP.backj=false;
 }
 function suppressMenuInput(frames=6){ G.menuSuppressUntil = G.fr + frames; clearMenuJustPresses(); }
 function menuInputSuppressed(){ return G.fr < (G.menuSuppressUntil||0); }
 function menuInput(opts){
   const o = opts || {};
   if(isRebinding() || menuInputSuppressed()){
-    return {up:false,down:false,left:false,right:false,confirm:false,cancel:false,clear:false};
+    return {up:false,down:false,left:false,right:false,confirm:false,cancel:false,pause:false,clear:false};
   }
   const fireConfirms = o.fireConfirms !== false;
   const enterConfirm = iEnter();
@@ -45,7 +45,8 @@ function menuInput(opts){
     left:  !!(jp('ArrowLeft')  || kjust('rotLeft')  || GP.menuLeft),
     right: !!(jp('ArrowRight') || kjust('rotRight') || GP.menuRight),
     confirm: !!(enterConfirm || fireConfirm),
-    cancel:  !!iBack(),
+    cancel:  !!(iBack() || GP.backj),
+    pause:   !!iPause(),
     clear:   !!iClear(),
   };
 }
@@ -87,8 +88,8 @@ function fmtKey(c){return({ArrowLeft:'◄ LEFT',ArrowRight:'► RIGHT',ArrowUp:'
 function fmtBtn(i){const n=['A','B','X','Y','LB','RB','LT','RT','SEL','START','L3','R3','↑','↓','◄','►'];return n[i]!==undefined?n[i]:'BTN'+i;}
 
 // Gamepad
-var GP={connected:false,id:'',axL:0,axLCombat:0,axLxRaw:0,axLyRaw:0,rotDigital:0,thrust:false,reverse:false,strafeLeft:false,strafeRight:false,fire:false,fireSec:false,shield:false,shieldj:false,startj:false,menuUp:false,menuDown:false,menuLeft:false,menuRight:false,confirmj:false};
-let _gsh=false,_gshield=false,_gmuh=false,_gmdh=false,_gmlh=false,_gmrh=false,_gconfirm=false,_gprev=[];
+var GP={connected:false,id:'',axL:0,axLCombat:0,axLxRaw:0,axLyRaw:0,rotDigital:0,thrust:false,reverse:false,strafeLeft:false,strafeRight:false,fire:false,fireSec:false,shield:false,shieldj:false,startj:false,menuUp:false,menuDown:false,menuLeft:false,menuRight:false,confirmj:false,backj:false};
+let _gsh=false,_gshield=false,_gmuh=false,_gmdh=false,_gmlh=false,_gmrh=false,_gconfirm=false,_gback=false,_gprev=[];
 const GP_AXIS_DEADZONE=.18;
 const GP_ROT_AXIS_CURVE=1.4;
 const GP_COMBAT_ROT_AXIS_CURVE=2.4;
@@ -153,6 +154,7 @@ function pollGP(){
   const ml=dL||(rawLx<-.5);GP.menuLeft=ml&&!_gmlh;_gmlh=ml;
   const mr=dR||(rawLx>.5);GP.menuRight=mr&&!_gmrh;_gmrh=mr;
   const conf=bpressed(bt,0);GP.confirmj=conf&&!_gconfirm;_gconfirm=conf;
+  const bk=bpressed(bt,1);GP.backj=bk&&!_gback;_gback=bk;
 }
 function kdown(id){return!!K[BND[id].key];}
 function kjust(id){return jp(BND[id].key);}
