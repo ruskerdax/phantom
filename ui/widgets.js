@@ -849,6 +849,253 @@ class RunSummaryPanel extends Widget {
   }
 }
 
+// ----- BodySummaryPanel (body/site summary shared by body-info + system map) --
+class BodySummaryPanel extends Widget {
+  constructor(opts = {}) {
+    super(opts);
+    this.focusable = false;
+    this.siteRef = opts.siteRef || null;
+    this.layout = opts.layout || 'inspect'; // 'inspect' | 'enter' | 'compact'
+    this.moonFocusId = opts.moonFocusId ?? null;
+    this._actionPair = null;
+  }
+
+  static bodySummaryRowText(body) {
+    if (!body) return '';
+    const id = body.id != null ? String(body.id).toLowerCase() : 'body';
+    const kind = (body.subtype || body.kind || 'unknown').toString().toLowerCase().replace(/_/g, ' ');
+    const size = Number.isFinite(body.size) ? Math.round(body.size) : '?';
+    return `${id} · ${kind} · size ${size}`;
+  }
+
+  setSiteRef(siteRef) {
+    this.siteRef = siteRef || null;
+    this.refresh();
+  }
+
+  setMoonFocusId(moonFocusId) {
+    this.moonFocusId = moonFocusId ?? null;
+    this.refresh();
+  }
+
+  build() {
+    const el = document.createElement('div');
+    el.className = 'body-summary';
+    return el;
+  }
+
+  handle(input) {
+    if (this.layout !== 'enter' || !this._actionPair) return false;
+    if (input.cancel) {
+      this._back();
+      return true;
+    }
+    return this._actionPair.handle(input);
+  }
+
+  refresh() {
+    if (!this._el) return;
+    this._el.innerHTML = '';
+    this._actionPair = null;
+
+    const siteRef = this.siteRef;
+    if (!siteRef || !siteRef.kind) return;
+
+    if (this.layout === 'compact') {
+      if (siteRef.kind === 'body' && siteRef.body) this._appendLine(BodySummaryPanel.bodySummaryRowText(siteRef.body));
+      return;
+    }
+
+    if (siteRef.kind === 'body') this._renderBody(siteRef.body);
+    else if (siteRef.kind === 'hbase') this._renderHBase();
+    else if (siteRef.kind === 'asteroid') this._renderAsteroid(siteRef.idx);
+    else if (siteRef.kind === 'base') this._renderBase();
+    else if (siteRef.kind === 'slipgate') this._renderSlipgate();
+
+    if (this.layout === 'enter') this._appendActionPair();
+  }
+
+  _appendWidget(widget) {
+    if (!widget) return;
+    this._el.appendChild(widget.render());
+  }
+
+  _appendIdLabel(id) {
+    const el = document.createElement('div');
+    el.className = 'bsp-id';
+    el.textContent = id != null ? String(id) : 'body';
+    this._el.appendChild(el);
+  }
+
+  _appendSectionHeader(label) {
+    this._appendWidget(new SectionHeader({ label }));
+  }
+
+  _appendKV(label, value, valueColor = null) {
+    this._appendWidget(new KeyValueRow({ label, value, valueColor }));
+  }
+
+  _appendLine(text) {
+    const row = document.createElement('div');
+    row.className = 'kv-row';
+    const line = document.createElement('span');
+    line.className = 'kv-label';
+    line.textContent = text;
+    row.appendChild(line);
+    this._el.appendChild(row);
+  }
+
+  _appendObjectiveRows(rows) {
+    this._appendSectionHeader('objectives');
+    if (!rows.length) {
+      this._appendKV('status', 'none');
+      return;
+    }
+    for (const row of rows) {
+      const complete = !!row.complete;
+      const label = (row.label || row.type || 'objective').toString().toLowerCase();
+      this._appendKV(label, complete ? 'complete' : 'pending', complete ? 'var(--stat-up)' : null);
+    }
+  }
+
+  _planetObjectiveRows(bodyId) {
+    if (typeof objectivePanelRows !== 'function' || !bodyId) return [];
+    return objectivePanelRows({ layout: 'planet', bodyId }) || [];
+  }
+
+  _hbaseObjectiveRows() {
+    const list = Array.isArray(G?.objectives) ? G.objectives : [];
+    const hbaseType = (typeof OBJECTIVE_TYPE_IDS !== 'undefined' && OBJECTIVE_TYPE_IDS?.HBASE) || 'hbase';
+    return list
+      .filter(o => String(o?.type || '').toLowerCase() === String(hbaseType).toLowerCase())
+      .map(o => ({ label: o.label, type: o.type, complete: !!o.complete }));
+  }
+
+  _asteroidObjectiveRows(idx) {
+    const list = Array.isArray(G?.objectives) ? G.objectives : [];
+    if (idx == null) return [];
+    const keys = new Set([
+      `asteroid:${idx}`,
+      `asteroid-${idx}`,
+      `asteroid ${idx}`,
+      `ab:${idx}`,
+      `ab${idx}`,
+    ]);
+    return list
+      .filter(o => keys.has(String(o?.bodyId || '').toLowerCase()))
+      .map(o => ({ label: o.label, type: o.type, complete: !!o.complete }));
+  }
+
+  _gravityLabel(size) {
+    const n = Math.max(1, Math.min(6, Math.round(Number(size) || 1)));
+    if (n === 1) return 'none';
+    if (n === 2) return 'very little';
+    if (n === 3) return 'some';
+    if (n === 4) return 'moderate';
+    if (n === 5) return 'high';
+    return 'very high';
+  }
+
+  _renderBody(body) {
+    if (!body || body.kind === 'star') return; // star is not a selectable site
+    this._appendIdLabel(body.id || 'body');
+    if (body.kind === 'gas_giant') {
+      this._appendKV('size', Number.isFinite(body.size) ? Math.round(body.size) : '?');
+      this._appendKV('type', 'gas giant');
+      return;
+    }
+    if (body.kind !== 'habitable' && body.kind !== 'uninhabitable') return;
+
+    this._appendSectionHeader('body');
+    this._appendKV('size', Number.isFinite(body.size) ? Math.round(body.size) : '?');
+    this._appendKV('gravity', this._gravityLabel(body.size));
+    this._appendKV('type', String(body.kind).replace(/_/g, ' '));
+    this._appendKV('subtype', body.subtype ? String(body.subtype).replace(/_/g, ' ') : 'none');
+    this._appendKV('population', body.kind === 'uninhabitable' ? 'uninhabited' : (body.populationClass || 'none'));
+    this._appendKV('atmosphere', body.atmoKind ? String(body.atmoKind).replace(/_/g, ' ') : 'none');
+    this._appendObjectiveRows(this._planetObjectiveRows(body.id));
+  }
+
+  _renderHBase() {
+    this._appendSectionHeader('hostile base');
+    this._appendKV('status', G?.hbCleared ? 'cleared' : 'armada fleet active');
+    this._appendObjectiveRows(this._hbaseObjectiveRows());
+  }
+
+  _renderAsteroid(idx) {
+    this._appendSectionHeader('asteroid field');
+    this._appendObjectiveRows(this._asteroidObjectiveRows(idx));
+  }
+
+  _renderBase() {
+    this._appendSectionHeader('friendly base');
+    this._appendLine('dock to refuel and refit');
+  }
+
+  _renderSlipgate() {
+    this._appendSectionHeader('slipgate');
+    this._appendLine(G?.slipgateActive ? 'unlocked' : 'locked');
+  }
+
+  _hasInteractableSurface() {
+    const siteRef = this.siteRef;
+    if (!siteRef || !siteRef.kind) return false;
+    if (siteRef.kind === 'body') {
+      const kind = siteRef.body?.kind;
+      return kind === 'habitable' || kind === 'uninhabitable';
+    }
+    return siteRef.kind === 'hbase' || siteRef.kind === 'asteroid';
+  }
+
+  _appendActionPair() {
+    const canEnter = this._hasInteractableSurface();
+    this._actionPair = new ButtonPair({
+      left: { label: 'back', onConfirm: () => this._back() },
+      right: {
+        label: canEnter ? 'enter' : 'enter (disabled)',
+        onConfirm: () => { if (canEnter) this._enter(); },
+      },
+      defaultSel: canEnter ? 1 : 0,
+    });
+    this._actionPair.setFocused(true);
+    const el = this._actionPair.render();
+    if (!canEnter && el.children?.[1]) el.children[1].classList.add('is-disabled');
+    this._el.appendChild(el);
+  }
+
+  _enter() {
+    const siteRef = this.siteRef;
+    if (!siteRef || !siteRef.kind) return;
+    if (siteRef.kind === 'body') {
+      const body = siteRef.body;
+      if (!body) return;
+      if ((body.kind === 'habitable' || body.kind === 'uninhabitable') && typeof enterPlanetByBodyId === 'function') {
+        enterPlanetByBodyId(body.id);
+      }
+      return;
+    }
+    if (siteRef.kind === 'asteroid') {
+      if (typeof enterAsteroidField === 'function') enterAsteroidField(siteRef.idx);
+      return;
+    }
+    if (siteRef.kind === 'hbase') {
+      if (typeof startHBaseEnc === 'function') startHBaseEnc();
+    }
+  }
+
+  _back() {
+    if (typeof uiPop === 'function') {
+      uiPop();
+      return;
+    }
+    if (this.screen?.onCancel) this.screen.onCancel();
+  }
+}
+
+function bodySummaryRowText(body) {
+  return BodySummaryPanel.bodySummaryRowText(body);
+}
+
 // ----- NewsTicker (pulsing dot + scrolling event ribbon) --------------------
 class NewsTicker extends Widget {
   constructor(opts) {

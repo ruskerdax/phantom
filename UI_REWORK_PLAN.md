@@ -355,7 +355,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) replaces `LV` / 
 
 ---
 
-### F-16. BodySummaryPanel widget
+### F-16. BodySummaryPanel widget ✅
 
 **Goal:** A single widget that renders a body's (or non-body site's) summary fields. Consumed by both the `body-info` DOM screen (OVERWORLD U-01) and the system-map right-side info card (P4-02), so the displayed field set stays in sync.
 

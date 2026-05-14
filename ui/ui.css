@@ -462,6 +462,19 @@
 .kv-row .kv-label { color: var(--text-dim); }
 .kv-row .kv-value { color: var(--text-strong); font-weight: 700; }
 
+/* --- BodySummaryPanel -------------------------------------------------------- */
+.body-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.body-summary .bsp-id {
+  font-size: var(--fs-section);
+  color: var(--text-dim);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
 /* --- StatCompareRow --------------------------------------------------------- */
 .stat-compare {
   display: grid;
