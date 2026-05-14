@@ -171,6 +171,97 @@ function btRotateTerrainToEntry(poly,entX){
   return poly.slice(bestI).concat(poly.slice(0,bestI));
 }
 
+function btStationReachableInSite(siteData,entry){
+  if(typeof caveWalkReachable!=='function')return true;
+  const stations=(siteData.buildings||[]).filter(b=>b.classId===BUILDING_CLASS_IDS.POWER_STATION);
+  if(!stations.length)return true;
+  const fences=(siteData.buildings||[]).filter(b=>b.classId===BUILDING_CLASS_IDS.LASER_DEFENSE&&b.a&&b.b);
+  return caveWalkReachable(siteData,entry,stations,fences);
+}
+
+function btClearingStationXCandidates(rng,clearing,halfW){
+  const minX=Math.ceil(clearing.x+halfW+10);
+  const maxX=Math.floor(clearing.x+clearing.w-halfW-10);
+  if(maxX<minX)return [];
+  const out=[Math.round((minX+maxX)*.5)];
+  for(let i=0;i<7;i++)out.push(Math.round(rng.fl(minX,maxX)));
+  return [...new Set(out)];
+}
+
+function btBuildingPlacementClear(siteData,classId,x,y,pad=10){
+  const def=buildingDef(classId);
+  const hw=def.footprint.w*.5,hh=def.footprint.h*.5;
+  for(const b of siteData.buildings||[]){
+    const bd=buildingDef(b.classId);
+    const bhw=bd.footprint.w*.5,bhh=bd.footprint.h*.5;
+    if(Math.abs(x-b.x)<hw+bhw+pad&&Math.abs(y-b.y)<hh+bhh+pad)return false;
+  }
+  return true;
+}
+
+function btPlaceClearingPowerStation(rng,siteData){
+  if(!Array.isArray(siteData.clearings)||!siteData.clearings.length)return;
+  if(rng.next()>=.5)return;
+  const stationDef=buildingDef(BUILDING_CLASS_IDS.POWER_STATION);
+  const halfW=stationDef.footprint.w*.5;
+  const yOff=stationDef.footprint.h*.5;
+  const clearings=btShuffleInPlace(rng,siteData.clearings.slice());
+  const entry=siteData.entTop||siteData.ent||{x:Math.round(W*.5),y:32};
+  for(const clearing of clearings){
+    const y=Math.round(clearing.floorY-yOff);
+    const xs=btClearingStationXCandidates(rng,clearing,halfW);
+    for(const x of xs){
+      if(!pip(x,y,siteData.terrain))continue;
+      const station=mkBuilding(BUILDING_CLASS_IDS.POWER_STATION,Math.round(x),Math.round(y),{clearingId:clearing.terminalNodeId});
+      siteData.buildings.push(station);
+      if(btStationReachableInSite(siteData,entry))return;
+      siteData.buildings.pop();
+    }
+  }
+}
+
+function btClearingFactoryXCandidates(rng,clearing,halfW){
+  const minX=Math.ceil(clearing.x+halfW+12);
+  const maxX=Math.floor(clearing.x+clearing.w-halfW-12);
+  if(maxX<minX)return [];
+  const out=[Math.round((minX+maxX)*.5)];
+  for(let i=0;i<7;i++)out.push(Math.round(rng.fl(minX,maxX)));
+  return [...new Set(out)];
+}
+
+function btPlaceClearingDroneFactory(rng,siteData){
+  if(!Array.isArray(siteData.clearings)||!siteData.clearings.length)return;
+  if(rng.next()>=.25)return;
+  const factoryDef=buildingDef(BUILDING_CLASS_IDS.DRONE_FACTORY);
+  const halfW=factoryDef.footprint.w*.5;
+  const yOff=factoryDef.footprint.h*.5;
+  const clearings=btShuffleInPlace(rng,siteData.clearings.slice());
+  for(const clearing of clearings){
+    const y=Math.round(clearing.floorY-yOff);
+    const xs=btClearingFactoryXCandidates(rng,clearing,halfW);
+    for(const x of xs){
+      if(!pip(x,y,siteData.terrain))continue;
+      if(!btBuildingPlacementClear(siteData,BUILDING_CLASS_IDS.DRONE_FACTORY,x,y,10))continue;
+      const idx=siteData.buildings.length;
+      const factory=mkBuilding(BUILDING_CLASS_IDS.DRONE_FACTORY,Math.round(x),Math.round(y),{
+        clearingId:clearing.terminalNodeId,
+        idx,
+        spawnTimer:1200
+      });
+      siteData.buildings.push(factory);
+      return;
+    }
+  }
+}
+
+function btPlaceLaserDefenses(rng,siteData){
+  if(typeof genLaserDefensesInSite!=='function')return;
+  const entry=siteData.entTop||siteData.ent||{x:Math.round(W*.5),y:32};
+  const axis=rng.next()<.5?'horizontal':'vertical';
+  const fences=genLaserDefensesInSite(rng,siteData,entry,{axis});
+  for(const f of fences)siteData.buildings.push(f);
+}
+
 function genBranchingTunnel(rng,tmpl,seed){
   const worldW=rng.int(2,4)*W;
   const worldH=rng.int(3,5)*H;
@@ -308,7 +399,7 @@ function genBranchingTunnel(rng,tmpl,seed){
   terrain=btSimplifyCollinear(terrain).map(p=>[Math.round(p[0]),Math.round(p[1])]);
   terrain=btRotateTerrainToEntry(terrain,ent.x);
 
-  return{
+  const siteData={
     ...tmpl,
     kind:'branching',
     worldW,
@@ -326,4 +417,8 @@ function genBranchingTunnel(rng,tmpl,seed){
     buildings:[],
     grav:tmpl.grav
   };
+  btPlaceClearingPowerStation(rng,siteData);
+  btPlaceClearingDroneFactory(rng,siteData);
+  btPlaceLaserDefenses(rng,siteData);
+  return siteData;
 }

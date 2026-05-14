@@ -678,19 +678,20 @@ function orbitalGunClassId(){
 function powerStationRefsForPlanet(pi){
   const p=LV?.[pi],stationId=powerStationClassId();
   if(!p)return [];
+  const tunnelMode=p?.tunnelKind==='branching'?'branching':'tunnel';
   if(typeof planetBuildingRefs==='function'){
-    return planetBuildingRefs(p).filter(r=>r.classId===stationId&&(r.mode==='surface'||r.mode==='tunnel'));
+    return planetBuildingRefs(p).filter(r=>r.classId===stationId&&(r.mode==='surface'||r.mode==='tunnel'||r.mode==='branching'));
   }
   const refs=[],counts={};
   const add=(mode,d)=>{
     (d?.buildings||[]).forEach((b,i)=>{
       const classId=b.classId,bitIndex=counts[classId]||0;
       counts[classId]=bitIndex+1;
-      if(classId===stationId&&(mode==='surface'||mode==='tunnel'))refs.push({mode,siteIndex:i,classId,bitIndex,b});
+      if(classId===stationId&&(mode==='surface'||mode==='tunnel'||mode==='branching'))refs.push({mode,siteIndex:i,classId,bitIndex,b});
     });
   };
   add('surface',p.surface);
-  add('tunnel',p.tunnel);
+  add(tunnelMode,p.tunnel);
   return refs;
 }
 function orbitalGunRefsForPlanet(pi){

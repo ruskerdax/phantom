@@ -73,6 +73,7 @@ function drawBuildingTunnel(b, site) {
   const def = buildingDef(b);
   b.powered = buildingIsPowered(site, b);
   if(def.drawTunnel) def.drawTunnel(b, site, b.powered);
+  else if(def.drawSurface) def.drawSurface(b, site, b.powered);
 }
 
 function drawPowerStation(station) {

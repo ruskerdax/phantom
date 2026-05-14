@@ -77,6 +77,14 @@ function surfaceDroneCount(site) {
   return (site?.en || []).filter(e => e.alive && surfaceEnemyDef(e).type === SURFACE_ENEMY_TYPES.SURFACE_DRONE).length;
 }
 
+function isTunnelDrone(e) {
+  return !!e?.tunnelDrone;
+}
+
+function tunnelDroneCount(site) {
+  return (site?.en || []).filter(e => e.alive && isTunnelDrone(e)).length;
+}
+
 function airDefenseBaseGround(site, base) {
   return surfaceYAt(site.d, base.x);
 }
@@ -160,12 +168,31 @@ function spawnSurfaceDrone(site, factory) {
   return e;
 }
 
+function spawnTunnelDrone(site, factory) {
+  if(site?.mode !== 'branching') return null;
+  if(tunnelDroneCount(site) >= TUNNEL_DRONE_CAP) return null;
+  const e = mkSurfaceEnemy(SURFACE_ENEMY_TYPES.SURFACE_DRONE, factory.x, Math.round(factory.y - 28), {
+    vx:(Math.random() - .5) * .8,
+    vy:(Math.random() - .5) * .8,
+    phase:Math.random() * Math.PI * 2,
+    factoryOf:factory.idx,
+    homeX:factory.x,
+    homeY:factory.y - 56,
+    tunnelDrone:true,
+  });
+  site.en.push(initSurfaceEnemy(e, true));
+  return e;
+}
+
 function updateDroneFactory(factory, site) {
-  if(site?.mode !== 'surface' || !factory?.alive) return;
+  if((site?.mode !== 'surface' && site?.mode !== 'branching') || !factory?.alive) return;
   if(!Number.isFinite(factory.spawnTimer)) factory.spawnTimer = 1200;
-  if(surfaceDroneCount(site) >= SURFACE_DRONE_CAP) return;
+  const cap = site.mode === 'branching' ? TUNNEL_DRONE_CAP : SURFACE_DRONE_CAP;
+  const count = site.mode === 'branching' ? tunnelDroneCount(site) : surfaceDroneCount(site);
+  if(count >= cap) return;
   if(--factory.spawnTimer <= 0) {
-    spawnSurfaceDrone(site, factory);
+    if(site.mode === 'branching') spawnTunnelDrone(site, factory);
+    else spawnSurfaceDrone(site, factory);
     factory.spawnTimer = 1200;
   }
 }
@@ -204,6 +231,44 @@ function steerSurfaceDrone(site, e, dist, aimAngle) {
     if(hdist > 250) {
       e.vx += hd.dx / hdist * .08;
       e.vy += hd.dy / hdist * .08;
+    }
+  }
+}
+
+function tunnelDroneHasLos(site, e, dist, aimAngle) {
+  const s = site.s;
+  const tgts = [{x:s.x, y:s.y, r:shipHitRadius(s), kind:'ship'}];
+  const res = castLaserForSpace(e.x, e.y, aimAngle, dist + shipHitRadius(s), tgts, siteBeamWalls(site), null);
+  return res.hitIdx >= 0;
+}
+
+function tunnelPointOpen(site, x, y) {
+  const d = site.d;
+  if(!pip(x, y, d.terrain)) return false;
+  if((d.obs || []).some(o => pip(x, y, o))) return false;
+  return true;
+}
+
+function steerTunnelDrone(site, e, dist, aimAngle) {
+  const s = site.s, home = surfaceDroneHome(site, e);
+  if(tunnelDroneHasLos(site, e, dist, aimAngle)) {
+    const orbitA = G.fr * .025 + e.phase;
+    const tx = s.x + Math.sin(orbitA) * 120;
+    const ty = s.y + Math.cos(orbitA) * 120;
+    e.vx += (tx - e.x) * .006;
+    e.vy += (ty - e.y) * .006;
+  } else {
+    const orbitA = G.fr * .016 + e.phase;
+    const tx = home.x + Math.sin(orbitA) * 170;
+    const ty = home.y + Math.cos(orbitA) * 52;
+    const pdx = tx - e.x, pdy = ty - e.y;
+    const hdx = home.x - e.x, hdy = home.y - e.y;
+    const hdist = Math.hypot(hdx, hdy) || 1;
+    e.vx += pdx * .004;
+    e.vy += pdy * .004;
+    if(hdist > 250) {
+      e.vx += hdx / hdist * .08;
+      e.vy += hdy / hdist * .08;
     }
   }
 }
@@ -316,6 +381,86 @@ function maybeFireSurfaceEnemy(site, e, def, dist, aimAngle) {
   fireSurfaceEnemyWeapon(site, e, def, aimAngle, dist);
 }
 
+function tunnelDroneWeaponContext(site, e, def, dist, aimAngle) {
+  const wp = surfaceEnemyWeapon(def), fw = def.surf.fire;
+  const shots = enemyWeaponShotCount(e, 0, wp, fw.count || 1);
+  const angles = enemyFireAngles(e, fw, aimAngle, shots);
+  return {
+    trace:'tunnel-drone',
+    angle:aimAngle,
+    angles,
+    count:shots,
+    ammoCost:shots,
+    spread:fw.spread || 0,
+    offset:fw.offset,
+    cooldownFrames:surfaceEnemyCooldown(def),
+    retryCooldown:enemyRetryCooldown,
+    projectileColor:def.col,
+    projectileTone:[520, .04, 'square', .03],
+    beamColor:def.col,
+    beamTone:[550, .08, 'sine', .04],
+    bul:site.ebu,
+    mis:site.emi,
+    lsb:site.lsb,
+    walls:siteBeamWalls(site),
+    space:null,
+    tgts:()=>defenseBeamTargets(site),
+    onBeamHit:(tg, hitWp, res)=>defenseHandleBeamHit(site, hitWp, res, tg),
+    canStartFire:()=>shots > 0 && enemyCanFireAnyWeapon(e) && surfaceEnemyCanFire(e, def, dist, aimAngle),
+    aimOnPress:true,
+  };
+}
+
+function fireTunnelDroneWeapon(site, e, def, aimAngle, dist = Infinity) {
+  const wp = surfaceEnemyWeapon(def);
+  return runAiWeaponSlot(e, 0, wp, tunnelDroneWeaponContext(site, e, def, dist, aimAngle));
+}
+
+function maybeFireTunnelDrone(site, e, def, dist, aimAngle) {
+  fireTunnelDroneWeapon(site, e, def, aimAngle, dist);
+}
+
+function updTunnelDrone(site, e) {
+  if(!e.alive || site?.mode !== 'branching') return;
+  const d = site.d, s = site.s, def = surfaceEnemyDef(e), sf = def.surf;
+  tickEnemyEnergy(e);
+  const dx = s.x - e.x, dy = s.y - e.y;
+  const dist = Math.hypot(dx, dy) || 1, aimAngle = Math.atan2(dx, -dy);
+  steerTunnelDrone(site, e, dist, aimAngle);
+
+  e.vx *= .985;
+  e.vy *= .985;
+  const max = sf.spd ?? 2.8, sp = Math.hypot(e.vx, e.vy);
+  if(sp > max) {
+    e.vx = e.vx / sp * max;
+    e.vy = e.vy / sp * max;
+  }
+
+  const prevX = e.x, prevY = e.y;
+  e.x += e.vx;
+  e.y += e.vy;
+  const worldW = d.worldW || W, worldH = d.worldH || H;
+  e.x = Math.max(8, Math.min(worldW - 8, e.x));
+  e.y = Math.max(8, Math.min(worldH - 8, e.y));
+  if(!tunnelPointOpen(site, e.x, e.y)) {
+    e.x = prevX;
+    e.y = prevY;
+    e.vx *= -.35;
+    e.vy *= -.35;
+  }
+
+  e.a = Math.atan2(e.vx, -e.vy || -.01);
+  maybeFireTunnelDrone(site, e, def, dist, aimAngle);
+
+  if(Math.hypot(s.x - e.x, s.y - e.y) < surfaceEnemyRadius(e) + shipHitRadius(s)) {
+    const hit = applyShipDamage(s, 2, {source:{x:e.x, y:e.y}, kind:'collision'});
+    shipDamageTone(hit, 180, .12, 'sawtooth', .1);
+    e.vx -= dx / dist * 1.5;
+    e.vy -= dy / dist * 1.5;
+    if(s.hp <= 0) siteKillShip();
+  }
+}
+
 function updSurfaceEnemy(site, e) {
   if(!e.alive) return;
   const d = site.d, s = site.s, def = surfaceEnemyDef(e), sf = def.surf, ground = surfaceYAt(d, e.x);
@@ -380,3 +525,54 @@ function updSurfaceEnemy(site, e) {
     if(s.hp <= 0) siteKillShip();
   }
 }
+
+const _nativeUpdateDefense = updateDefense;
+updateDefense = function(site, d) {
+  if(isTunnelDrone(d)) {
+    updTunnelDrone(site, d);
+    return;
+  }
+  _nativeUpdateDefense(site, d);
+};
+
+const _nativeDrawDefense = drawDefense;
+drawDefense = function(d) {
+  if(isTunnelDrone(d)) {
+    drawSurfaceEnemy(d);
+    return;
+  }
+  _nativeDrawDefense(d);
+};
+
+const _nativeDamageDefense = damageDefense;
+damageDefense = function(site, d, dmg, x = d.x, y = d.y) {
+  if(isTunnelDrone(d)) return damageSurfaceEnemy(site, d, dmg, x, y);
+  return _nativeDamageDefense(site, d, dmg, x, y);
+};
+
+const _nativeDefenseRadius = defenseRadius;
+defenseRadius = function(d) {
+  if(isTunnelDrone(d)) return surfaceEnemyRadius(d);
+  return _nativeDefenseRadius(d);
+};
+
+const _nativeDefenseColor = defenseColor;
+defenseColor = function(d) {
+  if(isTunnelDrone(d)) return surfaceEnemyColor(d);
+  return _nativeDefenseColor(d);
+};
+
+const _nativeDefenseHullWorld = defenseHullWorld;
+defenseHullWorld = function(d, def) {
+  if(isTunnelDrone(d)) return surfaceEnemyHullWorld(d, surfaceEnemyDef(d));
+  return _nativeDefenseHullWorld(d, def);
+};
+
+const _nativeDefenseBeamTarget = defenseBeamTarget;
+defenseBeamTarget = function(d, idx, kind = 'defense') {
+  if(isTunnelDrone(d)) {
+    const h = surfaceEnemyHullWorld(d);
+    return {x:d.x, y:d.y, r:h.boundsR, hull:h, beamPad:beamMotionPadding(d), kind, idx};
+  }
+  return _nativeDefenseBeamTarget(d, idx, kind);
+};

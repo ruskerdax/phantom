@@ -472,7 +472,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P2-04. Power substation in clearings
+### P2-04. Power substation in clearings ✅
 
 **Goal:** Place 0–1 power stations per branching tunnel in a clearing; integrate into planet powered cascade.
 
@@ -490,7 +490,7 @@ P1-01 and P1-02 are foundational; the rest can run in parallel after both land. 
 
 ---
 
-### P2-05. Drone factory + laser defense in branching tunnels
+### P2-05. Drone factory + laser defense in branching tunnels ✅
 
 **Goal:** Allow `DRONE_FACTORY` in clearings (using `TUNNEL_DRONE_CAP=8` independent of surface); allow `LASER_DEFENSE` in tunnel corridors with reachability check.
 
