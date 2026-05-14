@@ -47,6 +47,19 @@ function genNeighbors(seed){
   return out;
 }
 
+function tutorialSystemComposition(){
+  return{archetypeId:'compact_rocky',huCount:3,gasCount:2};
+}
+
+function rollSystemComposition(seed){
+  const arch=rollSystemArchetype(mkRNG(seedChild(seed,0x4000)));
+  const huRng=mkRNG(seedChild(seed,0x4001));
+  const gasRng=mkRNG(seedChild(seed,0x4002));
+  const huCount=huRng.int(arch.hu[0],arch.hu[1]);
+  const gasCount=gasRng.int(arch.gas[0],arch.gas[1]);
+  return{archetypeId:arch.id,huCount,gasCount};
+}
+
 // ---- Overworld body orbital parameters ----
 function bodyXY(b){
   return{x:OW_W/2+Math.cos(b.orbitA)*b.orbitR,y:OW_H/2+Math.sin(b.orbitA)*b.orbitR};
@@ -114,9 +127,11 @@ function genSlipgateBody(rng,placed){
 // ---- Master world-generation entry point ----
 function genWorld(seed){
   if(typeof genBackground==='function')genBackground(seed);
-  setOWBounds(16000,16000);
-  const worldRng=mkRNG(seedChild(seed,0x3100));
-  const planetCount=worldRng.int(1,5)+worldRng.int(1,5);
+  const composition=seed===TUTORIAL_SEED?tutorialSystemComposition():rollSystemComposition(seed);
+  const bodyCount=1+composition.huCount+composition.gasCount;
+  const worldSize=Math.max(16000,7000+bodyCount*250);
+  setOWBounds(worldSize,worldSize);
+  const planetCount=composition.huCount+composition.gasCount;
   const tmplRng=mkRNG(seedChild(seed,0x3200)),prevColors=[];
   LV=Array.from({length:planetCount},(_,i)=>genPlanet(genPlanetTmpl(tmplRng,prevColors),seedChild(seed,i),i));
   const placed=[];
@@ -130,6 +145,7 @@ function genWorld(seed){
   const flavorRng=mkRNG(seedChild(seed,0x3000));
   G.systemFlavor={
     levelCount:  planetCount,
+    archetypeId: composition.archetypeId,
     hasHostileBase: true,                               // placeholder: forced true
     shopSeed:    seedChild(seed,0x3001),                // for future shop variation
     encounterSeed: seedChild(seed,0x3002),              // for future encounter variation

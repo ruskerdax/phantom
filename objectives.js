@@ -165,6 +165,7 @@ function currentSystemState() {
     hbCleared: G.hbCleared,
     hbState: G.hbState,
     lvState: G.lvState,
+    systemArchetype: G.systemFlavor?.archetypeId ?? null,
   };
 }
 

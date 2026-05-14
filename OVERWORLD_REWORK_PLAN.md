@@ -351,7 +351,7 @@ SUBTYPE_WEIGHTS = {
 
 ## Phase 1 — System & body generation (sequential)
 
-### G-01. System archetype roll & body count
+### G-01. System archetype roll & body count ✅
 
 **Goal:** Replace the fixed 2d5-planets roll with the archetype-driven body count.
 
