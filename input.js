@@ -53,16 +53,16 @@ function menuInput(opts){
 
 // Action bindings
 var ACT_DEFS=[
-  {id:'rotLeft', label:'ROTATE LEFT',  defKey:'KeyA',      defBtn:14},
-  {id:'rotRight',label:'ROTATE RIGHT', defKey:'KeyD',      defBtn:15},
-  {id:'thrust',  label:'THRUST',       defKey:'KeyW',      defBtn:7},
-  {id:'reverse', label:'REVERSE',      defKey:'KeyS',      defBtn:6},
-  {id:'strafeLeft', label:'STRAFE LEFT', defKey:'KeyQ',    defBtn:4},
-  {id:'strafeRight',label:'STRAFE RIGHT',defKey:'KeyE',    defBtn:5},
-  {id:'fire',    label:'FIRE',         defKey:'KeyJ',      defBtn:2},
-  {id:'fireSec', label:'FIRE SECONDARY',defKey:'KeyO',     defBtn:3},
-  {id:'shield',  label:'TOGGLE SHIELDS',defKey:'KeyX',     defBtn:11},
-  {id:'pause',   label:'PAUSE',        defKey:'KeyP',      defBtn:9},
+  {id:'rotLeft',    label:'ROTATE LEFT',    defKey:'KeyA', defBtn:14, section:'movement'},
+  {id:'rotRight',   label:'ROTATE RIGHT',   defKey:'KeyD', defBtn:15, section:'movement'},
+  {id:'thrust',     label:'THRUST',         defKey:'KeyW', defBtn:7,  section:'movement'},
+  {id:'reverse',    label:'REVERSE',        defKey:'KeyS', defBtn:6,  section:'movement'},
+  {id:'strafeLeft', label:'STRAFE LEFT',    defKey:'KeyQ', defBtn:4,  section:'movement'},
+  {id:'strafeRight',label:'STRAFE RIGHT',   defKey:'KeyE', defBtn:5,  section:'movement'},
+  {id:'fire',       label:'FIRE',           defKey:'KeyJ', defBtn:2,  section:'combat'},
+  {id:'fireSec',    label:'FIRE SECONDARY', defKey:'KeyO', defBtn:3,  section:'combat'},
+  {id:'shield',     label:'TOGGLE SHIELDS', defKey:'KeyX', defBtn:11, section:'combat'},
+  {id:'pause',      label:'PAUSE',          defKey:'KeyP', defBtn:9,  section:'ui'},
 ];
 var BND={};ACT_DEFS.forEach(a=>{BND[a.id]={key:a.defKey,btn:a.defBtn};});
 const BND_VERSION=2,BND_VERSION_KEY='phantom_bnd_version';

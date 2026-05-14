@@ -20,7 +20,7 @@ function makeControlsScreen() {
     layout: 'fullscreen',
     theme: 'default',
     title: 'controls',
-    footer: () => `${UI_GLYPH_DOM.left}${UI_GLYPH_DOM.right} switch column   enter remap   del clear   ${pausePromptDOM('back')}`,
+    footer: () => `${bindHint('left/right', 'column')}   ${bindHint('confirm', 'remap')}   del clear   ${bindHint('cancel', 'back')}`,
     onCancel: () => openOptionsMenu(G.optFrom),
   });
 
@@ -52,8 +52,13 @@ function makeControlsScreen() {
     panel.appendChild(headers);
 
     // KeyBinder rows go in their own grid below the headers.
+    // overflow-y + min-height: 0 let this section shrink and scroll inside
+    // the panel's max-height flex column.
     const grid = document.createElement('div');
     grid.className = 'controls-grid';
+    grid.style.overflowY = 'auto';
+    grid.style.minHeight = '0';
+    grid.style.scrollbarColor = 'var(--accent-dim) transparent';
     panel.appendChild(grid);
     this._gridSlot = grid;
 
@@ -80,28 +85,34 @@ function makeControlsScreen() {
     this._gridSlot.innerHTML = '';
     this._stackSlot.innerHTML = '';
     for (const w of this.widgets) {
-      const target = w instanceof KeyBinder ? this._gridSlot : this._stackSlot;
+      const inGrid = w instanceof KeyBinder || w instanceof SectionHeader;
+      const target = inGrid ? this._gridSlot : this._stackSlot;
       target.appendChild(w.render());
     }
   };
 
-  // ---- KeyBinder rows -----------------------------------------------------
+  // ---- KeyBinder rows grouped by section ----------------------------------
   const isListeningHere = (idx) => G.optListen != null && G.ctrlSel === idx;
   const startListening = (idx, mode) => {
     G.ctrlSel = idx;
     G.optListen = mode;
     suppressMenuInput();
   };
-  for (let i = 0; i < ACT_DEFS.length; i++) {
-    const a = ACT_DEFS[i], idx = i;
-    screen.add(new KeyBinder({
-      actionId: a.id,
-      label: a.label.toLowerCase(),
-      getCol: () => G.optCol,
-      setCol: c => { G.optCol = c; },
-      startListening: mode => startListening(idx, mode),
-      isListening: () => isListeningHere(idx),
-    }));
+  const SECTION_ORDER = ['movement', 'combat', 'ui'];
+  for (const section of SECTION_ORDER) {
+    const entries = ACT_DEFS.map((a, i) => ({ a, i })).filter(({ a }) => (a.section || 'ui') === section);
+    if (!entries.length) continue;
+    screen.add(new SectionHeader({ label: section }));
+    for (const { a, i } of entries) {
+      screen.add(new KeyBinder({
+        actionId: a.id,
+        label: a.label.toLowerCase(),
+        getCol: () => G.optCol,
+        setCol: c => { G.optCol = c; },
+        startListening: mode => startListening(i, mode),
+        isListening: () => isListeningHere(i),
+      }));
+    }
   }
 
   // ---- Tail widgets -------------------------------------------------------
@@ -147,6 +158,11 @@ function makeControlsScreen() {
       });
     }
     origRefresh();
+    // row-action uses display:contents so _el has no layout box; scroll a
+    // child cell instead so the focused row stays visible.
+    if (w instanceof KeyBinder && w._el?.firstElementChild) {
+      try { w._el.firstElementChild.scrollIntoView({ block: 'nearest' }); } catch(e) {}
+    }
   };
 
   // Refresh every frame so the listening "press key..." state updates and key

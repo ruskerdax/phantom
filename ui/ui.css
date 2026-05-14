@@ -404,6 +404,7 @@
   text-shadow: 0 0 10px var(--accent-cheat);
   animation: blink 0.5s steps(2) infinite;
 }
+.controls-grid .section-header { grid-column: 1 / -1; margin-top: 8px; }
 
 /* ---- Centered group inside the panel body --------------------------------- */
 .center-stack {
@@ -445,7 +446,6 @@
 .section-header {
   font-size: var(--fs-section);
   letter-spacing: .14em;
-  text-transform: uppercase;
   color: var(--text-dim);
   border-bottom: 1px dashed var(--divider);
   padding-bottom: 2px;

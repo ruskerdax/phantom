@@ -415,7 +415,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ---
 
-### P1-02. Controls sectioned grid
+### P1-02. Controls sectioned grid ✅
 
 **Goal:** 10-a — group `ACT_DEFS` rows under `SectionHeader`s, sticky column headers, gamepad+keyboard prompts.
 
