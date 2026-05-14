@@ -296,7 +296,7 @@ The overworld + star system rework (`OVERWORLD_REWORK_PLAN.md`) replaces `LV` / 
 
 ---
 
-### F-13. Save format extension
+### F-13. Save format extension ✅
 
 **Goal:** Persist `G.totals`, `G.lastRun`, `G.recentChassis`, and (when a run is in progress) `G.run`.
 

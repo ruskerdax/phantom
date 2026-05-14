@@ -4,6 +4,66 @@ const SAVE_KEY = 'phantom_save_v3';
 const SETTINGS_VERSION = 1;
 const DEFAULT_VOLUME = 7;
 
+function defaultRunState() {
+  return {
+    startMs: 0,
+    activeMs: 0,
+    kills: 0,
+    creditsEarned: 0,
+    sectorsCleared: 0,
+    deaths: 0,
+    objectivesDone: 0,
+    objectivesTotal: 0,
+    stakeBonusPct: 0,
+  };
+}
+
+function defaultTotalsState() {
+  return {
+    kills: 0,
+    systemsVisited: 0,
+    stakeEarned: 0,
+  };
+}
+
+function defaultRecentChassis() {
+  return ['kestrel'];
+}
+
+function finiteOr(value, fallback) {
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function normalizeRunState(run, fallback = defaultRunState()) {
+  const src = (run && typeof run === 'object' && !Array.isArray(run)) ? run : fallback;
+  return {
+    startMs: finiteOr(src.startMs, fallback.startMs),
+    activeMs: finiteOr(src.activeMs, fallback.activeMs),
+    kills: finiteOr(src.kills, fallback.kills),
+    creditsEarned: finiteOr(src.creditsEarned, fallback.creditsEarned),
+    sectorsCleared: finiteOr(src.sectorsCleared, fallback.sectorsCleared),
+    deaths: finiteOr(src.deaths, fallback.deaths),
+    objectivesDone: finiteOr(src.objectivesDone, fallback.objectivesDone),
+    objectivesTotal: finiteOr(src.objectivesTotal, fallback.objectivesTotal),
+    stakeBonusPct: finiteOr(src.stakeBonusPct, fallback.stakeBonusPct),
+  };
+}
+
+function normalizeTotalsState(totals, fallback = defaultTotalsState()) {
+  const src = (totals && typeof totals === 'object' && !Array.isArray(totals)) ? totals : fallback;
+  return {
+    kills: finiteOr(src.kills, fallback.kills),
+    systemsVisited: finiteOr(src.systemsVisited, fallback.systemsVisited),
+    stakeEarned: finiteOr(src.stakeEarned, fallback.stakeEarned),
+  };
+}
+
+function normalizeRecentChassis(recentChassis, fallback = defaultRecentChassis()) {
+  if (!Array.isArray(recentChassis)) return [...fallback];
+  const list = recentChassis.filter(id => typeof id === 'string' && id.length > 0);
+  return list.length ? list : [...fallback];
+}
+
 function defaultSave() {
   const power = defaultPowerForChassisId('kestrel');
   return {
@@ -21,6 +81,10 @@ function defaultSave() {
     cheatSlipgateUnlocked: false,
     seed: 0,
     visitedSeeds: [],
+    run: defaultRunState(),
+    totals: defaultTotalsState(),
+    lastRun: null,
+    recentChassis: defaultRecentChassis(),
     tutorialDone: false,
     prevSeed: null,
     systemStates: {},
@@ -104,6 +168,11 @@ function loadSave() {
     if (!Array.isArray(d.currentMag))        d.currentMag = null;
     if (!Array.isArray(d.currentReloading))  d.currentReloading = null;
     if (!Array.isArray(d.currentCharge))     d.currentCharge = null;
+    d.run = normalizeRunState(d.run, def.run);
+    d.totals = normalizeTotalsState(d.totals, def.totals);
+    if (d.lastRun == null) d.lastRun = null;
+    else if (typeof d.lastRun !== 'object' || Array.isArray(d.lastRun)) d.lastRun = def.lastRun;
+    d.recentChassis = normalizeRecentChassis(d.recentChassis, def.recentChassis);
     if (!Number.isFinite(d.objectivesRequired)) d.objectivesRequired = def.objectivesRequired;
     if (typeof d.cheatSlipgateUnlocked !== 'boolean') d.cheatSlipgateUnlocked = false;
     if (!d.lvState || typeof d.lvState !== 'object') d.lvState = {};
@@ -141,6 +210,7 @@ function resetSave() {
 function buildSaveData() {
   if (typeof saveActiveSiteState === 'function') saveActiveSiteState();
   const s = G.ENC?.s ?? G.site?.s ?? G.OW?.s;
+  const hasSaveContext = !!(G.OW || G.ENC || G.site);
   if (s) syncShipEnergyProfile(s);
   const systemStates = {...(G.systemStates ?? {})};
   if (typeof currentSystemState === 'function') systemStates[G.seed >>> 0] = currentSystemState();
@@ -148,7 +218,7 @@ function buildSaveData() {
   const fallbackPower = defaultPowerForChassisId('kestrel');
   const battery = isBatteryId(G.loadout.battery) ? G.loadout.battery : (isBatteryId(power.battery) ? power.battery : fallbackPower.battery);
   const reactor = isReactorId(G.loadout.reactor) ? G.loadout.reactor : (isReactorId(power.reactor) ? power.reactor : fallbackPower.reactor);
-  return {
+  const data = {
     credits: G.credits,
     stake: G.stake,
     licenses: [...G.licenses],
@@ -165,6 +235,9 @@ function buildSaveData() {
     cheatSlipgateUnlocked: !!G.cheatSlipgateUnlocked,
     seed: G.seed,
     visitedSeeds: [...G.visitedSeeds],
+    totals: normalizeTotalsState(G.totals, defaultTotalsState()),
+    lastRun: (G.lastRun && typeof G.lastRun === 'object') ? G.lastRun : null,
+    recentChassis: normalizeRecentChassis(G.recentChassis, defaultRecentChassis()),
     tutorialDone: G.tutorialDone,
     prevSeed: G.prevSeed,
     systemStates,
@@ -194,6 +267,8 @@ function buildSaveData() {
     effectsEnabled: G.effectsEnabled !== false,
     effectSettings: normalizeEffectSettings(G.effectSettings),
   };
+  if (!(G.st === 'title' && !hasSaveContext)) data.run = normalizeRunState(G.run, defaultRunState());
+  return data;
 }
 
 function saveGame() { writeSave(buildSaveData()); }

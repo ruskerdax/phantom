@@ -853,6 +853,10 @@ function startFromSave(){
     shield:('shield' in savedLoadout)?savedLoadout.shield:def.loadout.shield
   };
   G.visitedSeeds=sv?[...(sv.visitedSeeds??[])]:[];
+  G.run={...(sv?.run??def.run)};
+  G.totals={...(sv?.totals??def.totals)};
+  G.lastRun=(sv?.lastRun&&typeof sv.lastRun==='object')?sv.lastRun:null;
+  G.recentChassis=[...(sv?.recentChassis??def.recentChassis)];
   G.credits=sv?.credits??0;
   G.stake=0;
   G.cleared={};
