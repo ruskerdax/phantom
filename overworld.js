@@ -785,6 +785,31 @@ function drawOW(){
   cx.fillStyle=owStarGrad;cx.beginPath();cx.arc(0,0,SR,0,Math.PI*2);cx.fill();
   cx.shadowBlur=0;
   cx.restore();}
+  if(typeof BODIES!=='undefined'){
+    for(let bi=0;bi<BODIES.length;bi++){
+      const b=BODIES[bi];
+      if(b.kind!=='gas_giant')continue;
+      const gp=bodyOWPos(b),gr=bodyDrawRadius(b.size);
+      if(gp.x+gr<camRect.x0||gp.x-gr>camRect.x1||gp.y+gr<camRect.y0||gp.y-gr>camRect.y1)continue;
+      const pal=b.palette||{},bands=pal.bands&&pal.bands.length?pal.bands:[pal.primary||'#fa6'];
+      const primary=pal.primary||bands[0],bg=pal.bg||bands[bands.length-1];
+      const pu=.5+.5*Math.sin(G.fr*.04+bi*.7);
+      cx.save();
+      cx.shadowColor=primary;cx.shadowBlur=sb(10+pu*16);
+      cx.fillStyle=bg;cx.beginPath();cx.arc(gp.x,gp.y,gr,0,Math.PI*2);cx.fill();
+      cx.shadowBlur=0;
+      cx.save();cx.beginPath();cx.arc(gp.x,gp.y,gr,0,Math.PI*2);cx.clip();
+      for(let i=0;i<bands.length;i++){
+        const t0=-1+(2*i)/bands.length,t1=-1+(2*(i+1))/bands.length;
+        const y0=gp.y+t0*gr,y1=gp.y+t1*gr;
+        cx.fillStyle=bands[i];cx.fillRect(gp.x-gr,y0,gr*2,y1-y0+1);
+      }
+      cx.restore();
+      cx.strokeStyle=primary;cx.shadowColor=primary;cx.shadowBlur=sb(8+pu*10);cx.lineWidth=1.5;
+      cx.beginPath();cx.arc(gp.x,gp.y,gr,0,Math.PI*2);cx.stroke();
+      cx.restore();
+    }
+  }
   for(let pi=0;pi<visPlanets.length;pi++){
     const i=visPlanets[pi];
     const p=owPos(PP[i]),d=LV[i];

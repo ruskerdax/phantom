@@ -778,8 +778,12 @@ class SiteMap extends Widget {
     this.get = opts.get;              // () => focused id
     this.set = opts.set;              // (id) => void
     this.onConfirm = opts.onConfirm;
-    this._nodeEls = new Map();        // String(id) -> SVGCircleElement
+    this.playerPos = opts.playerPos;  // () => {x, y, angle} in [-1,1] coords | null
+    this._nodeEls = new Map();        // String(id) -> SVG element (circle or rect)
+    this._playerEl = null;
   }
+
+  static _squareKinds() { return new Set(['base', 'hbase', 'slipgate']); }
 
   _rawNodes() {
     return typeof this.nodes === 'function' ? this.nodes() : (this.nodes || []);
@@ -825,6 +829,27 @@ class SiteMap extends Widget {
       svg.appendChild(center);
     }
 
+    // For system mode, render the star at center as a fixed, non-selectable decoration.
+    if (this.mode === 'system') {
+      const starG = document.createElementNS(ns, 'g');
+      starG.setAttribute('class', 'star');
+      const starC = document.createElementNS(ns, 'circle');
+      starC.setAttribute('cx', '100');
+      starC.setAttribute('cy', '100');
+      starC.setAttribute('r', '4');
+      starG.appendChild(starC);
+      for (let i = 0; i < 8; i++) {
+        const a = i * Math.PI / 4;
+        const ray = document.createElementNS(ns, 'line');
+        ray.setAttribute('x1', String(100 + Math.cos(a) * 5.5));
+        ray.setAttribute('y1', String(100 + Math.sin(a) * 5.5));
+        ray.setAttribute('x2', String(100 + Math.cos(a) * 8.5));
+        ray.setAttribute('y2', String(100 + Math.sin(a) * 8.5));
+        starG.appendChild(ray);
+      }
+      svg.appendChild(starG);
+    }
+
     return svg;
   }
 
@@ -840,18 +865,60 @@ class SiteMap extends Widget {
       if (!activeIds.has(id)) { el.remove(); this._nodeEls.delete(id); }
     }
 
+    const squareKinds = SiteMap._squareKinds();
     for (const n of nodes) {
       const sid = String(n.id);
+      const wantSquare = squareKinds.has(n.kind);
+      const wantTag = wantSquare ? 'rect' : 'circle';
       let el = this._nodeEls.get(sid);
+      if (el && el.tagName.toLowerCase() !== wantTag) {
+        el.remove();
+        this._nodeEls.delete(sid);
+        el = null;
+      }
       if (!el) {
-        el = document.createElementNS(ns, 'circle');
-        el.setAttribute('r', '4');
+        el = document.createElementNS(ns, wantTag);
+        if (wantSquare) {
+          el.setAttribute('width', '8');
+          el.setAttribute('height', '8');
+        } else {
+          el.setAttribute('r', '4');
+        }
         this._el.appendChild(el);
         this._nodeEls.set(sid, el);
       }
-      el.setAttribute('cx', String(n.svgX));
-      el.setAttribute('cy', String(n.svgY));
-      el.setAttribute('class', 'node' + (sid === focusedId ? ' is-focused' : ''));
+      if (wantSquare) {
+        el.setAttribute('x', String(n.svgX - 4));
+        el.setAttribute('y', String(n.svgY - 4));
+      } else {
+        el.setAttribute('cx', String(n.svgX));
+        el.setAttribute('cy', String(n.svgY));
+      }
+      const cls = 'node'
+        + (wantSquare ? ' shape-square' : '')
+        + (n.kind ? ' kind-' + n.kind : '')
+        + (n.isCurrent ? ' is-current' : '')
+        + (sid === focusedId ? ' is-focused' : '');
+      el.setAttribute('class', cls);
+    }
+
+    // Player marker (arrow). Only meaningful in 'system' mode but rendered if
+    // playerPos is supplied regardless of mode.
+    const pp = typeof this.playerPos === 'function' ? this.playerPos() : null;
+    if (pp && Number.isFinite(pp.x) && Number.isFinite(pp.y)) {
+      if (!this._playerEl) {
+        this._playerEl = document.createElementNS(ns, 'polygon');
+        this._playerEl.setAttribute('class', 'player');
+        this._playerEl.setAttribute('points', '0,-5 -3.5,4 0,2 3.5,4');
+        this._el.appendChild(this._playerEl);
+      }
+      const px = 100 + Math.max(-1, Math.min(1, pp.x)) * 90;
+      const py = 100 + Math.max(-1, Math.min(1, pp.y)) * 90;
+      const deg = Number.isFinite(pp.angle) ? pp.angle * 180 / Math.PI : 0;
+      this._playerEl.setAttribute('transform', `translate(${px} ${py}) rotate(${deg})`);
+    } else if (this._playerEl) {
+      this._playerEl.remove();
+      this._playerEl = null;
     }
   }
 
@@ -1150,6 +1217,10 @@ class BodySummaryPanel extends Widget {
     this._appendKV('subtype', body.subtype ? String(body.subtype).replace(/_/g, ' ') : 'none');
     this._appendKV('population', body.kind === 'uninhabitable' ? 'uninhabited' : (body.populationClass || 'none'));
     this._appendKV('atmosphere', body.atmoKind ? String(body.atmoKind).replace(/_/g, ' ') : 'none');
+    if (body.parentId === 'star') {
+      const moonCount = (typeof planetsOf === 'function') ? planetsOf(body.id).length : 0;
+      if (moonCount > 0) this._appendKV('moons', String(moonCount));
+    }
     this._appendObjectiveRows(this._planetObjectiveRows(body.id));
   }
 

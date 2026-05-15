@@ -578,7 +578,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ---
 
-### P3-04. Refit tab
+### P3-04. Refit tab ✅
 
 **Goal:** Embed `makeShipConfigurator` (P2-02) inside the refit tab.
 
@@ -597,7 +597,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ## Phase 4 — Pause + submenus
 
-### P4-01. Pause two-pane
+### P4-01. Pause two-pane ✅
 
 **Goal:** 02-b layout. Right pane is the 06-b ship readout body inline. New menu items: `system map`, `info`. No `ship config` entry.
 
@@ -622,7 +622,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ---
 
-### P4-02. System Map submenu
+### P4-02. System Map submenu ✅
 
 **Goal:** Pause submenu derived from 03-c radar — right rail removed, selected-site info card above the news ticker.
 

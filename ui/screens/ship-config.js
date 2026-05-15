@@ -7,8 +7,8 @@
 // via populateShipReadoutBody().
 // =============================================================================
 
-function populateShipReadoutBody(panelEl) {
-  if (!panelEl) return;
+function populateShipReadoutBody(panelEl, opts = {}) {
+  if (!panelEl) return null;
   panelEl.innerHTML = '';
   panelEl.classList.add('ship-readout-body');
 
@@ -56,10 +56,21 @@ function populateShipReadoutBody(panelEl) {
   appendW(new SectionHeader({ label: 'stats' }));
   appendW(new KeyValueRow({ label: 'hull', value: String(ch.maxHp) }));
   appendW(new KeyValueRow({ label: 'thrust', value: chassisThrustStatsText(ch).toLowerCase() }));
-  appendW(new KeyValueRow({
+  const energyRow = new KeyValueRow({
     label: 'energy',
-    value: `${loadoutBatteryCapacity()} cap · ${loadoutReactorRate()}/s rech`,
-  }));
+    value: opts.liveEnergy
+      ? () => {
+          const s = G.OW?.s;
+          const cap = loadoutBatteryCapacity();
+          const rech = loadoutReactorRate();
+          const max = (s && s.maxEnergy > 0) ? s.maxEnergy : cap;
+          const cur = (s && Number.isFinite(s.energy)) ? s.energy : max;
+          const pct = max > 0 ? Math.round(100 * cur / max) : 0;
+          return `${pct}% · ${cap} cap · ${rech}/s rech`;
+        }
+      : `${loadoutBatteryCapacity()} cap · ${loadoutReactorRate()}/s rech`,
+  });
+  appendW(energyRow);
 
   appendW(new SectionHeader({ label: 'loadout' }));
   ch.slots.forEach((sl, i) => {
@@ -81,6 +92,8 @@ function populateShipReadoutBody(panelEl) {
 
   grid.appendChild(rightPane);
   panelEl.appendChild(grid);
+
+  return { energyRow };
 }
 
 function makeShipConfigScreen() {

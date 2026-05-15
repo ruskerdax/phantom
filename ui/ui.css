@@ -651,6 +651,19 @@
 .ship-readout-diagram { width:340px; }
 .ship-readout-stats { display:flex; flex-direction:column; }
 
+/* --- Pause two-pane (02-b) -------------------------------------------------- */
+.pause-grid {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  column-gap: var(--gap-loose, 16px);
+  align-items: start;
+  min-height: 0;
+}
+.pause-menu { display: flex; flex-direction: column; gap: 4px; padding-right: 12px; border-right: 1px solid var(--divider); }
+.pause-dash { min-width: 0; }
+.pause-dash .ship-readout-grid { grid-template-columns: 200px 1fr; column-gap: 12px; }
+.pause-dash .ship-readout-diagram { width: 200px; }
+
 /* --- SlotPicker / Ship Configurator ---------------------------------------- */
 .ship-configurator-grid {
   display: grid;
@@ -694,7 +707,76 @@
 .site-map .node { fill:var(--text); }
 .site-map .node.is-current { fill:var(--accent); }
 .site-map .node.is-focused { stroke:var(--accent); stroke-width:2; filter:drop-shadow(0 0 6px var(--accent)); animation: ship-slot-pulse 1.2s ease-in-out infinite; }
+.site-map .node.shape-square { fill:none; stroke:var(--text); stroke-width:2; }
+.site-map .node.shape-square.is-current { stroke:var(--accent); }
+.site-map .node.shape-square.is-focused { stroke:var(--accent); stroke-width:2.5; }
 .site-map .orbit { fill:none; stroke:var(--divider); stroke-dasharray:3 4; }
+.site-map .star circle { fill:var(--accent); }
+.site-map .star line { stroke:var(--accent); stroke-width:1.5; }
+.site-map .player { fill:var(--accent); stroke:var(--accent); stroke-width:0.5; filter:drop-shadow(0 0 4px var(--accent)); }
+
+/* --- System Map screen ----------------------------------------------------- */
+.system-map-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap-loose, 16px);
+  min-height: 0;
+}
+.system-map-grid {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  column-gap: var(--gap-loose, 16px);
+  align-items: start;
+  min-height: 0;
+}
+.system-map-pane-map {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-width: 0;
+  border: 1px solid var(--divider);
+  padding: 6px;
+}
+.system-map-pane-info {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+.system-map-moon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px dashed var(--divider);
+  padding-top: 6px;
+}
+.system-map-moon-list.hidden { display: none; }
+.system-map-moon-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: var(--fs-section);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.system-map-moon-header-hint {
+  color: var(--accent);
+  letter-spacing: .08em;
+  text-transform: none;
+  font-size: var(--fs-row-detail);
+}
+.system-map-moon-row {
+  font-size: var(--fs-row-detail);
+  color: var(--text-dim);
+  padding: 2px 6px;
+  border-left: 2px solid transparent;
+}
+.system-map-moon-row.is-focused {
+  color: var(--accent);
+  background: rgba(0, 255, 136, .08);
+  border-left-color: var(--accent);
+}
 
 /* GP indicator */
 .gp-indicator {

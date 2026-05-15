@@ -118,6 +118,8 @@ function makeBaseScreen() {
     this.widgets = [tabBar];
     this._serviceUpdaters = [];
     this._shopUpdate = null;
+    this._refitUpdate = null;
+    this._refitPicker = null;
     this._flashMsg = null;
     this._flashUntil = 0;
 
@@ -128,15 +130,16 @@ function makeBaseScreen() {
       this._populateServices();
     } else if (tabId === 'shop') {
       this._populateShop();
+    } else if (tabId === 'refit') {
+      this._populateRefit();
     }
-    // refit body content is owned by P3-04.
 
     this.widgets.push(ticker);
 
     this.focusIdx = Math.max(0, Math.min(this.widgets.length - 1, this.focusIdx));
 
     // Fallback render for tabs that didn't take over panel-body themselves.
-    if (this._panelBody && tabId !== 'services' && tabId !== 'shop') {
+    if (this._panelBody && tabId !== 'services' && tabId !== 'shop' && tabId !== 'refit') {
       for (let i = 1; i < this.widgets.length - 1; i++) {
         this._panelBody.appendChild(this.widgets[i].render());
       }
@@ -231,6 +234,140 @@ function makeBaseScreen() {
       actionBtn.setDisabled(d);
     });
     this._serviceUpdaters[0]();
+  };
+
+  // ===========================================================================
+  // Refit tab (P3-04): embeds the P2-02 configurator inline with deferred-cost.
+  //   - flow.original snapshotted on first refit-tab visit (preserved across
+  //     in-base tab switches; cleared when the base screen unmounts).
+  //   - Confirm: debit diff cost and apply to G.loadout. No chassis change.
+  //   - Back button: discard flow and re-snapshot from current G.loadout.
+  // ===========================================================================
+  screen._populateRefit = function() {
+    if (!this._panelBody) return;
+
+    if (!this._refitFlow) {
+      this._refitFlow = {
+        chassisId: G.loadout.chassis,
+        slots: [...(G.loadout.weapons || [])],
+        shieldId: G.loadout.shield ?? null,
+        original: {
+          chassisId: G.loadout.chassis,
+          slots: [...(G.loadout.weapons || [])],
+          shieldId: G.loadout.shield ?? null,
+        },
+        warnShown: false,
+      };
+    }
+    const flow = this._refitFlow;
+    const flowCost = () => equipFlowCost(flow);
+
+    const picker = new SlotPicker({
+      getSlots: () => {
+        const c = CHASSIS.find(x => x.id === flow.chassisId);
+        return c?.slots || [];
+      },
+      getChoicesForSlot: (slotIdx) => {
+        const c = CHASSIS.find(x => x.id === flow.chassisId);
+        const sl = c?.slots?.[slotIdx];
+        if (!sl) return [];
+        return [null, ...licensedWeaponsForSlot(sl).map(w => w.id)];
+      },
+      getCurrent: (slotIdx) => flow.slots[slotIdx] ?? null,
+      setCurrent: (slotIdx, id) => { flow.slots[slotIdx] = id; },
+    });
+
+    const shieldCycle = new Cycle({
+      label: 'shield',
+      values: () => [null, ...SHIELDS.filter(s => hasLicense(s.id)).map(s => s.id)],
+      get: () => flow.shieldId ?? null,
+      set: v => { flow.shieldId = v; },
+      format: v => {
+        if (v == null) return '(none)';
+        const sh = SHIELDS.find(s => s.id === v);
+        return (sh ? sh.name : v).toLowerCase();
+      },
+    });
+
+    const confirmBtn = new Button({
+      label: () => 'confirm · ' + creditLabel(flowCost()),
+      onConfirm: () => {
+        const cost = flowCost();
+        if (G.credits < cost) { tone(80, .1, 'square', .06); return; }
+        const hasWeapon = flow.slots.some(s => s !== null);
+        if (!hasWeapon && !flow.warnShown) { flow.warnShown = true; return; }
+        const ch = CHASSIS.find(c => c.id === flow.chassisId);
+        G.credits -= cost;
+        G.loadout.weapons = [...flow.slots];
+        G.loadout.shield = flow.shieldId;
+        if (ch) {
+          while (G.loadout.weapons.length < ch.slots.length) G.loadout.weapons.push(null);
+          G.loadout.weapons = G.loadout.weapons.slice(0, ch.slots.length);
+        }
+        const s = G.OW?.s;
+        if (s) { resetShipShield(s); refillAmmoForLoadout(s); }
+        flow.original = {
+          chassisId: flow.chassisId,
+          slots: [...flow.slots],
+          shieldId: flow.shieldId,
+        };
+        flow.warnShown = false;
+        saveGame();
+        tone(660, .2, 'sine', .08);
+      },
+    });
+
+    const backBtn = new Button({
+      label: 'back',
+      onConfirm: () => {
+        screen._refitFlow = null;
+        screen.focusIdx = 0;
+        screen.populateBody();
+        screen.refresh();
+      },
+    });
+
+    const warnRow = new TextRow({
+      text: () => flow.warnShown ? 'warning: no weapons equipped!' : '',
+      color: 'var(--accent-warn)',
+      align: 'center',
+      size: 'sm',
+    });
+    warnRow.focusable = false;
+
+    const diagram = new ShipDiagram({
+      chassisId: flow.chassisId,
+      loadout: { weapons: flow.slots, shield: flow.shieldId },
+      focusedSlotId: 0,
+    });
+
+    const grid = document.createElement('div');
+    grid.className = 'ship-configurator-grid';
+    const leftPane = document.createElement('div');
+    leftPane.className = 'ship-configurator-diagram';
+    leftPane.appendChild(diagram.render());
+    const rightPane = document.createElement('div');
+    rightPane.className = 'ship-configurator-info';
+    rightPane.appendChild(picker.render());
+    grid.appendChild(leftPane);
+    grid.appendChild(rightPane);
+    this._panelBody.appendChild(grid);
+    this._panelBody.appendChild(shieldCycle.render());
+    this._panelBody.appendChild(confirmBtn.render());
+    this._panelBody.appendChild(backBtn.render());
+    this._panelBody.appendChild(warnRow.render());
+
+    this.widgets.push(picker, shieldCycle, confirmBtn, backBtn, warnRow);
+
+    this._refitPicker = picker;
+    this._refitUpdate = () => {
+      const curCh = CHASSIS.find(c => c.id === flow.chassisId);
+      if (curCh) diagram.chassisId = curCh.id;
+      diagram.setLoadout({ weapons: flow.slots, shield: flow.shieldId });
+      diagram.setFocusedSlotId(picker.slotIdx);
+      confirmBtn.setDisabled(G.credits < flowCost());
+    };
+    this._refitUpdate();
   };
 
   // ===========================================================================
@@ -623,10 +760,30 @@ function makeBaseScreen() {
     saveGame();
   };
 
+  // Up/Down on the refit SlotPicker cycles weapons before falling through to
+  // vertical focus movement. Mirrors the configurator's input override.
+  screen.handle = function(input) {
+    if (input.cancel && this.onCancel) { this.onCancel(); return; }
+    const w = this.focused();
+    if ((input.up || input.down) && w === this._refitPicker && this._refitPicker) {
+      if (this._refitPicker.handle(input)) { this.refresh(); return; }
+      this.moveFocus(input.up ? -1 : 1);
+      return;
+    }
+    if (input.up)   { this.moveFocus(-1); return; }
+    if (input.down) { this.moveFocus( 1); return; }
+    if (w && w.handle) {
+      const consumed = w.handle(input);
+      if (consumed) { this.refresh(); return; }
+    }
+    if (input.confirm && this.onConfirm) { this.onConfirm(); }
+  };
+
   const baseRefresh = screen.refresh.bind(screen);
   screen.refresh = function() {
     if (this._serviceUpdaters) for (const fn of this._serviceUpdaters) fn();
     if (this._shopUpdate) this._shopUpdate();
+    if (this._refitUpdate) this._refitUpdate();
     baseRefresh();
     if (this._chipsEl) this._chipsEl.innerHTML = chipsHTML();
     if (this._footerEl) {
