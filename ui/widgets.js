@@ -632,6 +632,134 @@ class ShipDiagram extends Widget {
   }
 }
 
+// ----- SlotPicker (focusable; ←/→ slot, ↑/↓ weapon cycle) -------------------
+// Renders an info card for the focused slot — section header, current part
+// name, brief stats, and a choice list with the focused choice highlighted.
+//   left/right  -> slotIdx +/- 1 (wraps), snaps partChoiceIdx to current part
+//   up/down     -> partChoiceIdx +/- 1 within choices; writes flow.slots[i]
+//                  immediately. At boundaries the input is NOT consumed, so
+//                  the screen can move focus to a sibling widget.
+class SlotPicker extends Widget {
+  constructor(opts) {
+    super(opts);
+    this.getSlots = opts.getSlots;                  // () => chassis.slots
+    this.getChoicesForSlot = opts.getChoicesForSlot; // (slotIdx) => [id|null, ...]
+    this.getCurrent = opts.getCurrent;              // (slotIdx) => id|null
+    this.setCurrent = opts.setCurrent;              // (slotIdx, id) => void
+    this.onSlotChange = opts.onSlotChange;          // () => void  (left/right)
+    this.onPartChange = opts.onPartChange;          // () => void  (up/down)
+    this.slotIdx = 0;
+    this.partChoiceIdx = 0;
+    this._syncPartChoiceToCurrent();
+  }
+  _slots() { const s = this.getSlots && this.getSlots(); return Array.isArray(s) ? s : []; }
+  _choices() { const c = this.getChoicesForSlot && this.getChoicesForSlot(this.slotIdx); return Array.isArray(c) ? c : []; }
+  _syncPartChoiceToCurrent() {
+    const choices = this._choices();
+    if (!choices.length) { this.partChoiceIdx = 0; return; }
+    const cur = this.getCurrent ? this.getCurrent(this.slotIdx) : null;
+    const idx = choices.findIndex(c => c === cur);
+    this.partChoiceIdx = idx < 0 ? 0 : idx;
+  }
+  build() {
+    const el = document.createElement('div');
+    el.className = 'slot-picker';
+    const header = document.createElement('div');
+    header.className = 'section-header sp-header';
+    const partName = document.createElement('div');
+    partName.className = 'sp-part-name';
+    const partStats = document.createElement('div');
+    partStats.className = 'sp-part-stats';
+    const choiceList = document.createElement('div');
+    choiceList.className = 'sp-choice-list';
+    el.appendChild(header);
+    el.appendChild(partName);
+    el.appendChild(partStats);
+    el.appendChild(choiceList);
+    this._header = header;
+    this._partName = partName;
+    this._partStats = partStats;
+    this._choiceList = choiceList;
+    return el;
+  }
+  _choiceLabel(id) {
+    if (id == null) return '(empty)';
+    const wp = (typeof WEAPONS !== 'undefined') ? WEAPONS.find(w => w.id === id) : null;
+    return (wp ? (wp.name || wp.id) : String(id)).toLowerCase();
+  }
+  _choiceStats(id) {
+    if (id == null) return '';
+    const wp = (typeof WEAPONS !== 'undefined') ? WEAPONS.find(w => w.id === id) : null;
+    if (!wp) return '';
+    return (typeof weaponLoadoutText === 'function' ? weaponLoadoutText(wp) : (wp.name || wp.id)).toLowerCase();
+  }
+  refresh() {
+    super.refresh();
+    if (!this._el) return;
+    const slots = this._slots();
+    const n = slots.length;
+    if (n === 0) {
+      this._header.textContent = 'no slots';
+      this._partName.textContent = '';
+      this._partStats.textContent = '';
+      this._choiceList.innerHTML = '';
+      return;
+    }
+    if (this.slotIdx >= n) this.slotIdx = n - 1;
+    if (this.slotIdx < 0) this.slotIdx = 0;
+    const slot = slots[this.slotIdx];
+    const kind = (slot?.type || '').toString().toLowerCase();
+    this._header.textContent = `slot ${this.slotIdx + 1} · ${kind}`;
+
+    const choices = this._choices();
+    if (this.partChoiceIdx >= choices.length) this.partChoiceIdx = Math.max(0, choices.length - 1);
+    if (this.partChoiceIdx < 0) this.partChoiceIdx = 0;
+
+    const curId = this.getCurrent ? this.getCurrent(this.slotIdx) : null;
+    this._partName.textContent = this._choiceLabel(curId);
+    this._partStats.textContent = this._choiceStats(curId);
+
+    this._choiceList.innerHTML = '';
+    for (let i = 0; i < choices.length; i++) {
+      const row = document.createElement('div');
+      row.className = 'sp-choice' + (i === this.partChoiceIdx ? ' is-focused' : '');
+      row.textContent = this._choiceLabel(choices[i]);
+      this._choiceList.appendChild(row);
+    }
+  }
+  handle(input) {
+    if (this.disabled) return false;
+    const slots = this._slots();
+    const n = slots.length;
+    if (n === 0) return false;
+    if (input.left) {
+      this.slotIdx = (this.slotIdx - 1 + n) % n;
+      this._syncPartChoiceToCurrent();
+      if (this.onSlotChange) this.onSlotChange();
+      return true;
+    }
+    if (input.right) {
+      this.slotIdx = (this.slotIdx + 1) % n;
+      this._syncPartChoiceToCurrent();
+      if (this.onSlotChange) this.onSlotChange();
+      return true;
+    }
+    if (input.up || input.down) {
+      const choices = this._choices();
+      if (choices.length <= 1) return false;
+      const dir = input.up ? -1 : 1;
+      const next = this.partChoiceIdx + dir;
+      // Don't wrap; let the screen move focus to a sibling at the boundary.
+      if (next < 0 || next >= choices.length) return false;
+      this.partChoiceIdx = next;
+      if (this.setCurrent) this.setCurrent(this.slotIdx, choices[this.partChoiceIdx]);
+      if (this.onPartChange) this.onPartChange();
+      return true;
+    }
+    return false;
+  }
+}
+
 // ----- SiteMap (radar / star-map, focusable, directional nav) ----------------
 class SiteMap extends Widget {
   constructor(opts) {

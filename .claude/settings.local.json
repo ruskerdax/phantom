@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(node --check c:/Games/phantom/ui/screens/ship-config.js)"
+      "Bash(node --check c:/Games/phantom/ui/screens/ship-config.js)",
+      "Bash(node -e \"const fs=require\\('fs'\\);const files=['ui/widgets.js','ui/screens/equip-config.js'];for\\(const f of files\\){try{new Function\\(fs.readFileSync\\('c:/Games/phantom/'+f,'utf8'\\)\\);console.log\\('OK',f\\)}catch\\(e\\){console.log\\('SYNTAX',f,e.message\\)}}\")",
+      "Bash(node -e \"const fs=require\\('fs'\\);new Function\\(fs.readFileSync\\('c:/Games/phantom/ui/screens/equip-config.js','utf8'\\)\\);console.log\\('OK'\\)\")"
     ]
   }
 }

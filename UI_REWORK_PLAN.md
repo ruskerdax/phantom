@@ -474,7 +474,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ---
 
-### P2-02. Refit configurator (SlotPicker + deferred confirm)
+### P2-02. Refit configurator (SlotPicker + deferred confirm) ✅
 
 **Goal:** 05-b layout. New input model: ←/→ change slot, ↑/↓ cycle weapon. Deferred confirm with summed-diff cost.
 
