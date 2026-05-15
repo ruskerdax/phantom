@@ -433,7 +433,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ---
 
-### P1-03. Cheats grouped sections
+### P1-03. Cheats grouped sections ✅
 
 **Goal:** 12-a — group existing rows under three section headers.
 

@@ -12,12 +12,15 @@ function makeCheatsScreen() {
     theme: 'cheat',
     title: 'cheats',
     subtitle: 'cheat mode',
-    footer: () => pausePromptDOM('to go back'),
+    footer: () => bindHint('cancel', 'back'),
     onCancel: () => { G.cheatSub = false; },
   });
 
   const exit = () => { G.paused = false; G.cheatSub = false; };
+  const cheatColor = 'var(--accent-cheat)';
 
+  // ---- ship ---------------------------------------------------------------
+  screen.add(new SectionHeader({ label: 'ship', color: cheatColor }));
   screen.add(new Button({
     label: 'repair ship',
     onConfirm: () => {
@@ -27,6 +30,25 @@ function makeCheatsScreen() {
       tone(660, .2, 'sine', .08); exit();
     },
   }));
+  screen.add(new Toggle({
+    label: 'invincibility',
+    get: () => !!G.invincible,
+    set: v => { G.invincible = !!v; tone(G.invincible ? 1200 : 400, .08, 'square', .05); },
+  }));
+
+  // ---- wallet -------------------------------------------------------------
+  screen.add(new SectionHeader({ label: 'wallet', color: cheatColor }));
+  screen.add(new Button({
+    label: 'add 100k credits',
+    onConfirm: () => { G.credits += 100000; tone(880, .15, 'sine', .07); exit(); },
+  }));
+  screen.add(new Button({
+    label: 'zero credits',
+    onConfirm: () => { G.credits = 0; tone(220, .15, 'sawtooth', .07); exit(); },
+  }));
+
+  // ---- world --------------------------------------------------------------
+  screen.add(new SectionHeader({ label: 'world', color: cheatColor }));
   screen.add(new Button({
     label: 'teleport to slipgate',
     onConfirm: () => {
@@ -46,19 +68,7 @@ function makeCheatsScreen() {
       G.ENC = null; G.site = null; returnToOverworld(); saveGame(); exit();
     },
   }));
-  screen.add(new Button({
-    label: 'add 100k credits',
-    onConfirm: () => { G.credits += 100000; tone(880, .15, 'sine', .07); exit(); },
-  }));
-  screen.add(new Button({
-    label: 'zero credits',
-    onConfirm: () => { G.credits = 0; tone(220, .15, 'sawtooth', .07); exit(); },
-  }));
-  screen.add(new Toggle({
-    label: 'invincibility',
-    get: () => !!G.invincible,
-    set: v => { G.invincible = !!v; tone(G.invincible ? 1200 : 400, .08, 'square', .05); },
-  }));
+
   screen.add(new Button({ label: 'back', onConfirm: () => { G.cheatSub = false; } }));
 
   return screen;

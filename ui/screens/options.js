@@ -3,6 +3,12 @@
 // =============================================================================
 // Options screen.
 // Two-pane layout: category list on the left, category content on the right.
+//
+// Pane focus is an explicit state machine (`pane` = 'left' | 'right') and the
+// screen owns *all* navigation. Widgets only render and respond to confirm /
+// left / right when active. Keyboard and gamepad take identical paths because
+// neither input source is referenced — only the resolved input.{up,down,...}
+// flags from menuInput().
 // =============================================================================
 
 function makeOptionsScreen() {
@@ -14,6 +20,8 @@ function makeOptionsScreen() {
     { id: 'danger', label: 'danger' },
   ];
   let selectedCategory = categories[0].id;
+  let pane = 'left';                  // 'left' | 'right'
+  let rightFocus = 0;                 // index into rightFocusables()
   let rightWidgets = [];
   const categoryButtons = [];
 
@@ -26,23 +34,8 @@ function makeOptionsScreen() {
     onCancel: returnFromOptions,
   });
 
-  function categoryIndexById(id) {
-    return categories.findIndex(c => c.id === id);
-  }
-
-  function categoryIdFromOffset(categoryId, delta) {
-    const idx = categoryIndexById(categoryId);
-    if (idx < 0) return selectedCategory;
-    const next = (idx + delta + categories.length) % categories.length;
-    return categories[next].id;
-  }
-
-  function firstFocusableRightIndex() {
-    for (let i = 0; i < rightWidgets.length; i++) {
-      if (rightWidgets[i].focusable !== false) return categoryButtons.length + i;
-    }
-    return categoryButtons.length;
-  }
+  function categoryIndex(id) { return categories.findIndex(c => c.id === id); }
+  function rightFocusables()  { return rightWidgets.filter(w => w.focusable !== false); }
 
   function buildRightWidgets(categoryId) {
     if (categoryId === 'audio') {
@@ -125,23 +118,31 @@ function makeOptionsScreen() {
     ];
   }
 
-  function rebuildWidgetList() {
-    rightWidgets = buildRightWidgets(selectedCategory);
-    screen.widgets = [...categoryButtons, ...rightWidgets];
-  }
-
-  function setSelectedCategory(categoryId, opts = {}) {
-    const idx = categoryIndexById(categoryId);
-    if (idx < 0) return;
-    const changed = selectedCategory !== categoryId;
-    selectedCategory = categoryId;
-    if (!changed && !opts.force) return;
+  function setSelectedCategory(id) {
+    if (categoryIndex(id) < 0 || id === selectedCategory) return;
+    selectedCategory = id;
+    rightFocus = 0;
     screen.populateBody();
-    if (opts.keepRightFocus) screen.focusIdx = firstFocusableRightIndex();
-    else screen.focusIdx = idx;
     screen.refresh();
   }
 
+  function setPane(next) {
+    if (next === 'right') {
+      const n = rightFocusables().length;
+      if (n === 0) { pane = 'left'; }
+      else { pane = 'right'; rightFocus = Math.max(0, Math.min(n - 1, rightFocus)); }
+    } else {
+      pane = 'left';
+    }
+    screen.refresh();
+  }
+
+  function cycleCategory(delta) {
+    const idx = (categoryIndex(selectedCategory) + delta + categories.length) % categories.length;
+    setSelectedCategory(categories[idx].id);
+  }
+
+  // ---- DOM ---------------------------------------------------------------
   screen.buildDOM = function() {
     const el = document.createElement('div');
     el.className = `screen ${this.layout} theme-${this.theme}`;
@@ -201,7 +202,8 @@ function makeOptionsScreen() {
   };
 
   screen.populateBody = function() {
-    rebuildWidgetList();
+    rightWidgets = buildRightWidgets(selectedCategory);
+    this.widgets = [...categoryButtons, ...rightWidgets];
     if (!this._leftPane || !this._rightPane) return;
     this._leftPane.innerHTML = '';
     this._rightPane.innerHTML = '';
@@ -209,71 +211,77 @@ function makeOptionsScreen() {
     for (const w of rightWidgets) this._rightPane.appendChild(w.render());
   };
 
+  screen.refresh = function() {
+    const focusables = rightFocusables();
+    if (pane === 'right' && focusables.length === 0) pane = 'left';
+
+    const activeIdx = categoryIndex(selectedCategory);
+    for (let i = 0; i < categoryButtons.length; i++) {
+      const w = categoryButtons[i];
+      w.setFocused(pane === 'left' && i === activeIdx);
+      w.refresh && w.refresh();
+    }
+    const focusedRight = pane === 'right' ? focusables[rightFocus] : null;
+    for (const w of rightWidgets) {
+      w.setFocused(w === focusedRight);
+      w.refresh && w.refresh();
+    }
+
+    // Keep base class' focusIdx loosely in sync for any external consumer.
+    this.focusIdx = pane === 'left'
+      ? activeIdx
+      : Math.max(0, this.widgets.indexOf(focusedRight));
+
+    const focusedEl = pane === 'left'
+      ? categoryButtons[activeIdx]?._el
+      : focusedRight?._el;
+    if (focusedEl?.scrollIntoView) {
+      try { focusedEl.scrollIntoView({ block: 'nearest' }); } catch(e) {}
+    }
+
+    if (this._footerEl) {
+      const txt = typeof this.footer === 'function' ? this.footer() : this.footer;
+      this._footerEl.textContent = txt || '';
+    }
+    if (typeof shaderMarkUiDirty === 'function') shaderMarkUiDirty();
+  };
+
+  // ---- Build category buttons (no per-button handle override) ------------
+  // The screen owns all navigation; the buttons just render their label.
   for (const category of categories) {
-    const btn = new Button({
+    categoryButtons.push(new Button({
       label: () => selectedCategory === category.id ? `${category.label} <` : category.label,
       center: false,
-      onConfirm: () => setSelectedCategory(category.id, { force: true, keepRightFocus: true }),
-    });
-    btn._categoryId = category.id;
-    const baseHandle = btn.handle.bind(btn);
-    btn.handle = function(input) {
-      if (input.left) {
-        setSelectedCategory(categoryIdFromOffset(category.id, -1));
-        return true;
-      }
-      if (input.right) {
-        setSelectedCategory(categoryIdFromOffset(category.id, 1));
-        return true;
-      }
-      return baseHandle(input);
-    };
-    categoryButtons.push(btn);
+      onConfirm: () => {},
+    }));
   }
 
-  const baseHandle = screen.handle.bind(screen);
+  // ---- Single source of truth for navigation -----------------------------
   screen.handle = function(input) {
-    // Pause always exits the options screen regardless of which pane is focused.
     if (input.pause) { returnFromOptions(); return; }
 
-    const prevFocus = this.widgets[this.focusIdx];
-    const onRight = prevFocus && !prevFocus._categoryId;
+    if (pane === 'left') {
+      if (input.cancel) { returnFromOptions(); return; }
+      if (input.up   || input.left)  { cycleCategory(-1); return; }
+      if (input.down || input.right) { cycleCategory( 1); return; }
+      if (input.confirm) { setPane('right'); return; }
+      return;
+    }
 
-    // Cancel from the right pane returns focus to the selected category on the left.
-    if (input.cancel && onRight) {
-      this.focusIdx = categoryIndexById(selectedCategory);
+    // pane === 'right'
+    if (input.cancel) { setPane('left'); return; }
+
+    const focusables = rightFocusables();
+    if (focusables.length === 0) { setPane('left'); return; }
+
+    if (input.up || input.down) {
+      rightFocus = (rightFocus + (input.down ? 1 : -1) + focusables.length) % focusables.length;
       this.refresh();
       return;
     }
 
-    // Up/down on the right pane wraps within the right pane only.
-    if (onRight && (input.up || input.down)) {
-      const rightFocusables = this.widgets
-        .map((w, i) => ({ w, i }))
-        .filter(x => !x.w._categoryId && x.w.focusable !== false);
-      if (rightFocusables.length > 0) {
-        let cur = rightFocusables.findIndex(x => x.i === this.focusIdx);
-        if (cur < 0) cur = 0;
-        cur = (cur + (input.down ? 1 : -1) + rightFocusables.length) % rightFocusables.length;
-        this.focusIdx = rightFocusables[cur].i;
-        this.refresh();
-        return;
-      }
-    }
-
-    const wasOnCategory = !!(prevFocus?._categoryId);
-    baseHandle(input);
-
-    const focused = this.widgets[this.focusIdx];
-    if (focused?._categoryId && focused._categoryId !== selectedCategory) {
-      setSelectedCategory(focused._categoryId, { force: true });
-      return;
-    }
-
-    if (!wasOnCategory && focused?._categoryId && (input.left || input.right)) {
-      const nextId = categoryIdFromOffset(focused._categoryId, input.left ? -1 : 1);
-      setSelectedCategory(nextId, { force: true });
-    }
+    const w = focusables[rightFocus];
+    if (w && w.handle && w.handle(input)) this.refresh();
   };
 
   return screen;

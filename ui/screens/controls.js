@@ -51,22 +51,31 @@ function makeControlsScreen() {
     this._headers = headers;
     panel.appendChild(headers);
 
-    // KeyBinder rows go in their own grid below the headers.
-    // overflow-y + min-height: 0 let this section shrink and scroll inside
-    // the panel's max-height flex column.
+    // Action grid lives inside a clipping container. We can't use overflow:auto
+    // because cloneNode (shader SVG path) and getBoundingClientRect (shader
+    // manual path) can't reproduce scrollTop state in the rasterized snapshot.
+    // Instead, use overflow:hidden + a CSS transform on inner content that JS
+    // updates on focus change. Both clip and transform are inline-style state
+    // that survives cloneNode/serialization, so the snapshot matches live.
+    const gridClip = document.createElement('div');
+    gridClip.style.overflow = 'hidden';
+    gridClip.style.minHeight = '0';
+    panel.appendChild(gridClip);
+    this._gridClip = gridClip;
+
     const grid = document.createElement('div');
     grid.className = 'controls-grid';
-    grid.style.overflowY = 'auto';
-    grid.style.minHeight = '0';
-    grid.style.scrollbarColor = 'var(--accent-dim) transparent';
-    panel.appendChild(grid);
+    gridClip.appendChild(grid);
     this._gridSlot = grid;
 
     const hr2 = document.createElement('hr'); hr2.className = 'panel-divider'; panel.appendChild(hr2);
 
     // Stack for tail widgets (steering / return / reset).
     const stack = document.createElement('div');
-    stack.className = 'panel-body';
+    stack.style.display = 'flex';
+    stack.style.flexDirection = 'column';
+    stack.style.gap = 'var(--gap-tight)';
+    stack.style.margin = '4px 0';
     panel.appendChild(stack);
     this._stackSlot = stack;
 
@@ -102,7 +111,6 @@ function makeControlsScreen() {
   for (const section of SECTION_ORDER) {
     const entries = ACT_DEFS.map((a, i) => ({ a, i })).filter(({ a }) => (a.section || 'ui') === section);
     if (!entries.length) continue;
-    screen.add(new SectionHeader({ label: section }));
     for (const { a, i } of entries) {
       screen.add(new KeyBinder({
         actionId: a.id,
@@ -158,10 +166,21 @@ function makeControlsScreen() {
       });
     }
     origRefresh();
-    // row-action uses display:contents so _el has no layout box; scroll a
-    // child cell instead so the focused row stays visible.
-    if (w instanceof KeyBinder && w._el?.firstElementChild) {
-      try { w._el.firstElementChild.scrollIntoView({ block: 'nearest' }); } catch(e) {}
+    if (this._gridClip && this._gridSlot && w instanceof KeyBinder && w._el) {
+      const clipRect = this._gridClip.getBoundingClientRect();
+      const innerRect = this._gridSlot.getBoundingClientRect();
+      const itemRect = w._el.getBoundingClientRect();
+      const margin = 4;
+      let offset = this._scrollOffset || 0;
+      const itemTopInClip = itemRect.top - clipRect.top;
+      const itemBotInClip = itemRect.bottom - clipRect.top;
+      if (itemTopInClip < margin) offset += margin - itemTopInClip;
+      else if (itemBotInClip > clipRect.height - margin) offset -= itemBotInClip - (clipRect.height - margin);
+      const maxOffset = 0;
+      const minOffset = Math.min(0, clipRect.height - innerRect.height);
+      offset = Math.max(minOffset, Math.min(maxOffset, offset));
+      this._scrollOffset = offset;
+      this._gridSlot.style.transform = `translateY(${offset}px)`;
     }
   };
 

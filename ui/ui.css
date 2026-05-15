@@ -376,7 +376,10 @@
 }
 .controls-grid .col-header.is-active { color: var(--accent); }
 .controls-grid .row-action {
-  display: contents;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  column-gap: 24px;
 }
 .controls-grid .row-action > * {
   padding: 4px 8px;

@@ -735,6 +735,14 @@ function shaderPaintDomElement(ctx, el, root, rootRect, w, h, parentAlpha) {
   ctx.globalAlpha *= opacity;
   shaderDrawElementBox(ctx, cs, rect, scale);
 
+  // For overflow containers, clip children to this element's box so transform-
+  // scrolled content (e.g. the controls grid) doesn't bleed past the box.
+  if (el !== root && (cs.overflowX !== 'visible' || cs.overflowY !== 'visible')) {
+    ctx.beginPath();
+    ctx.rect(rect.x, rect.y, rect.w, rect.h);
+    ctx.clip();
+  }
+
   if (el.tagName === 'IMG') {
     const bypass = el.hasAttribute(SHADER_CAPTURE_BYPASS_ATTR);
     const img = SHADER.manualImageCache.get(shaderImageRasterCacheKey(shaderImageCacheKey(el), shaderImageRasterSize(el, root)));
