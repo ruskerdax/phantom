@@ -36,7 +36,7 @@ var G={
   OW:null,ENC:null,site:null,
   paused:false,
   cheatSub:false,
-  baseTab:0,
+  baseTab:'services',
   shopActionId:null,
   equipFlow:null,
   optFrom:'title',
@@ -121,7 +121,7 @@ function openShaderMenu(){
 }
 function openBaseMenu(){
   cancelChargesForActiveShips();
-  G.baseTab=0;
+  G.baseTab='services';
   G.shopActionId=null;
   G.equipFlow=null;
   fillShipEnergy(G.OW?.s);

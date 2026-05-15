@@ -10,11 +10,13 @@
 
 function baseTabs() { return [
   { id: 'services', label: 'SERVICES' },
-  { id: 'chassis',  label: 'CHASSIS'  },
-  { id: 'weapons',  label: 'WEAPONS'  },
-  { id: 'shields',  label: 'SHIELDS'  },
+  { id: 'shop',     label: 'SHOP'     },
+  { id: 'refit',    label: 'REFIT'    },
 ];}
-function baseTabId(tab = G.baseTab) { return baseTabs()[tab]?.id || 'services'; }
+function baseTabId(tab = G.baseTab) {
+  if (typeof tab === 'string') return baseTabs().some(t => t.id === tab) ? tab : 'services';
+  return baseTabs()[tab]?.id || 'services';
+}
 
 function shopItemsForTab(tab) {
   const id = typeof tab === 'string' ? tab : baseTabId(tab);

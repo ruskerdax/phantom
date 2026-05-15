@@ -501,6 +501,44 @@
 .stat-compare .delta.up { color: var(--stat-up); }
 .stat-compare .delta.down { color: var(--stat-down); }
 
+/* --- Friendly base header (P3-01) ------------------------------------------ */
+.base-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: var(--gap);
+  margin: 0 0 8px;
+}
+.base-header-lbl {
+  font-size: var(--fs-section);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.base-header-title {
+  font-size: var(--fs-title);
+  color: var(--accent);
+  text-shadow: var(--glow-title);
+  font-weight: bold;
+  letter-spacing: .04em;
+}
+.base-header-chips {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.chip {
+  font-size: var(--fs-row-detail);
+  padding: 2px 8px;
+  border: 1px solid var(--accent-dim);
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+.chip.chip-strong {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* --- NewsTicker ------------------------------------------------------------- */
 .news-ticker { display:flex; align-items:center; gap:10px; padding:6px 10px; background:var(--ticker-bg); border:1px solid var(--accent-dim); font-size:var(--fs-ticker); overflow:hidden; }
 .news-ticker .pulse { width:8px; height:8px; flex-shrink:0; background:var(--accent); animation: ticker-pulse 1.4s ease-in-out infinite; }

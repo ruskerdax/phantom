@@ -1,19 +1,16 @@
 'use strict';
 
 // =============================================================================
-// Friendly base screen.
+// Friendly base screen (P3-01 shell).
 //
-// Structure (one screen, two sub-screens):
-//   base            tabs + item list + detail panel
-//     ↓ confirm on item
-//   shop-action     overlay listing buy/equip choices
-//     ↓ buy CHASSIS chooses a loadout
-//   equip-config    ship configurator (separate factory)
-//
-// User has flagged this for a total rework later. The structure here is meant
-// to make that easy: tab content is just a list of items, the detail panel is
-// re-rendered from the focused item, and any new tab kind plugs in by adding
-// a `renderTab` branch.
+// Structure:
+//   - Header: lbl 'friendly base' + system seed title (left); credits / stake /
+//     hull chips (right).
+//   - TabBar (focusable): services · shop · refit.
+//   - Body: per-tab content. Services has the repair-hull button. Shop and
+//     refit bodies are populated by P3-03 / P3-04 — placeholder for now.
+//   - News ticker: bottom of panel, reads G.system.events; auto-hides when
+//     empty.
 // =============================================================================
 
 function baseTabsList() { return baseTabs().map(t => ({ id: t.id, label: t.label.toLowerCase() })); }
@@ -23,21 +20,28 @@ function makeBaseScreen() {
     id: 'base',
     layout: 'modal',
     theme: 'info',
-    title: 'friendly base',
-    footer: () => `${UI_GLYPH_DOM.left}${UI_GLYPH_DOM.right} switch tab   enter select   ${pausePromptDOM('to leave')}`,
+    footer: () => [
+      bindHint('left/right', 'tab'),
+      bindHint('up/down', 'select'),
+      bindHint('confirm', 'open'),
+      bindHint('cancel', 'leave'),
+    ].join('   '),
     onCancel: () => { returnToOverworld(); saveGame(); },
   });
 
-  // ---- TabBar widget -------------------------------------------------------
   const tabBar = new TabBar({
     tabs: baseTabsList(),
-    get: () => { const list = baseTabsList(); return (list[G.baseTab] || list[0]).id; },
-    set: (id) => { const idx = baseTabsList().findIndex(t => t.id === id); if (idx >= 0) G.baseTab = idx; },
-    onChange: () => {},
+    get: () => G.baseTab,
+    set: (id) => { G.baseTab = id; },
+    onChange: () => { screen.populateBody(); screen.refresh(); },
   });
   screen._tabBar = tabBar;
 
-  // ---- Custom DOM ---------------------------------------------------------
+  const ticker = new NewsTicker({
+    items: () => (G.system?.events || []).map(e => e.text),
+  });
+  screen._ticker = ticker;
+
   screen.buildDOM = function() {
     const el = document.createElement('div');
     el.className = `screen ${this.layout} theme-${this.theme}`;
@@ -47,12 +51,26 @@ function makeBaseScreen() {
     panel.className = 'panel';
     panel.style.minWidth = '540px';
 
-    const title = document.createElement('div');
-    title.className = 'panel-title';
-    title.textContent = this.title;
-    panel.appendChild(title);
+    const header = document.createElement('div');
+    header.className = 'base-header';
+    const headerL = document.createElement('div');
+    headerL.className = 'base-header-left';
+    const lbl = document.createElement('div');
+    lbl.className = 'base-header-lbl';
+    lbl.textContent = 'friendly base';
+    const titleEl = document.createElement('div');
+    titleEl.className = 'base-header-title';
+    titleEl.textContent = 'system ' + seedText(G.seed);
+    headerL.appendChild(lbl);
+    headerL.appendChild(titleEl);
+    header.appendChild(headerL);
+    const chips = document.createElement('div');
+    chips.className = 'base-header-chips';
+    header.appendChild(chips);
+    this._chipsEl = chips;
+    panel.appendChild(header);
 
-    panel.appendChild(this._tabBar.render());
+    panel.appendChild(tabBar.render());
 
     const hr = document.createElement('hr'); hr.className = 'panel-divider'; panel.appendChild(hr);
 
@@ -61,21 +79,7 @@ function makeBaseScreen() {
     panel.appendChild(body);
     this._panelBody = body;
 
-    const detail = document.createElement('div');
-    detail.className = 'row-detail center-text';
-    detail.style.minHeight = '46px';
-    detail.style.padding = '8px 4px 0';
-    detail.style.gridColumn = 'unset';
-    panel.appendChild(detail);
-    this._detailEl = detail;
-
-    const wallet = document.createElement('div');
-    wallet.style.textAlign = 'center';
-    wallet.style.fontSize = 'var(--fs-row-detail)';
-    wallet.style.color = 'var(--text-strong)';
-    wallet.style.padding = '6px 0';
-    panel.appendChild(wallet);
-    this._walletEl = wallet;
+    panel.appendChild(ticker.render());
 
     const footer = document.createElement('div');
     footer.className = 'panel-footer';
@@ -87,100 +91,56 @@ function makeBaseScreen() {
     return el;
   };
 
-  // ---- Build tab strip + item list ---------------------------------------
-  function rebuildTabsAndItems() {
-    // Widgets — rebuild list per tab.
-    screen.widgets = [];
+  function chipsHTML() {
+    const s = G.OW?.s;
+    const hullPct = (s && s.maxHp > 0) ? Math.round(100 * s.hp / s.maxHp) : 0;
+    return `<span class="chip chip-strong">cr ${G.credits}</span>` +
+           `<span class="chip">stake ${G.stake}</span>` +
+           `<span class="chip">hull ${hullPct}%</span>`;
+  }
+
+  screen.populateBody = function() {
+    // widgets[0] = tabBar (focusable, rendered in header).
+    // widgets[1..] = body widgets for the active tab.
+    // ticker is rendered outside this list (in buildDOM) but appended last so
+    // its refresh() runs each frame.
+    this.widgets = [tabBar];
     const tabId = baseTabId();
     if (tabId === 'services') {
-      const s = G.OW?.s; if (!s) return;
-      const repairCost = baseRepairCost(s);
-      screen.add(new Button({
-        label: () => {
-          const cost = baseRepairCost(s);
-          if (s.hp >= s.maxHp) return 'repair hull   full';
-          return 'repair hull   ' + cost + ' cr';
-        },
-        onConfirm: () => {
-          const cost = baseRepairCost(s);
-          if (s.hp >= s.maxHp || G.credits < cost) { tone(80, .1, 'square', .06); return; }
-          G.credits -= cost; fillShipHull(s); tone(660, .2, 'sine', .08); saveGame();
-        },
-      }));
-    } else {
-      const items = shopItemsForTab(G.baseTab);
-      for (const item of items) {
-        screen.add(new Button({
-          label: () => formatShopRow(item),
-          onConfirm: () => { G.shopActionId = item.id; },
+      const s = G.OW?.s;
+      if (s) {
+        this.add(new Button({
+          label: () => {
+            const cost = baseRepairCost(s);
+            if (s.hp >= s.maxHp) return 'repair hull   full';
+            return 'repair hull   ' + cost + ' cr';
+          },
+          onConfirm: () => {
+            const cost = baseRepairCost(s);
+            if (s.hp >= s.maxHp || G.credits < cost) { tone(80, .1, 'square', .06); return; }
+            G.credits -= cost; fillShipHull(s); tone(660, .2, 'sine', .08); saveGame();
+          },
         }));
       }
     }
-    screen.focusIdx = Math.min(screen.focusIdx, screen.widgets.length - 1);
-  }
+    // shop / refit body content is owned by P3-03 / P3-04.
 
-  function formatShopRow(item) {
-    const owned = hasLicense(item.id), eq = isEquipped(item.id);
-    const status = eq ? '★ equipped' : owned ? 'licensed' : creditLabel(itemLicensePrice(item));
-    return `${item.name.toLowerCase()}   —   ${status.toLowerCase()}`;
-  }
+    this.widgets.push(ticker);
 
-  function refreshDetailPanel() {
-    const tabId = baseTabId();
-    let detail = '', sub = '', cost = '';
-    if (tabId === 'services') {
-      detail = '';
-    } else {
-      const items = shopItemsForTab(G.baseTab);
-      const item = items[Math.min(screen.focusIdx, items.length - 1)];
-      if (item) {
-        if (tabId === 'chassis')      detail = chassisStatsText(item);
-        else if (tabId === 'weapons') detail = weaponStatsText(item);
-        else if (tabId === 'shields') detail = shieldStatsText(item);
-        sub = item.desc || '';
-        if (!hasLicense(item.id))      cost = 'build: ' + itemBuildPrice(item) + ' cr (after license)';
-        else if (!isEquipped(item.id)) cost = 'build cost: ' + itemBuildPrice(item) + ' cr';
-      }
-    }
-    screen._detailEl.innerHTML =
-      (detail ? `<div>${escapeHtml(detail.toLowerCase())}</div>` : '') +
-      (sub    ? `<div class="muted">${escapeHtml(sub.toLowerCase())}</div>` : '') +
-      (cost   ? `<div class="muted">${escapeHtml(cost.toLowerCase())}</div>` : '');
-    screen._walletEl.textContent = 'credits: ' + G.credits + '   ·   stake: ' + G.stake;
-  }
+    this.focusIdx = Math.max(0, Math.min(this.widgets.length - 1, this.focusIdx));
 
-  // ---- Lifecycle ----------------------------------------------------------
-  screen.populateBody = function() {
-    rebuildTabsAndItems();
     if (this._panelBody) {
       this._panelBody.innerHTML = '';
-      for (const w of this.widgets) this._panelBody.appendChild(w.render());
+      for (let i = 1; i < this.widgets.length - 1; i++) {
+        this._panelBody.appendChild(this.widgets[i].render());
+      }
     }
   };
 
-  // Override refresh so we can rebuild the panel when the tab changes.
-  let _lastTab = -1;
   const baseRefresh = screen.refresh.bind(screen);
   screen.refresh = function() {
-    if (G.baseTab !== _lastTab) {
-      _lastTab = G.baseTab;
-      this.populateBody();
-    }
-    this._tabBar.refresh();
     baseRefresh();
-    refreshDetailPanel();
-  };
-
-  // ---- Input: tab switching at the screen level --------------------------
-  const baseHandle = screen.handle.bind(screen);
-  screen.handle = function(input) {
-    if (input.left || input.right) {
-      this._tabBar.handle(input);
-      this.focusIdx = 0;
-      this.refresh();
-      return;
-    }
-    baseHandle(input);
+    if (this._chipsEl) this._chipsEl.innerHTML = chipsHTML();
   };
 
   screen.tick = function() { this.refresh(); };
@@ -188,16 +148,11 @@ function makeBaseScreen() {
   return screen;
 }
 
-function escapeHtml(s) {
-  return String(s)
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
 registerScreen('base', makeBaseScreen);
 
 // =============================================================================
 // Shop-action overlay — modal sub-screen with buy/equip options for one item.
+// (Will be deleted in P3-03 when the shop tab embeds its own buy+equip flow.)
 // =============================================================================
 
 function makeShopActionScreen() {

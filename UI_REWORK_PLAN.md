@@ -509,7 +509,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ## Phase 3 — Friendly Base
 
-### P3-01. Base shell
+### P3-01. Base shell ✅
 
 **Goal:** 03-a tab structure with the **`services` (default) ∙ `shop` ∙ `refit`** tabs only. No sites/objectives tabs.
 
