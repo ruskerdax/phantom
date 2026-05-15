@@ -528,7 +528,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ---
 
-### P3-02. Services tab
+### P3-02. Services tab ✅
 
 **Goal:** Left list of services (focusable rows), right pane shows info + action for the focused service.
 
@@ -548,7 +548,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ---
 
-### P3-03. Shop tab
+### P3-03. Shop tab ✅
 
 **Goal:** 04-a stat compare. Single confirm replacing the old buy-then-equip overlay.
 

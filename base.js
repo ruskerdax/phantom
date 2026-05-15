@@ -47,6 +47,108 @@ function itemStatusLabel(item) {
 function baseRepairCost(s) { return Math.max(0, Math.ceil((s.maxHp - s.hp) * 2)); }
 
 // -----------------------------------------------------------------------------
+// Shop tab (P3-03) helpers — pure formatting / cost / stat-compare data used
+// by ui/screens/base.js to populate the shop body.
+// -----------------------------------------------------------------------------
+
+// The total credit cost to "buy & equip" (or "equip" if already licensed) one
+// shop item. License is added when not yet owned.
+function shopItemCost(item) {
+  if (!item) return 0;
+  const lp = hasLicense(item.id) ? 0 : itemLicensePrice(item);
+  return lp + itemBuildPrice(item);
+}
+
+// Right-side value shown in the item-list row.
+//   - "★ eq" (green star) if the item is currently equipped.
+//   - "{cost} cr" / "free" for any item whose total cost the player can
+//     consider.
+function shopItemRowValue(item) {
+  if (!item) return '';
+  if (isEquipped(item.id)) return UI_GLYPH.star + ' eq';
+  return creditLabel(shopItemCost(item));
+}
+
+// Chassis stat groups — hull/thrust/slots/mass, candidate vs current.
+function shopCompareChassis(candidate) {
+  const cur = activeChassisObj();
+  const c = candidate || cur;
+  const toThrust = ch => Math.round((ch?.thrust?.fwd || 0) * 1000);
+  const toMass   = ch => Math.round(ch?.hitRadius || 0);
+  return [{
+    header: null,
+    rows: [
+      { label: 'hull',   current: cur?.maxHp || 0,         candidate: c?.maxHp || 0,         betterIsHigher: true },
+      { label: 'thrust', current: toThrust(cur),           candidate: toThrust(c),           betterIsHigher: true },
+      { label: 'slots',  current: cur?.slots?.length || 0, candidate: c?.slots?.length || 0, betterIsHigher: true },
+      { label: 'mass',   current: toMass(cur),             candidate: toMass(c),             betterIsHigher: false },
+    ],
+  }];
+}
+
+// Weapon stat groups — one section per chassis weapon slot. Each section
+// compares the candidate weapon against the weapon (or empty) currently in
+// that slot. Ammo/magazine rows only appear when the candidate exposes the
+// corresponding field.
+function shopCompareWeapons(candidate) {
+  if (!candidate) return [];
+  const chassis = activeChassisObj();
+  const slots = chassis?.slots || [];
+  const groups = [];
+  const toRate = wp => (wp && wp.cd) ? Math.round(60 / wp.cd) : 0;
+  const toRange = wp => {
+    if (!wp) return 0;
+    if (Number.isFinite(wp.range)) return Math.round(wp.range);
+    if (Number.isFinite(wp.spd) && Number.isFinite(wp.life)) return Math.round(wp.spd * wp.life);
+    return 0;
+  };
+  const wpField = (wp, k) => (wp && Number.isFinite(wp[k])) ? wp[k] : 0;
+  for (let i = 0; i < slots.length; i++) {
+    const sl = slots[i];
+    if (!slotMatchesWeapon(sl, candidate)) continue;
+    const curId = G.loadout.weapons[i];
+    const cur = curId ? WEAPONS.find(w => w.id === curId) : null;
+    const header = `slot ${i + 1}: ${cur ? (cur.name || cur.id).toLowerCase() : '(empty)'}`;
+    const rows = [
+      { label: 'dmg',   current: wpField(cur, 'dmg'),        candidate: wpField(candidate, 'dmg'),        betterIsHigher: true },
+      { label: 'rate',  current: toRate(cur),                candidate: toRate(candidate),                betterIsHigher: true },
+      { label: 'heat',  current: wpField(cur, 'energyCost'), candidate: wpField(candidate, 'energyCost'), betterIsHigher: false },
+      { label: 'range', current: toRange(cur),               candidate: toRange(candidate),               betterIsHigher: true },
+    ];
+    if (Number.isFinite(candidate.ammoMax)) {
+      rows.push({ label: 'ammo', current: wpField(cur, 'ammoMax'), candidate: candidate.ammoMax, betterIsHigher: true });
+    }
+    if (Number.isFinite(candidate.magMax)) {
+      rows.push({ label: 'magazine', current: wpField(cur, 'magMax'), candidate: candidate.magMax, betterIsHigher: true });
+    }
+    groups.push({ header, rows });
+  }
+  return groups;
+}
+
+// Shield stat group — strength/regen, candidate vs current.
+function shopCompareShields(candidate) {
+  const cur = activeShieldObj();
+  const c = candidate || cur;
+  const toRegen = sh => Math.round((sh?.rechargeRate || 0) * 100);
+  return [{
+    header: null,
+    rows: [
+      { label: 'strength', current: cur?.hp || 0, candidate: c?.hp || 0, betterIsHigher: true },
+      { label: 'regen',    current: toRegen(cur), candidate: toRegen(c), betterIsHigher: true },
+    ],
+  }];
+}
+
+function shopCompareGroups(item) {
+  if (!item) return [];
+  if (CHASSIS.includes(item)) return shopCompareChassis(item);
+  if (WEAPONS.includes(item)) return shopCompareWeapons(item);
+  if (SHIELDS.includes(item)) return shopCompareShields(item);
+  return [];
+}
+
+// -----------------------------------------------------------------------------
 // Shop action options builder — given a shop item, produce the list of
 // {label, act, slotIdx?, disabled} options that the shop-action overlay shows.
 // Pure function, no DOM/canvas. Called from ui/screens/base.js.

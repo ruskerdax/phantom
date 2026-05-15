@@ -82,6 +82,7 @@ class Button extends Widget {
   constructor(opts) {
     super(opts);
     this.label = opts.label;
+    this.value = opts.value ?? null;
     this.onConfirm = opts.onConfirm;
     this.center = opts.center !== false;
     this.cls = opts.cls || '';
@@ -92,6 +93,10 @@ class Button extends Widget {
     const ptr = document.createElement('span'); ptr.className = 'row-pointer'; ptr.textContent = UI_GLYPH_DOM.pointer;
     const lbl = document.createElement('span'); lbl.className = 'row-label';
     el.appendChild(ptr); el.appendChild(lbl);
+    if (this.value != null) {
+      const val = document.createElement('span'); val.className = 'row-value';
+      el.appendChild(val);
+    }
     return el;
   }
   refresh() {
@@ -99,6 +104,10 @@ class Button extends Widget {
     if (!this._el) return;
     const lbl = this._el.querySelector('.row-label');
     lbl.textContent = typeof this.label === 'function' ? this.label() : this.label;
+    if (this.value != null) {
+      const val = this._el.querySelector('.row-value');
+      if (val) val.textContent = typeof this.value === 'function' ? this.value() : this.value;
+    }
   }
   handle(input) {
     if (input.confirm && !this.disabled) { this.onConfirm && this.onConfirm(); return true; }

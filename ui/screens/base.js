@@ -1,19 +1,28 @@
 'use strict';
 
 // =============================================================================
-// Friendly base screen (P3-01 shell).
+// Friendly base screen.
 //
 // Structure:
 //   - Header: lbl 'friendly base' + system seed title (left); credits / stake /
 //     hull chips (right).
 //   - TabBar (focusable): services · shop · refit.
-//   - Body: per-tab content. Services has the repair-hull button. Shop and
-//     refit bodies are populated by P3-03 / P3-04 — placeholder for now.
+//   - Body: per-tab content. Services (P3-02) shows the repair-hull row.
+//     Shop (P3-03) shows category pills + item list + stat-compare detail.
+//     Refit body is populated by P3-04.
 //   - News ticker: bottom of panel, reads G.system.events; auto-hides when
 //     empty.
 // =============================================================================
 
+const SHOP_CATEGORIES = [
+  { id: 'chassis', label: 'chassis' },
+  { id: 'weapons', label: 'weapons' },
+  { id: 'shields', label: 'shields' },
+];
+
 function baseTabsList() { return baseTabs().map(t => ({ id: t.id, label: t.label.toLowerCase() })); }
+
+function shopItemLockReason(_item) { return null; }
 
 function makeBaseScreen() {
   const screen = new Screen({
@@ -101,46 +110,533 @@ function makeBaseScreen() {
 
   screen.populateBody = function() {
     // widgets[0] = tabBar (focusable, rendered in header).
-    // widgets[1..] = body widgets for the active tab.
+    // widgets[1..] = body widgets for the active tab (focusable rows first,
+    // followed by any non-focusable display widgets — order only matters for
+    // refresh() iteration, not navigation).
     // ticker is rendered outside this list (in buildDOM) but appended last so
     // its refresh() runs each frame.
     this.widgets = [tabBar];
+    this._serviceUpdaters = [];
+    this._shopUpdate = null;
+    this._flashMsg = null;
+    this._flashUntil = 0;
+
+    if (this._panelBody) this._panelBody.innerHTML = '';
+
     const tabId = baseTabId();
     if (tabId === 'services') {
-      const s = G.OW?.s;
-      if (s) {
-        this.add(new Button({
-          label: () => {
-            const cost = baseRepairCost(s);
-            if (s.hp >= s.maxHp) return 'repair hull   full';
-            return 'repair hull   ' + cost + ' cr';
-          },
-          onConfirm: () => {
-            const cost = baseRepairCost(s);
-            if (s.hp >= s.maxHp || G.credits < cost) { tone(80, .1, 'square', .06); return; }
-            G.credits -= cost; fillShipHull(s); tone(660, .2, 'sine', .08); saveGame();
-          },
-        }));
-      }
+      this._populateServices();
+    } else if (tabId === 'shop') {
+      this._populateShop();
     }
-    // shop / refit body content is owned by P3-03 / P3-04.
+    // refit body content is owned by P3-04.
 
     this.widgets.push(ticker);
 
     this.focusIdx = Math.max(0, Math.min(this.widgets.length - 1, this.focusIdx));
 
-    if (this._panelBody) {
-      this._panelBody.innerHTML = '';
+    // Fallback render for tabs that didn't take over panel-body themselves.
+    if (this._panelBody && tabId !== 'services' && tabId !== 'shop') {
       for (let i = 1; i < this.widgets.length - 1; i++) {
         this._panelBody.appendChild(this.widgets[i].render());
       }
     }
   };
 
+  screen._populateServices = function() {
+    const s = G.OW?.s;
+    if (!s || !this._panelBody) return;
+
+    const split = document.createElement('div');
+    split.className = 'base-services';
+    split.style.display = 'grid';
+    split.style.gridTemplateColumns = '240px 1fr';
+    split.style.columnGap = '16px';
+    split.style.alignItems = 'start';
+    split.style.minHeight = '0';
+
+    const left = document.createElement('div');
+    left.style.display = 'flex';
+    left.style.flexDirection = 'column';
+    left.style.gap = '4px';
+    left.style.paddingRight = '12px';
+    left.style.borderRight = '1px solid var(--divider)';
+
+    const right = document.createElement('div');
+    right.style.display = 'flex';
+    right.style.flexDirection = 'column';
+    right.style.gap = '4px';
+
+    split.appendChild(left);
+    split.appendChild(right);
+    this._panelBody.appendChild(split);
+
+    const tryRepair = () => {
+      const cost = baseRepairCost(s);
+      if (s.hp >= s.maxHp || G.credits < cost) { tone(80, .1, 'square', .06); return; }
+      G.credits -= cost; fillShipHull(s); tone(660, .2, 'sine', .08); saveGame();
+    };
+
+    const repairCanonicalLabel = 'repair hull';
+    const repairValue = () => (s.hp >= s.maxHp ? 'full' : baseRepairCost(s) + ' cr');
+    const repairDisabled = () => {
+      const cost = baseRepairCost(s);
+      return s.hp >= s.maxHp || G.credits < cost;
+    };
+
+    const serviceBtn = new Button({
+      center: false,
+      label: repairCanonicalLabel,
+      value: repairValue,
+      onConfirm: tryRepair,
+    });
+
+    const aboutHdr = new SectionHeader({ label: 'about' });
+    const desc = new TextRow({
+      text: 'restore your ship\'s hull to full integrity at the local shipyard.',
+      align: 'left',
+      size: 'sm',
+      color: 'var(--text-faint)',
+    });
+
+    const curHullRow = new KeyValueRow({ label: 'current hull', value: () => String(Math.round(s.hp)) });
+    const maxHullRow = new KeyValueRow({ label: 'max hull', value: () => String(Math.round(s.maxHp)) });
+    const costRow = new KeyValueRow({ label: 'cost', value: repairValue });
+
+    const actionHdr = new SectionHeader({ label: 'action' });
+    const actionBtn = new Button({
+      label: () => (s.hp >= s.maxHp ? 'repair · full' : 'repair · ' + baseRepairCost(s) + ' cr'),
+      onConfirm: tryRepair,
+    });
+
+    left.appendChild(serviceBtn.render());
+
+    right.appendChild(aboutHdr.render());
+    right.appendChild(desc.render());
+    right.appendChild(curHullRow.render());
+    right.appendChild(maxHullRow.render());
+    right.appendChild(costRow.render());
+    right.appendChild(actionHdr.render());
+    right.appendChild(actionBtn.render());
+
+    // Focusable widgets first (focus navigation order: tabBar → service row → action button).
+    this.widgets.push(serviceBtn);
+    this.widgets.push(actionBtn);
+    // Non-focusable widgets tracked for refresh() iteration.
+    this.widgets.push(aboutHdr, desc, curHullRow, maxHullRow, costRow, actionHdr);
+
+    this._serviceUpdaters.push(() => {
+      const d = repairDisabled();
+      serviceBtn.setDisabled(d);
+      actionBtn.setDisabled(d);
+    });
+    this._serviceUpdaters[0]();
+  };
+
+  // ===========================================================================
+  // Shop tab (P3-03): category pills + item list left, detail/compare right.
+  // ===========================================================================
+  screen._populateShop = function() {
+    if (!this._panelBody) return;
+
+    if (typeof this.shopCat !== 'string' || !SHOP_CATEGORIES.some(c => c.id === this.shopCat)) {
+      this.shopCat = 'chassis';
+    }
+
+    const items = shopItemsForTab(this.shopCat);
+    if (!items.find(it => it.id === this.shopItemId)) {
+      this.shopItemId = items[0]?.id ?? null;
+    }
+    this._shopItems = items;
+
+    const split = document.createElement('div');
+    split.className = 'base-shop';
+    split.style.display = 'grid';
+    split.style.gridTemplateColumns = '240px 1fr';
+    split.style.columnGap = '16px';
+    split.style.alignItems = 'start';
+    split.style.minHeight = '0';
+
+    const left = document.createElement('div');
+    left.className = 'base-shop-left';
+    left.style.display = 'flex';
+    left.style.flexDirection = 'column';
+    left.style.gap = '6px';
+    left.style.paddingRight = '12px';
+    left.style.borderRight = '1px solid var(--divider)';
+
+    const right = document.createElement('div');
+    right.className = 'base-shop-right';
+    right.style.display = 'flex';
+    right.style.flexDirection = 'column';
+    right.style.gap = '6px';
+
+    split.appendChild(left);
+    split.appendChild(right);
+    this._panelBody.appendChild(split);
+
+    // ----- Category pill row -------------------------------------------------
+    const catBar = new TabBar({
+      tabs: SHOP_CATEGORIES.map(c => ({ id: c.id, label: c.label })),
+      get: () => this.shopCat,
+      set: (id) => { this.shopCat = id; this.shopItemId = null; this._shopTargetSlot = null; },
+      onChange: () => { this.populateBody(); this.refresh(); },
+    });
+    this.widgets.push(catBar);
+    left.appendChild(catBar.render());
+
+    // ----- Item list ---------------------------------------------------------
+    const listEl = document.createElement('div');
+    listEl.className = 'shop-item-list';
+    left.appendChild(listEl);
+
+    const itemBtns = [];
+    for (const item of items) {
+      const lockReason = shopItemLockReason(item);
+      const btn = new Button({
+        center: false,
+        label: (item.name || item.id).toLowerCase(),
+        value: () => shopItemRowValue(item),
+        onConfirm: () => this._shopConfirmItem(item, lockReason),
+      });
+      btn._shopItemId = item.id;
+      btn._shopLocked = !!lockReason;
+      btn._shopLockReason = lockReason || '';
+      this.widgets.push(btn);
+      const btnEl = btn.render();
+      if (lockReason) btnEl.classList.add('is-locked');
+      listEl.appendChild(btnEl);
+      itemBtns.push(btn);
+    }
+    if (!items.length) {
+      const empty = document.createElement('div');
+      empty.className = 'shop-item-empty';
+      empty.textContent = '(none available)';
+      empty.style.color = 'var(--text-faint)';
+      empty.style.padding = '6px 8px';
+      listEl.appendChild(empty);
+    }
+
+    // ----- Right pane: title row + chip --------------------------------------
+    const titleRow = document.createElement('div');
+    titleRow.className = 'shop-detail-title';
+    const titleName = document.createElement('div');
+    titleName.className = 'shop-detail-name';
+    const titleChip = document.createElement('span');
+    titleChip.className = 'chip chip-good';
+    titleChip.textContent = 'licensed';
+    titleRow.appendChild(titleName);
+    titleRow.appendChild(titleChip);
+    right.appendChild(titleRow);
+
+    // ----- Preview placeholder ----------------------------------------------
+    const phEl = document.createElement('div');
+    phEl.className = 'ph shop-detail-preview';
+    right.appendChild(phEl);
+
+    // ----- Stat compare section --------------------------------------------
+    const compareHdr = new SectionHeader({ label: 'stat compare · current ▶ candidate' });
+    this.widgets.push(compareHdr);
+    right.appendChild(compareHdr.render());
+
+    const compareEl = document.createElement('div');
+    compareEl.className = 'shop-detail-compare';
+    right.appendChild(compareEl);
+
+    // ----- Cost row ---------------------------------------------------------
+    const costRow = document.createElement('div');
+    costRow.className = 'shop-detail-cost';
+    const costLabel = document.createElement('span');
+    costLabel.className = 'shop-cost-label';
+    const costChip = document.createElement('span');
+    costChip.className = 'chip';
+    costRow.appendChild(costLabel);
+    costRow.appendChild(costChip);
+    right.appendChild(costRow);
+
+    // ----- Action row (cycle + buttons) -------------------------------------
+    const actionRow = document.createElement('div');
+    actionRow.className = 'shop-detail-action';
+    right.appendChild(actionRow);
+
+    const slotCycle = new Cycle({
+      label: 'target slot',
+      values: () => this._shopSlotCycleValues(),
+      get: () => this._shopTargetSlot,
+      set: (v) => { this._shopTargetSlot = v; },
+      format: v => (v == null ? '(none)' : `slot ${v + 1}`),
+    });
+    this.widgets.push(slotCycle);
+    actionRow.appendChild(slotCycle.render());
+
+    const primaryBtn = new Button({
+      center: false,
+      label: () => this._shopPrimaryLabel(),
+      onConfirm: () => {
+        const item = this._shopCurrentItem();
+        if (!item) return;
+        this._shopConfirmItem(item, shopItemLockReason(item));
+      },
+    });
+    this.widgets.push(primaryBtn);
+    actionRow.appendChild(primaryBtn.render());
+
+    const buyOnlyBtn = new Button({
+      center: false,
+      label: () => 'buy only · ' + creditLabel(itemLicensePrice(this._shopCurrentItem() || {})),
+      onConfirm: () => {
+        const item = this._shopCurrentItem();
+        if (!item) return;
+        this._shopBuyLicenseOnly(item);
+      },
+    });
+    this.widgets.push(buyOnlyBtn);
+    actionRow.appendChild(buyOnlyBtn.render());
+
+    // ----- Updater (runs each refresh): retargets right pane to focused item.
+    //
+    // Stat-compare DOM and per-item display (title, slot cycle visibility,
+    // buy-only visibility) only rebuild when the focused item id or loadout
+    // signature changes, to avoid per-frame flicker. Cheap reads (cost chip,
+    // afford state, primary-button disabled) update every refresh.
+    let lastSig = null;
+    const rebuildItemDetail = (item) => {
+      titleName.textContent = item ? (item.name || item.id).toLowerCase() : '—';
+      titleChip.style.display = (item && hasLicense(item.id)) ? '' : 'none';
+
+      compareEl.innerHTML = '';
+      if (item) {
+        const groups = shopCompareGroups(item);
+        for (const g of groups) {
+          if (g.header) {
+            const h = document.createElement('div');
+            h.className = 'shop-compare-group';
+            h.textContent = g.header;
+            compareEl.appendChild(h);
+          }
+          for (const r of g.rows) {
+            const scr = new StatCompareRow({
+              label: r.label,
+              current: r.current,
+              candidate: r.candidate,
+              unit: r.unit || '',
+              betterIsHigher: r.betterIsHigher !== false,
+            });
+            compareEl.appendChild(scr.render());
+          }
+        }
+      }
+
+      const slots = this._shopSlotCycleValues();
+      const showCycle = !!(item && WEAPONS.includes(item) && slots.length > 1);
+      slotCycle.focusable = showCycle;
+      slotCycle._el.style.display = showCycle ? '' : 'none';
+      if (showCycle) {
+        if (this._shopTargetSlot == null || !slots.includes(this._shopTargetSlot)) {
+          this._shopTargetSlot = slots[0];
+        }
+      }
+
+      const showBuyOnly = !!(item && !hasLicense(item.id) && itemLicensePrice(item) > 0);
+      buyOnlyBtn.focusable = showBuyOnly;
+      buyOnlyBtn._el.style.display = showBuyOnly ? '' : 'none';
+
+      for (const b of itemBtns) {
+        b._el.classList.toggle('is-current', b._shopItemId === this.shopItemId);
+      }
+    };
+
+    this._shopUpdate = () => {
+      const focused = this.widgets[this.focusIdx];
+      if (focused && focused._shopItemId !== undefined) {
+        if (this.shopItemId !== focused._shopItemId) {
+          this.shopItemId = focused._shopItemId;
+          this._shopTargetSlot = null;
+        }
+      }
+
+      const item = this._shopCurrentItem();
+      const sig = [
+        item?.id || '',
+        hasLicense(item?.id || '') ? '1' : '0',
+        (G.loadout.weapons || []).join(','),
+        G.loadout.chassis || '',
+        G.loadout.shield || '',
+      ].join('|');
+      if (sig !== lastSig) {
+        lastSig = sig;
+        rebuildItemDetail(item);
+      }
+
+      const cost = item ? shopItemCost(item) : 0;
+      costLabel.textContent = 'cost · ' + creditLabel(cost);
+      if (!item || cost === 0) {
+        costChip.style.display = 'none';
+      } else {
+        costChip.style.display = '';
+        const afford = G.credits >= cost;
+        costChip.textContent = afford ? 'can afford' : 'insufficient';
+        costChip.className = 'chip ' + (afford ? 'chip-good' : 'chip-bad');
+      }
+
+      primaryBtn.setDisabled(!item || this._shopPrimaryDisabled());
+      if (buyOnlyBtn.focusable) {
+        buyOnlyBtn.setDisabled(G.credits < itemLicensePrice(item || {}));
+      }
+    };
+
+    this._shopUpdate();
+  };
+
+  // --- Shop helpers bound to the screen --------------------------------------
+
+  screen._shopCurrentItem = function() {
+    const items = this._shopItems || [];
+    return items.find(it => it.id === this.shopItemId) || null;
+  };
+
+  screen._shopSlotCycleValues = function() {
+    const item = this._shopCurrentItem();
+    if (!item || !WEAPONS.includes(item)) return [];
+    const compat = compatibleSlots(item);
+    if (compat.length <= 1) return [];
+    const empties = compat.filter(({ i }) => !G.loadout.weapons[i]).map(({ i }) => i);
+    return empties.length ? empties : compat.map(({ i }) => i);
+  };
+
+  screen._shopPrimaryLabel = function() {
+    const item = this._shopCurrentItem();
+    if (!item) return 'select item';
+    if (shopItemLockReason(item)) return 'locked';
+    if (isEquipped(item.id)) return 'already equipped';
+    const cost = shopItemCost(item);
+    if (WEAPONS.includes(item)) {
+      if (!compatibleSlots(item).length) return 'no compatible slot';
+      const verb = hasLicense(item.id) ? 'equip' : 'buy & equip';
+      return verb + ' · ' + creditLabel(cost);
+    }
+    if (CHASSIS.includes(item) || SHIELDS.includes(item) || (typeof AUX_ITEMS !== 'undefined' && AUX_ITEMS.includes(item))) {
+      const verb = hasLicense(item.id) ? 'equip' : 'buy & equip';
+      return verb + ' · ' + creditLabel(cost);
+    }
+    return 'buy · ' + creditLabel(cost);
+  };
+
+  screen._shopPrimaryDisabled = function() {
+    const item = this._shopCurrentItem();
+    if (!item) return true;
+    if (shopItemLockReason(item)) return true;
+    if (isEquipped(item.id) && !CHASSIS.includes(item)) return true;
+    if (WEAPONS.includes(item) && !compatibleSlots(item).length) return true;
+    if (isEquipped(item.id) && CHASSIS.includes(item)) return true;
+    return G.credits < shopItemCost(item);
+  };
+
+  screen._shopFlash = function(msg) {
+    this._flashMsg = msg;
+    this._flashUntil = (typeof performance !== 'undefined' ? performance.now() : Date.now()) + 2000;
+    tone(80, .1, 'square', .06);
+  };
+
+  screen._shopConfirmItem = function(item, lockReason) {
+    if (!item) return;
+    if (lockReason) { this._shopFlash(lockReason); return; }
+    if (isEquipped(item.id) && !CHASSIS.includes(item)) { tone(80, .1, 'square', .06); return; }
+
+    const lp = itemLicensePrice(item), bp = itemBuildPrice(item);
+    const needsLicense = !hasLicense(item.id);
+    const totalCost = (needsLicense ? lp : 0) + bp;
+
+    // Weapons: pick a target slot. Multi-compatible-slot weapons read the cycle;
+    // single-compatible-slot weapons use the only compatible slot.
+    if (WEAPONS.includes(item)) {
+      const compat = compatibleSlots(item);
+      if (!compat.length) { tone(80, .1, 'square', .06); return; }
+      let slotIdx;
+      if (compat.length === 1) {
+        slotIdx = compat[0].i;
+      } else {
+        const cycleVals = this._shopSlotCycleValues();
+        slotIdx = (this._shopTargetSlot != null && cycleVals.includes(this._shopTargetSlot))
+          ? this._shopTargetSlot
+          : cycleVals[0];
+        if (slotIdx == null) { tone(80, .1, 'square', .06); return; }
+      }
+      if (G.credits < totalCost) { tone(80, .1, 'square', .06); return; }
+      G.credits -= totalCost;
+      if (needsLicense && !hasLicense(item.id)) G.licenses.push(item.id);
+      equipWeaponInSlot(item, slotIdx);
+      tone(660, .2, 'sine', .08);
+      saveGame();
+      return;
+    }
+
+    if (CHASSIS.includes(item)) {
+      // Chassis: pay license now (non-refundable); build cost paid on configurator confirm.
+      if (needsLicense) {
+        if (G.credits < lp) { tone(80, .1, 'square', .06); return; }
+        G.credits -= lp;
+        if (!hasLicense(item.id)) G.licenses.push(item.id);
+      }
+      if (G.credits < bp) { tone(80, .1, 'square', .06); saveGame(); return; }
+      G.equipFlow = {
+        chassisId: item.id,
+        slots: item.slots.map(() => null),
+        shieldId: G.loadout.shield,
+        focus: 0,
+        buildPrice: bp,
+        warnShown: false,
+      };
+      saveGame();
+      return;
+    }
+
+    if (SHIELDS.includes(item)) {
+      if (G.credits < totalCost) { tone(80, .1, 'square', .06); return; }
+      G.credits -= totalCost;
+      if (needsLicense && !hasLicense(item.id)) G.licenses.push(item.id);
+      G.loadout.shield = item.id;
+      resetShipShield(G.OW?.s);
+      tone(660, .2, 'sine', .08);
+      saveGame();
+      return;
+    }
+
+    if (typeof AUX_ITEMS !== 'undefined' && AUX_ITEMS.includes(item)) {
+      if (G.credits < totalCost) { tone(80, .1, 'square', .06); return; }
+      G.credits -= totalCost;
+      if (needsLicense && !hasLicense(item.id)) G.licenses.push(item.id);
+      G.loadout.aux = item.id;
+      tone(660, .2, 'sine', .08);
+      saveGame();
+    }
+  };
+
+  screen._shopBuyLicenseOnly = function(item) {
+    if (!item) return;
+    if (hasLicense(item.id)) return;
+    const lp = itemLicensePrice(item);
+    if (lp > 0 && G.credits < lp) { tone(80, .1, 'square', .06); return; }
+    if (lp > 0) G.credits -= lp;
+    if (!hasLicense(item.id)) G.licenses.push(item.id);
+    tone(660, .15, 'sine', .08);
+    saveGame();
+  };
+
   const baseRefresh = screen.refresh.bind(screen);
   screen.refresh = function() {
+    if (this._serviceUpdaters) for (const fn of this._serviceUpdaters) fn();
+    if (this._shopUpdate) this._shopUpdate();
     baseRefresh();
     if (this._chipsEl) this._chipsEl.innerHTML = chipsHTML();
+    if (this._footerEl) {
+      const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      if (this._flashMsg && now < this._flashUntil) {
+        this._footerEl.textContent = this._flashMsg;
+      } else if (this._flashMsg) {
+        this._flashMsg = null;
+      }
+    }
   };
 
   screen.tick = function() { this.refresh(); };
@@ -149,36 +645,3 @@ function makeBaseScreen() {
 }
 
 registerScreen('base', makeBaseScreen);
-
-// =============================================================================
-// Shop-action overlay — modal sub-screen with buy/equip options for one item.
-// (Will be deleted in P3-03 when the shop tab embeds its own buy+equip flow.)
-// =============================================================================
-
-function makeShopActionScreen() {
-  const items = shopItemsForTab(G.baseTab);
-  const item = items.find(it => it.id === G.shopActionId);
-
-  const screen = new Screen({
-    id: 'shop-action',
-    layout: 'modal',
-    theme: 'info',
-    title: item ? item.name.toLowerCase() : 'item',
-    onCancel: () => { G.shopActionId = null; },
-  });
-
-  if (!item) { screen.handle = () => { G.shopActionId = null; }; return screen; }
-
-  const opts = shopActionOpts(item);
-  for (const opt of opts) {
-    screen.add(new Button({
-      label: opt.label.toLowerCase(),
-      disabled: opt.disabled,
-      onConfirm: () => execShopAction(opt),
-    }));
-  }
-
-  return screen;
-}
-
-registerScreen('shop-action', makeShopActionScreen);

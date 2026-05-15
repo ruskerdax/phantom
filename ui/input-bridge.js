@@ -53,7 +53,6 @@ function uiCurrentScreenKey() {
   }
   // Sub-screens that override the main state's screen.
   if (G.equipFlow) return 'equip-config';
-  if (G.st === 'base' && G.shopActionId != null) return 'shop-action';
   switch (G.st) {
     case 'title':       return 'title';
     case 'options':     return G.clearDataSel !== undefined ? 'clear-data' : 'options';

@@ -538,6 +538,90 @@
   border-color: var(--accent);
   color: var(--accent);
 }
+.chip.chip-good {
+  border-color: var(--stat-up);
+  color: var(--stat-up);
+}
+.chip.chip-bad {
+  border-color: var(--accent-danger);
+  color: var(--accent-danger);
+}
+
+/* --- Placeholder box (for deferred art slots) ------------------------------ */
+.ph {
+  border: 1.5px dashed var(--accent-dim);
+  background: repeating-linear-gradient(
+    45deg,
+    transparent 0 6px,
+    rgba(0, 255, 136, .04) 6px 7px
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-faint);
+  font-size: var(--fs-row-detail);
+  min-height: 80px;
+}
+
+/* --- Shop tab (P3-03) ------------------------------------------------------ */
+.shop-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+.shop-item-list .row.is-locked,
+.shop-item-list .row.is-locked.is-focused {
+  color: var(--text-disabled);
+  opacity: .65;
+}
+.shop-item-list .row.is-current:not(.is-focused) {
+  color: var(--text-strong);
+}
+.shop-detail-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.shop-detail-name {
+  font-size: var(--fs-row-strong);
+  color: var(--accent);
+  font-weight: 700;
+}
+.shop-detail-preview {
+  height: 80px;
+}
+.shop-detail-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.shop-compare-group {
+  font-size: var(--fs-section);
+  letter-spacing: .12em;
+  text-transform: lowercase;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+.shop-detail-cost {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: var(--fs-row-detail);
+}
+.shop-cost-label {
+  color: var(--text-strong);
+  font-weight: 700;
+}
+.shop-detail-action {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 6px;
+}
 
 /* --- NewsTicker ------------------------------------------------------------- */
 .news-ticker { display:flex; align-items:center; gap:10px; padding:6px 10px; background:var(--ticker-bg); border:1px solid var(--accent-dim); font-size:var(--fs-ticker); overflow:hidden; }
