@@ -514,7 +514,20 @@
 .ship-diagram .slot { fill:none; stroke:var(--accent-dim); stroke-width:1.2; }
 .ship-diagram .slot.is-equipped { fill:rgba(0,255,136,.12); stroke:var(--accent); }
 .ship-diagram .slot.is-focused { stroke:var(--accent); stroke-width:2; filter:drop-shadow(0 0 6px var(--accent)); animation: ship-slot-pulse 1.2s ease-in-out infinite; }
+.ship-diagram .slot-callout { stroke:var(--accent-dim); stroke-width:.4; vector-effect:non-scaling-stroke; }
+.ship-diagram .slot-callout-label { fill:var(--accent); font-size:3px; font-family:inherit; letter-spacing:.05em; }
 @keyframes ship-slot-pulse { 0%,100% { opacity:1 } 50% { opacity:.55 } }
+
+/* --- Ship Readout (06-b blueprint, reused inline by pause) ----------------- */
+.ship-readout-body { display:flex; flex-direction:column; gap:var(--gap-loose,16px); }
+.ship-readout-grid {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  column-gap: var(--gap-loose, 16px);
+  align-items: start;
+}
+.ship-readout-diagram { width:340px; }
+.ship-readout-stats { display:flex; flex-direction:column; }
 
 /* --- SiteMap --------------------------------------------------------------- */
 .site-map { width:100%; height:100%; }

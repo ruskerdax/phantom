@@ -454,7 +454,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ## Phase 2 — Ship widgets
 
-### P2-01. Ship Readout
+### P2-01. Ship Readout ✅
 
 **Goal:** 06-b blueprint — silhouette left, KV-grouped stats right. Read-only. Reused by pause's right pane.
 

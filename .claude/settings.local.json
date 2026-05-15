@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node --check c:/Games/phantom/ui/screens/ship-config.js)"
+    ]
+  }
+}
