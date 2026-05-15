@@ -41,7 +41,7 @@ var G={
   equipFlow:null,
   optFrom:'title',
   sfxVol:7,musVol:7,dynamicZoom:true,renderQuality:'full',
-  shaderEnabled:false,shaderUiEnabled:true,shaderPresetId:SHADER_DEFAULT_PRESET_ID,shaderParams:normalizeShaderParams(null),
+  shaderEnabled:true,shaderUiEnabled:false,shaderPresetId:SHADER_DEFAULT_PRESET_ID,shaderParams:normalizeShaderParams(null),
   effectsEnabled:true,effectSettings:normalizeEffectSettings(null),
   gpAimMode:'relative',absAimTarget:null,
   fps:60,frameMs:16.7,

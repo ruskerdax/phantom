@@ -64,12 +64,21 @@ const SHADER = {
   uiCaptureReady: false,
   uiCaptureFailed: false,
   uiCaptureStatus: '',
+  uiCaptureManualReason: '',
   uiCaptureUseManual: false,
   cssUrlCache: new Map(),
   imageDataUrlCache: new Map(),
   imageWatchCache: new WeakSet(),
   manualImageCache: new Map(),
+  diagLoggedKeys: new Set(),
+  diagProbeDone: false,
 };
+
+function shaderDiagWarnOnce(key, ...args) {
+  if (SHADER.diagLoggedKeys.has(key)) return;
+  SHADER.diagLoggedKeys.add(key);
+  try { console.warn(...args); } catch(_) {}
+}
 
 let SHADER_CAPABILITY = null;
 
@@ -174,6 +183,7 @@ function shaderUiCaptureRequested() {
 function shaderUiStatusText() {
   if (!shaderUiCaptureRequested()) return '';
   if (SHADER.uiCaptureFailed) return SHADER.uiCaptureStatus || 'ui capture fallback';
+  if (SHADER.uiCaptureUseManual) return 'manual capture: ' + (SHADER.uiCaptureManualReason || 'unknown reason');
   return '';
 }
 
@@ -195,7 +205,9 @@ function shaderResetUiCapture() {
   SHADER.uiCaptureReady = false;
   SHADER.uiCaptureFailed = false;
   SHADER.uiCaptureStatus = '';
+  SHADER.uiCaptureManualReason = '';
   SHADER.uiCaptureNextRetryMs = 0;
+  SHADER.uiCaptureUseManual = false;
   shaderApplyVisibility();
 }
 
@@ -245,18 +257,26 @@ async function shaderUrlToDataUrl(raw) {
   const src = shaderStripCssUrl(raw);
   if (!src || src.startsWith('#')) return raw;
   if (/^data:/i.test(src)) return src;
-  if (/^(blob|about):/i.test(src)) return '';
+  if (/^(blob|about):/i.test(src)) {
+    shaderDiagWarnOnce('css:' + src, 'SHADER UI css resource un-inlined (blob/about scheme):', src);
+    return '';
+  }
   let url = '';
-  try { url = new URL(src, document.baseURI).href; } catch(e) { return ''; }
+  try { url = new URL(src, document.baseURI).href; } catch(e) {
+    shaderDiagWarnOnce('css:bad:' + src, 'SHADER UI css resource un-inlined (bad URL):', src);
+    return '';
+  }
   if (SHADER.cssUrlCache.has(url)) return SHADER.cssUrlCache.get(url);
   try {
     const res = await fetch(url);
-    if (!res.ok) throw new Error('css resource fetch failed');
+    if (!res.ok) throw new Error('css resource fetch failed (HTTP ' + res.status + ')');
     const blob = await res.blob();
     const data = await shaderBlobToDataUrl(blob);
     SHADER.cssUrlCache.set(url, data || '');
+    if (!data) shaderDiagWarnOnce('css:empty:' + url, 'SHADER UI css resource un-inlined (empty blob):', url);
     return data || '';
   } catch(e) {
+    shaderDiagWarnOnce('css:err:' + url, 'SHADER UI css resource un-inlined:', url, '-', e?.message || e);
     SHADER.cssUrlCache.set(url, '');
     return '';
   }
@@ -476,6 +496,7 @@ async function shaderResolveImageCapture(img, root = null) {
   }
   const data = await shaderImageToDataUrl(img, size) || await shaderFetchImageDataUrl(url);
   SHADER.imageDataUrlCache.set(key, data || null);
+  if (!data) shaderDiagWarnOnce('img:' + url, 'SHADER UI image un-inlined:', url);
   return {url, key, data: data || null, loaded: true, pending: false};
 }
 
@@ -795,8 +816,14 @@ async function shaderPaintUiCapture(root, w, h, generation) {
   shaderApplyVisibility();
 }
 
-function shaderFallbackToManualCapture(root, w, h, generation, _reason) {
+function shaderFallbackToManualCapture(root, w, h, generation, reason) {
+  const resolved = reason || 'ui capture fallback';
+  const firstTime = !SHADER.uiCaptureUseManual || SHADER.uiCaptureManualReason !== resolved;
   SHADER.uiCaptureUseManual = true;
+  SHADER.uiCaptureManualReason = resolved;
+  if (firstTime) {
+    try { console.warn('SHADER UI fallback engaged:', resolved); } catch(_) {}
+  }
   shaderReplaceUiCaptureCanvas(w, h);
   shaderPaintUiCapture(root, w, h, generation).catch(e => {
     shaderFailUiCapture(e?.message || 'ui capture failed', generation);
@@ -885,6 +912,41 @@ function shaderCompositeFrameSource(source, w, h) {
   return SHADER.compositeCanvas;
 }
 
+async function shaderProbeForeignObjectTaint() {
+  if (SHADER.diagProbeDone) return;
+  SHADER.diagProbeDone = true;
+  const svg = '<svg xmlns="' + SHADER_SVG_NS + '" width="16" height="16">' +
+    '<foreignObject x="0" y="0" width="16" height="16">' +
+      '<div xmlns="' + SHADER_XHTML_NS + '" style="width:16px;height:16px;background:#0a0">x</div>' +
+    '</foreignObject>' +
+  '</svg>';
+  const blob = new Blob([svg], {type: 'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const im = new Image();
+      im.onload = () => resolve(im);
+      im.onerror = () => reject(new Error('probe image load failed'));
+      im.src = url;
+    });
+    const c = document.createElement('canvas');
+    c.width = 16;
+    c.height = 16;
+    const cx = c.getContext('2d');
+    cx.drawImage(img, 0, 0);
+    try {
+      cx.getImageData(0, 0, 1, 1);
+      try { console.warn('SHADER UI probe: foreignObject canvas READABLE (no taint) - SVG path should work if all resources inline'); } catch(_) {}
+    } catch(e) {
+      try { console.warn('SHADER UI probe: foreignObject canvas TAINTED (' + (e?.message || e) + ') - fundamental browser policy; SVG path cannot work in this browser'); } catch(_) {}
+    }
+  } catch(e) {
+    try { console.warn('SHADER UI probe failed:', e?.message || e); } catch(_) {}
+  } finally {
+    try { URL.revokeObjectURL(url); } catch(_) {}
+  }
+}
+
 function shaderInit(sourceCanvas) {
   if (SHADER.canvas) return shaderSupported();
   SHADER.source = sourceCanvas;
@@ -930,6 +992,7 @@ function shaderInit(sourceCanvas) {
   shaderInitBuffers();
   shaderLoadCurrentPreset();
   shaderApplyVisibility();
+  shaderProbeForeignObjectTaint().catch(()=>{});
   return true;
 }
 
