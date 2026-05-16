@@ -47,6 +47,7 @@ function uiCurrentScreenKey() {
   if (G.seedInputOpen) return 'seed-input';
   if (G.bodyInfoCtx) return 'body-info';
   if (G.systemMapOpen) return 'system-map';
+  if (G.infoOpen) return 'info';
   if (G.paused) {
     if (G.cheatSub) return 'cheats';
     if (G.showShipConfig) return 'ship-config';

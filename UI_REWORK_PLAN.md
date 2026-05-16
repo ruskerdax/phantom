@@ -659,7 +659,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ---
 
-### P4-03. Info submenu
+### P4-03. Info submenu ✅
 
 **Goal:** Pause submenu showing lifetime totals.
 
