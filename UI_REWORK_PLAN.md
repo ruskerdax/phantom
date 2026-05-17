@@ -681,7 +681,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ## Phase 5 — Death loop
 
-### P5-01. Slipgate full-bleed map
+### P5-01. Slipgate full-bleed map ✅
 
 **Goal:** 07-b — replace the existing list with a single full-bleed `SiteMap`.
 
