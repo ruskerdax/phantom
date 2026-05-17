@@ -699,7 +699,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ---
 
-### P5-02. Game Over banner (cinematic; drop sector-cleared)
+### P5-02. Game Over banner (cinematic; drop sector-cleared) ✅
 
 **Goal:** 13-c only. Capture `G.lastDeath.stakeLost` before zeroing `G.stake`. Snapshot `G.lastRun` on continue. **Delete the `banner-sector-cleared` registration entirely.**
 

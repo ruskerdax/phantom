@@ -609,8 +609,9 @@ function killShip(s,pts,deadState,orangeCount=16){
   s.alive=false;boomAt(pts,s.x,s.y,'#fff',28);boomAt(pts,s.x,s.y,'#fa0',orangeCount);
   tone(200,.5,'sawtooth',.15);
   if(deadState==='dead_ow'||deadState==='dead_enc')G.run.deaths++;
+  G.lastDeath={stakeLost:G.stake};G.stake=0;
   G.st=deadState;markNeedsRebuild();
-  setTimeout(()=>{enterRebuild();},1800);
+  setTimeout(()=>{G.st='over';},1800);
   return true;
 }
 function beamMotionPadding(o){return Math.min(4,Math.hypot(o?.vx||0,o?.vy||0));}

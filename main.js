@@ -87,7 +87,7 @@ function draw(){
   if(st==='slipgate') { if(uiOwns) drawOW(); return; }
 
   // Fullscreen menus / banners — DOM owns the menu, canvas paints the stars.
-  if(st==='title'||st==='options'||st==='controls'||st==='shaders'||st==='rebuild'||st==='over'||st==='done'){
+  if(st==='title'||st==='options'||st==='controls'||st==='shaders'||st==='rebuild'||st==='over'){
     if(uiOwns){
       drawMenuBackdrop();
       drGPI(8, H-8, 'left');

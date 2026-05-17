@@ -491,7 +491,7 @@ function musicReconcileLayers(arr){
   });
 }
 function musicContextForName(st){
-  if(st==='title'||st==='options'||st==='controls'||st==='shaders'||st==='done')return'title';
+  if(st==='title'||st==='options'||st==='controls'||st==='shaders')return'title';
   if(st==='over'||st==='rebuild'||st==='dead_ow'||st==='dead_enc'||st==='dead_site')return'gameover';
   if(st==='overworld'||st==='base'||st==='slipgate')return'overworld';
   if(st==='enc_in'||st==='encounter')return'encounter';

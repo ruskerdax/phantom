@@ -787,3 +787,68 @@
   color: var(--text-faint);
 }
 .gp-indicator.connected { color: var(--accent); text-shadow: var(--glow); }
+
+/* --- Game-over banner (P5-02 cinematic) ------------------------------------ */
+.banner-game-over { padding: 0; pointer-events: none; }
+.banner-gameover-bg {
+  position: absolute;
+  inset: 0;
+  background: #0a0608;
+}
+.banner-gameover-debris {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.banner-gameover-glow {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at center, rgba(255, 64, 64, .2), transparent 70%);
+  pointer-events: none;
+}
+.banner-gameover-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.banner-gameover-title {
+  font-size: 90px;
+  font-weight: 700;
+  letter-spacing: .16em;
+  color: #ff4040;
+  text-shadow: 0 0 30px rgba(255, 64, 64, .6);
+}
+.banner-gameover-sub {
+  margin-top: 18px;
+  font-size: 13px;
+  letter-spacing: .16em;
+  color: #ffd0d0;
+  opacity: .8;
+}
+.banner-gameover-stake {
+  margin-top: 28px;
+  font-size: 24px;
+  letter-spacing: .12em;
+  color: #ff4040;
+  text-shadow: 0 0 12px rgba(255, 64, 64, .4);
+}
+.banner-gameover-stats {
+  margin-top: 16px;
+  font-size: 11px;
+  letter-spacing: .12em;
+  color: #ffd0d0;
+  opacity: .6;
+}
+.banner-gameover-prompt {
+  margin-top: 36px;
+  font-size: 12px;
+  letter-spacing: .22em;
+  color: #ff8080;
+  animation: blink 1s steps(2) infinite;
+}

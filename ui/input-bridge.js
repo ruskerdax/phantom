@@ -65,7 +65,6 @@ function uiCurrentScreenKey() {
     case 'base':        return 'base';
     case 'slipgate':    return 'slipgate';
     case 'over':        return 'banner-game-over';
-    case 'done':        return 'banner-sector-cleared';
     default:            return '';
   }
 }
