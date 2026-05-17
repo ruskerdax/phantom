@@ -64,6 +64,8 @@ function finalizeRebuild(rf, ch) {
   while (G.loadout.weapons.length < ch.slots.length) G.loadout.weapons.push(null);
   G.loadout.weapons = G.loadout.weapons.slice(0, ch.slots.length);
   G.loadout.shield = rf.shieldId;
+  const prevRecent = Array.isArray(G.recentChassis) ? G.recentChassis : [];
+  G.recentChassis = [ch.id, ...prevRecent.filter(id => id !== ch.id)].slice(0, 3);
   G.rebuildFlow = null;
   doRebuildFinalize();
   return true;

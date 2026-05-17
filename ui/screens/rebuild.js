@@ -2,105 +2,251 @@
 
 // =============================================================================
 // Rebuild menus.
-// Phase 1 (key 'rebuild'):       chassis selection.
+// Phase 1 (key 'rebuild'):       chassis selection cinematic (08-c).
 // Phase 2 (key 'rebuild-config'): ship configurator (shared with equip flow).
 //
-// Banner above the panel: "ship destroyed".
+// Cinematic: full-bleed dark scene, "SHIP DESTROYED" heading, stake-lost line,
+// last-3-chassis cards, secondary chip row (charity / quit to title).
 // =============================================================================
+
+function _rebuildRecentCards() {
+  const list = Array.isArray(G.recentChassis) ? G.recentChassis : [];
+  const seen = new Set();
+  const out = [];
+  for (const id of list) {
+    if (seen.has(id)) continue;
+    if (!hasLicense(id)) continue;
+    const ch = CHASSIS.find(c => c.id === id);
+    if (!ch) continue;
+    seen.add(id);
+    out.push(ch);
+    if (out.length === 3) break;
+  }
+  return out;
+}
+
+// Maps a chassis array (most-recent first) to display order:
+//   N=1 -> [most_recent]
+//   N=2 -> [most_recent, 2nd_recent]
+//   N=3 -> [2nd_recent, most_recent, 3rd_recent]
+function _rebuildDisplayOrder(cards) {
+  if (cards.length === 3) return [cards[1], cards[0], cards[2]];
+  return cards.slice();
+}
+
+// Index of the most-recent chassis within the display layout (default focus).
+function _rebuildDefaultFocusIdx(n) {
+  return n === 3 ? 1 : 0;
+}
 
 function makeRebuildScreen() {
   if (!G.rebuildFlow) G.rebuildFlow = { phase: 'chassis', sel: 0 };
-  const rf = G.rebuildFlow;
 
   const screen = new Screen({
     id: 'rebuild',
     layout: 'fullscreen',
     theme: 'warn',
-    onCancel: null,    // no exit at chassis-select; quit-to-title is an explicit row
+    onCancel: null,
   });
 
-  // ---- Custom DOM with an above-panel banner -----------------------------
+  const cards = _rebuildRecentCards();
+  const display = _rebuildDisplayOrder(cards);
+  screen._cards = display;
+  screen._focus = { row: 'cards', idx: _rebuildDefaultFocusIdx(display.length) };
+  if (display.length === 0) screen._focus = { row: 'chips', idx: 0 };
+  screen._diagrams = [];
+
   screen.buildDOM = function() {
     const el = document.createElement('div');
-    el.className = `screen ${this.layout} theme-${this.theme}`;
+    el.className = `screen ${this.layout} theme-${this.theme} rebuild-cinematic`;
     el.dataset.screen = this.id;
 
-    const banner = document.createElement('div');
-    banner.className = 'panel-title';
-    banner.style.fontSize = 'var(--fs-banner)';
-    banner.style.marginBottom = '24px';
-    banner.textContent = 'ship destroyed';
-    el.appendChild(banner);
+    const bg = document.createElement('div');
+    bg.className = 'rebuild-bg';
+    el.appendChild(bg);
 
-    const panel = document.createElement('div');
-    panel.className = 'panel';
-    panel.style.minWidth = '520px';
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 800 580');
+    svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    svg.setAttribute('class', 'rebuild-debris');
+    let rs = ((G.seed >>> 0) ^ 0xa5a5a5a5) >>> 0;
+    const rnd = () => { rs = (rs * 1664525 + 1013904223) >>> 0; return rs / 0x100000000; };
+    for (let i = 0; i < 18; i++) {
+      const x = rnd() * 800, y = rnd() * 580, sz = 2 + rnd() * 10, ang = rnd() * 360;
+      const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      r.setAttribute('x', x);
+      r.setAttribute('y', y);
+      r.setAttribute('width', sz);
+      r.setAttribute('height', sz * 0.5);
+      r.setAttribute('fill', 'none');
+      r.setAttribute('stroke', 'rgba(255,136,68,.55)');
+      r.setAttribute('transform', `rotate(${ang} ${x} ${y})`);
+      svg.appendChild(r);
+    }
+    el.appendChild(svg);
 
-    const subtitle = document.createElement('div');
-    subtitle.className = 'panel-subtitle';
-    subtitle.textContent = 'select replacement hull';
-    panel.appendChild(subtitle);
+    const glow = document.createElement('div');
+    glow.className = 'rebuild-glow';
+    el.appendChild(glow);
 
-    const hr = document.createElement('hr'); hr.className = 'panel-divider'; panel.appendChild(hr);
+    const credits = document.createElement('div');
+    credits.className = 'rebuild-credits';
+    el.appendChild(credits);
+    this._creditsEl = credits;
 
-    const body = document.createElement('div');
-    body.className = 'panel-body';
-    panel.appendChild(body);
-    this._panelBody = body;
+    const heading = document.createElement('div');
+    heading.className = 'rebuild-heading';
+    heading.textContent = 'SHIP DESTROYED';
+    el.appendChild(heading);
 
-    const wallet = document.createElement('div');
-    wallet.style.textAlign = 'center';
-    wallet.style.fontSize = 'var(--fs-row-detail)';
-    wallet.style.color = 'var(--text-strong)';
-    wallet.style.padding = '8px 0 4px';
-    panel.appendChild(wallet);
-    this._walletEl = wallet;
+    const stakeLost = document.createElement('div');
+    stakeLost.className = 'rebuild-stake';
+    const lost = (G.lastDeath?.stakeLost || 0).toLocaleString();
+    stakeLost.textContent = `stake lost · ${lost} cr`;
+    el.appendChild(stakeLost);
 
-    const seedRow = document.createElement('div');
-    seedRow.style.textAlign = 'center';
-    seedRow.style.fontSize = 'var(--fs-footer)';
-    seedRow.style.color = 'var(--text-footer)';
-    panel.appendChild(seedRow);
-    this._seedEl = seedRow;
+    const cardRow = document.createElement('div');
+    cardRow.className = 'rebuild-card-row';
+    cardRow.dataset.count = String(this._cards.length);
+    el.appendChild(cardRow);
+    this._cardRowEl = cardRow;
+    this._cardEls = [];
 
-    el.appendChild(panel);
+    for (let i = 0; i < this._cards.length; i++) {
+      const ch = this._cards[i];
+      const card = document.createElement('div');
+      card.className = 'rebuild-card';
+
+      const name = document.createElement('div');
+      name.className = 'rebuild-card-name';
+      name.textContent = (ch.name || ch.id).toLowerCase();
+      card.appendChild(name);
+
+      const diagWrap = document.createElement('div');
+      diagWrap.className = 'rebuild-card-diagram';
+      const diag = new ShipDiagram({ chassisId: ch.id, loadout: { weapons: [] }, focusedSlotId: null });
+      diagWrap.appendChild(diag.render());
+      card.appendChild(diagWrap);
+      this._diagrams.push(diag);
+
+      const stats = new KeyValueRow({
+        label: 'stats',
+        value: chassisStatsText(ch, { slots: false }).toLowerCase(),
+      });
+      card.appendChild(stats.render());
+
+      const cost = document.createElement('div');
+      cost.className = 'rebuild-card-cost';
+      const price = ch.buildPrice ?? 0;
+      cost.textContent = price === 0 ? 'free' : `${price} cr`;
+      card.appendChild(cost);
+
+      const chip = document.createElement('div');
+      chip.className = 'rebuild-card-chip';
+      chip.textContent = '▶ rebuild';
+      card.appendChild(chip);
+
+      cardRow.appendChild(card);
+      this._cardEls.push(card);
+    }
+
+    if (this._cards.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'rebuild-empty';
+      empty.textContent = 'no licensed chassis available';
+      cardRow.appendChild(empty);
+    }
+
+    const chipRow = document.createElement('div');
+    chipRow.className = 'rebuild-chip-row';
+    el.appendChild(chipRow);
+    this._chipRowEl = chipRow;
+
+    const charity = document.createElement('div');
+    charity.className = 'chip rebuild-chip';
+    charity.textContent = 'charity assistance';
+    chipRow.appendChild(charity);
+
+    const quit = document.createElement('div');
+    quit.className = 'chip chip-bad rebuild-chip rebuild-chip-quit';
+    quit.textContent = 'quit to title';
+    chipRow.appendChild(quit);
+
+    this._chipEls = [charity, quit];
+
+    const footer = document.createElement('div');
+    footer.className = 'rebuild-footer';
+    el.appendChild(footer);
+    this._footerEl = footer;
+
     this._el = el;
     return el;
   };
 
-  // ---- Chassis selection rows --------------------------------------------
-  const lch = licensedRebuildChassis();
-  for (const ch of lch) {
-    const cost = ch.buildPrice;
-    screen.add(new Button({
-      label: `${ch.name.toLowerCase()}   —   ${chassisStatsText(ch, { slots: false }).toLowerCase()}   hull: ${cost === 0 ? 'free' : cost + ' cr'}`,
-      onConfirm: () => { ia(); openRebuildConfig(ch); },
-    }));
-  }
-  screen.add(new Spacer({ size: 'sm' }));
-  screen.add(new Button({
-    label: `charity assistance   —   forfeit all credits & stake — default ship free`,
-    onConfirm: () => { ia(); applyCharityRebuild(); },
-  }));
-  screen.add(new Spacer({ size: 'sm' }));
-  screen.add(new Button({
-    label: 'quit to title',
-    onConfirm: () => {
-      ia();
-      G.rebuildFlow = null; G.ENC = null; G.site = null;
-      openTitleMenu();
-      saveGame();
-    },
-  }));
+  screen.populateBody = function() {};
 
-  // ---- Refresh wallet/seed every tick -----------------------------------
-  const baseRefresh = screen.refresh.bind(screen);
   screen.refresh = function() {
-    baseRefresh();
-    if (this._walletEl) this._walletEl.textContent = `credits: ${G.credits}   ·   stake: ${G.stake}`;
-    if (this._seedEl)   this._seedEl.textContent   = 'seed  ' + seedText(G.seed).toLowerCase();
+    if (!this._el) return;
+    if (this._creditsEl) this._creditsEl.textContent = `cr ${G.credits}`;
+    for (let i = 0; i < this._cardEls.length; i++) {
+      const focused = this._focus.row === 'cards' && this._focus.idx === i;
+      this._cardEls[i].classList.toggle('is-focused', focused);
+    }
+    for (let i = 0; i < this._chipEls.length; i++) {
+      const focused = this._focus.row === 'chips' && this._focus.idx === i;
+      this._chipEls[i].classList.toggle('is-focused', focused);
+    }
+    if (this._footerEl) {
+      this._footerEl.textContent =
+        bindHint('directions', 'select') + '   ' + bindHint('confirm', 'rebuild');
+    }
   };
+
   screen.tick = function() { this.refresh(); };
+
+  screen.handle = function(input) {
+    const cardN = this._cards.length;
+    const chipN = this._chipEls.length;
+    if (input.left || input.right) {
+      const delta = input.right ? 1 : -1;
+      if (this._focus.row === 'cards' && cardN > 0) {
+        this._focus.idx = (this._focus.idx + delta + cardN) % cardN;
+      } else if (this._focus.row === 'chips' && chipN > 0) {
+        this._focus.idx = (this._focus.idx + delta + chipN) % chipN;
+      }
+      this.refresh();
+      return;
+    }
+    if (input.up || input.down) {
+      if (this._focus.row === 'cards' && chipN > 0) {
+        this._focus = { row: 'chips', idx: 0 };
+      } else if (this._focus.row === 'chips' && cardN > 0) {
+        this._focus = { row: 'cards', idx: _rebuildDefaultFocusIdx(cardN) };
+      }
+      this.refresh();
+      return;
+    }
+    if (input.confirm) {
+      if (this._focus.row === 'cards' && cardN > 0) {
+        const ch = this._cards[this._focus.idx];
+        ia();
+        openRebuildConfig(ch);
+        return;
+      }
+      if (this._focus.row === 'chips') {
+        if (this._focus.idx === 0) {
+          ia();
+          applyCharityRebuild();
+        } else {
+          ia();
+          G.rebuildFlow = null; G.ENC = null; G.site = null;
+          openTitleMenu();
+          saveGame();
+        }
+        return;
+      }
+    }
+  };
 
   return screen;
 }

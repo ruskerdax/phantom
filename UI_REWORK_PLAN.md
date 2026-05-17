@@ -723,7 +723,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ---
 
-### P5-03. Rebuild cinematic
+### P5-03. Rebuild cinematic ✅
 
 **Goal:** 08-c. Last 3 chassis as cards, equal-width columns, most-recent center for N=3.
 
