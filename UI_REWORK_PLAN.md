@@ -760,7 +760,7 @@ These three validate the F-04 widgets and `bindPrompt` in real screens. After F-
 
 ## Phase 6 — Title + cosmetic polish
 
-### P6-01. Title screen with run summary
+### P6-01. Title screen with run summary ✅
 
 **Goal:** 01-b. Two-pane layout: menu left, current/last run panel right. `BUILD` in footer. No kill-phrase line, no seed.
 
